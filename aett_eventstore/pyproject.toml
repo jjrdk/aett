@@ -1,0 +1,36 @@
+# pyproject.toml
+
+[build-system]
+requires = ["setuptools>=69.1.1", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src/"]
+include = ["aett.eventstore"]
+
+[project]
+name = "aett-eventstore"
+version = "0.1.0"
+description = "Event store for Python"
+readme = "README.md"
+authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["events", "event store", "event sourcing"]
+dependencies = [
+    'typing >= 3.7.4.3',
+    'tomli; python_version >= "3.8"',
+]
+requires-python = ">=3.8"
+
+[project.optional-dependencies]
+dev = ["pip-tools", "pytest"]
+
+[project.urls]
+Homepage = "https://github.com/jjrdk/aett"
+
+[project.scripts]
