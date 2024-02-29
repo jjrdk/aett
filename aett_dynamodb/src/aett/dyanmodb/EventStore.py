@@ -1,6 +1,5 @@
 import datetime
 import json
-import sys
 from uuid import UUID
 
 import boto3
@@ -51,7 +50,7 @@ class CommitStore(ICommitEvents):
                 'StreamRevision': commit.stream_revision,
                 'CommitId': str(commit_id),
                 'CommitSequence': commit.commit_sequence,
-                'CommitStamp': 1,
+                'CommitStamp': int(datetime.datetime.now(datetime.UTC).timestamp()),
                 'Headers': json.dumps(commit.headers),
                 'Events': (EventMessage.schema().dumps(commit.events, many=True)),
             }
@@ -96,43 +95,39 @@ class SnapshotStore(IAccessSnapshots):
         self.table = self.dynamodb.Table(table_name)
         self.table_name = table_name
 
-    async def get(self, bucket_id: str, stream_id: str, version: int) -> Snapshot:
+    def get(self, bucket_id: str, stream_id: str, version: int) -> Snapshot:
         try:
-            query_response = self.dynamodb.query(
+            query_response = self.table.query(
                 TableName=self.table_name,
                 ConsistentRead=True,
                 Limit=1,
-                KeyConditionExpression=(Key("BucketAndStream").eq(":v_BucketAndStream") & Key("StreamRevision").lte(
-                    ":v_MaxRevision")),
-                ExpressionAttributeValues={
-                    ":v_BucketAndStream": {'S': f"{bucket_id}{stream_id}"},
-                    ":v_MaxRevision": {'N': str(version)}
-                },
+                KeyConditionExpression=(Key("BucketAndStream").eq(f'{bucket_id}{stream_id}') & Key("StreamRevision").lte(version)),
                 ScanIndexForward=False
             )
             item = query_response['Items'][0]
-            return Snapshot(item['BucketId']['S'],
-                            item['StreamId']['S'],
-                            int(item['StreamRevision']['N']),
-                            json.load(item['Payload']))
+            return Snapshot(item['BucketId'],
+                            item['StreamId'],
+                            int(item['StreamRevision']),
+                            item['Payload'])
         except Exception as e:
             raise Exception(
                 f"Failed to get snapshot for stream {stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}")
 
     def add(self, snapshot: Snapshot):
         try:
+            item = {
+                'BucketAndStream': f"{snapshot.bucket_id}{snapshot.stream_id}",
+                'BucketId': snapshot.bucket_id,
+                'StreamId': snapshot.stream_id,
+                'StreamRevision': snapshot.stream_revision,
+                'Payload': snapshot.payload
+            }
             response = self.table.put_item(
                 TableName=self.table_name,
-                Item={
-                    'BucketAndStream': {'S': f"{snapshot.bucket_id}{snapshot.stream_id}"},
-                    'BucketId': {'S': snapshot.bucket_id},
-                    'StreamId': {'S': snapshot.stream_id},
-                    'StreamRevision': {'N': str(snapshot.stream_revision)},
-                    'Payload': {'S': json.dumps(snapshot.payload)}
-                },
+                Item=item,
                 ReturnValues='NONE',
                 ReturnValuesOnConditionCheckFailure='NONE',
-                ConditionExpression='attribute_not_exists(BucketAndStream) AND attribute_not_exists(CommitSequence)'
+                ConditionExpression='attribute_not_exists(BucketAndStream) AND attribute_not_exists(StreamRevision)'
             )
         except Exception as e:
             raise Exception(
