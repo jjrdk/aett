@@ -9,7 +9,7 @@ where = ["src/"]
 include = ["aett.dynamodb"]
 
 [project]
-name = "aett-eventstore-dynamodb"
+name = "aett-dynamodb"
 version = "0.1.0"
 description = "DynamoDB connector for aett event store"
 readme = "README.md"
