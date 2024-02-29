@@ -7,7 +7,7 @@ Provides a framework for managing event streams.
 To create an event stream to manage events, you can use the `EventStream` class.
 
 ```python
-from aett import EventStream
+from aett.eventstore.EventStream import EventStream
 
 # Create a new event stream
 event_stream = EventStream.create('bucket_name', 'stream_name')

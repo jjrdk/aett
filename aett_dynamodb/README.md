@@ -1,20 +1,18 @@
 # Æt (Aett) is an Event Store for Python
 
-Provides a framework for managing event streams.
+Aett DynamoDB provides the ability to store and retrieve events from a DynamoDB table.
 
 ## Usage
 
-To create an event stream to manage events, you can use the `EventStream` class.
+To create an event stream to manage events, you can use the `PersistenceManagement` class.
 
 ```python
-from aett import EventStream
+from aett.dynamodb.EventStore import PersistenceManagement
 
-# Create a new event stream
-event_stream = EventStream.create('bucket_name', 'stream_name')
+# Set up a new event store
+mgmt = PersistenceManagement()
+mgmt.initialize()
 
-# Append an event to the stream
-event_stream.add(SomeEvent())
-
-# Load the event stream from the event store
-event_stream = EventStream.load('bucket_name', 'stream_name', 'event_store_uri', 0, 100)
+# Drop the store
+mgmt.drop()
 ```
