@@ -16,14 +16,13 @@ class TestMemento(Memento):
 
 
 class TestAggregate(Aggregate[TestMemento]):
-    def __init__(self, identifier: str, event_stream: EventStream, memento: TestMemento = None):
+    def __init__(self, event_stream: EventStream, memento: TestMemento = None):
         self.value = 0
-        super().__init__(identifier, event_stream, memento)
+        super().__init__(event_stream, memento)
 
     def apply_memento(self, memento: TestMemento) -> None:
         if self.id != memento.id:
             raise ValueError("Memento id does not match aggregate id")
-        self.version = memento.version
         self.value = memento.value
 
     def get_memento(self) -> TestMemento:

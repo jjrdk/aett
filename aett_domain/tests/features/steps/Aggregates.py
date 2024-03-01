@@ -3,15 +3,10 @@ import datetime
 import jsonpickle.pickler
 from behave import *
 
-from aett.eventstore.EventStream import EventMessage
+from aett.eventstore.EventStream import EventMessage, EventStream
 from aett_domain.tests.features.steps.Types import TestEvent, TestAggregate
 
 use_step_matcher("re")
-
-
-@given("an aggregate")
-def step_impl(context):
-    context.aggregate = TestAggregate('test')
 
 
 @when("an event is applied to the aggregate")
@@ -20,7 +15,7 @@ def step_impl(context):
     a.raise_event(TestEvent(id='test', timestamp=datetime.datetime.now(datetime.UTC), version=1, value=1))
 
 
-@then("the aggregate version is (\\d{1,})")
+@then("the aggregate version is (\\d+)")
 def step_impl(context, version: str):
     a: TestAggregate = context.aggregate
     assert a.version == int(version)
@@ -34,6 +29,17 @@ def step_impl(context):
             EventMessage(body=event2, headers=None)]
     j = jsonpickle.encode(msgs)
     context.events = jsonpickle.decode(j)
+
+
+@given("an aggregate")
+def step_impl(context):
+    msgs = []
+    if hasattr(context, 'events'):
+        msgs = context.events
+    stream = EventStream.create('test', 'test')
+    for m in msgs:
+        stream.add(m)
+    context.aggregate = TestAggregate(stream, None)
 
 
 @when("the events are applied to the aggregate")

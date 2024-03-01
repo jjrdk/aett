@@ -9,7 +9,7 @@ from aett.eventstore.EventStream import DomainEvent, EventStream, Commit, ICommi
 
 class TestEvent(DomainEvent):
     def __init__(self):
-        super().__init__("a", datetime.datetime.now(datetime.UTC), 0)
+        super().__init__(id="a", timestamp=datetime.datetime.now(datetime.UTC), version=0)
 
 
 class TestEventStore(ICommitEvents):
@@ -18,7 +18,9 @@ class TestEventStore(ICommitEvents):
 
     def get(self, bucket_id: str, stream_id: str, min_revision: int, max_revision: int) -> Iterable[Commit]:
         return [
-            Commit('bucket', 'stream', 1, uuid.uuid4(), 1, datetime.datetime.now(), {}, [EventMessage(TestEvent())], 1)]
+            Commit(bucket_id=bucket_id, stream_id=stream_id, stream_revision=1, commit_id=uuid.uuid4(),
+                   commit_sequence=1, commit_stamp=datetime.datetime.now(), headers={},
+                   events=[EventMessage(body=TestEvent())], checkpoint_token=1)]
 
 
 class TestEventStream(TestCase):
@@ -37,10 +39,10 @@ class TestEventStream(TestCase):
 
     def test_add_event(self):
         stream = EventStream.create('bucket', 'stream')
-        stream.add_event(TestEvent())
+        stream.add(EventMessage(body=TestEvent()))
         self.assertEqual(stream.version, 1)
 
     def test_add_header(self):
         stream = EventStream.create('bucket', 'stream')
-        stream.add_header('key', 'value')
+        stream.set_header('key', 'value')
         self.assertEqual(stream.uncommitted_headers['key'], 'value')

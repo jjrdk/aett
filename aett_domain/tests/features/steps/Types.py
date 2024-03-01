@@ -2,7 +2,7 @@ import datetime
 from dataclasses import dataclass
 
 from aett.domain.Domain import Aggregate, Saga
-from aett.eventstore.EventStream import DomainEvent, Memento
+from aett.eventstore.EventStream import DomainEvent, Memento, EventStream
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -16,14 +16,13 @@ class TestMemento(Memento):
 
 
 class TestAggregate(Aggregate[TestMemento]):
-    def __init__(self, identifier: str, memento: TestMemento = None):
+    def __init__(self, event_stream: EventStream, memento: TestMemento = None):
         self.value = 0
-        super().__init__(identifier, memento)
+        super().__init__(event_stream, memento)
 
     def apply_memento(self, memento: TestMemento) -> None:
         if self.id != memento.id:
             raise ValueError("Memento id does not match aggregate id")
-        self.version = memento.version
         self.value = memento.value
 
     def get_memento(self) -> TestMemento:
@@ -31,7 +30,8 @@ class TestAggregate(Aggregate[TestMemento]):
 
     def set_value(self, value: int) -> None:
         self.raise_event(
-            TestEvent(value=value, id=self.id, version=self.version, timestamp=datetime.datetime.now(datetime.UTC)))
+            TestEvent(value=value, id=self.id, version=self.version,
+                      timestamp=datetime.datetime.now(datetime.UTC)))
 
     def apply(self, event: TestEvent) -> None:
         self.value = event.value

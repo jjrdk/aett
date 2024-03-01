@@ -3,6 +3,7 @@ import uuid
 
 from aett.domain.Domain import AggregateRepository, Aggregate, SagaRepository, Saga
 from aett.dyanmodb.EventStore import CommitStore
+from aett.eventstore.EventStream import EventStream
 
 
 class DynamoAggregateRepository(AggregateRepository):
@@ -10,11 +11,16 @@ class DynamoAggregateRepository(AggregateRepository):
 
     def get(self, cls: typing.Type[TAggregate], id: str, version: int) -> TAggregate:
         stream = self._store.get(self._bucket_id, id, version)
-        aggregate = cls(id, stream, None)
+        aggregate = cls(stream, None)
         return aggregate
 
     def save(self, aggregate: TAggregate) -> None:
-        self._store.commit(aggregate.stream, uuid.uuid4())
+        if len(aggregate.uncommitted) == 0:
+            return
+        stream = self._store.get(self._bucket_id, aggregate.id, 0, aggregate.version)
+        for event in aggregate.uncommitted:
+            stream.add(event)
+        self._store.commit(stream, uuid.uuid4())
 
     def __init__(self, bucket_id: str, store: CommitStore):
         self._bucket_id = bucket_id
@@ -33,6 +39,10 @@ class DynamoSagaRepository(SagaRepository):
         saga = cls(stream)
         return saga
 
-    def save(self, saga: Saga) -> None:
-        stream = saga.stream
+    def save(self, saga: TSaga) -> None:
+        stream = self._store.get(self._bucket_id, saga.id)
+        if stream is None:
+            stream = EventStream.create('test', saga.id)
+        for event in saga.uncommitted:
+            stream.add(event)
         self._store.commit(stream, uuid.uuid4())

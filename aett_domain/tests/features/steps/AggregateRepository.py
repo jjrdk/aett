@@ -2,6 +2,7 @@ import typing
 from behave import *
 
 from aett.domain.Domain import AggregateRepository, Aggregate
+from aett.eventstore.EventStream import EventStream
 from aett_domain.tests.features.steps.Types import TestAggregate
 
 use_step_matcher("re")
@@ -15,7 +16,7 @@ class TestAggregateRepository(AggregateRepository):
 
     def get(self, cls: typing.Type[TAggregate], identifier: str, version: int) -> TestAggregate:
         m = self.storage.get(identifier)
-        return cls(identifier, m)
+        return cls(EventStream.create('bucket', identifier), m)
 
     def save(self, aggregate: TAggregate) -> None:
         self.storage[aggregate.id] = aggregate.get_memento()

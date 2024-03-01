@@ -15,15 +15,25 @@ class Aggregate(ABC, typing.Generic[T]):
     of the event relies on multiple dispatch to call the correct apply method in the subclass.
     """
 
-    def __init__(self, identifier: str, stream: EventStream, memento: T = None):
-        self.id = identifier
-        self.version = 0
-        self.stream: EventStream = stream
+    def __init__(self, stream: EventStream, memento: T = None):
+        self.uncommitted: typing.List[EventMessage] = []
+        self._id = stream.stream_id
+        self._version = 0
         if memento is not None:
             self.apply_memento(memento)
-        for event in self.stream.committed:
+            self._version = memento.version
+        for event in stream.committed:
             if isinstance(event.body, DomainEvent):
                 self.raise_event(event.body)
+        self.uncommitted.clear()
+
+    @property
+    def id(self) -> str:
+        return self._id
+
+    @property
+    def version(self) -> int:
+        return self._version
 
     @abstractmethod
     def apply_memento(self, memento: T) -> None:
@@ -58,17 +68,27 @@ class Aggregate(ABC, typing.Generic[T]):
         """
         # Use multiple dispatch to call the correct apply method
         self.apply(event)
-        self.version += 1
-        self.stream.add(EventMessage(body=event, headers=None))
+        self._version += 1
+        self.uncommitted.append(EventMessage(body=event, headers=None))
 
 
 class Saga(ABC):
     def __init__(self, event_stream: EventStream):
-        self.id = id
-        self.version = 0
-        self.stream: EventStream = event_stream
-        for event in self.stream.committed:
+        self._id = event_stream.stream_id
+        self._version = 0
+        self.uncommitted: typing.List[EventMessage] = []
+        self._headers: typing.Dict[str, typing.Any] = {}
+        for event in event_stream.committed:
             self.transition(event.body)
+        self.uncommitted.clear()
+
+    @property
+    def id(self) -> str:
+        return self._id
+
+    @property
+    def version(self) -> int:
+        return self._version
 
     def transition(self, event: BaseEvent) -> None:
         """
@@ -78,8 +98,8 @@ class Saga(ABC):
         """
         # Use multiple dispatch to call the correct apply method
         self.apply(event)
-        self.stream.add(event)
-        self.version += 1
+        self.uncommitted.append(EventMessage(body=event, headers=self._headers))
+        self._version += 1
 
     def dispatch(self, command: T) -> None:
         """
@@ -87,8 +107,8 @@ class Saga(ABC):
         :param command: The command to dispatch
         :return: None
         """
-        index = len(self.stream.uncommitted_headers)
-        self.stream.set_header(f'UndispatchedMessage.{index}', command)
+        index = len(self._headers)
+        self._headers[f'UndispatchedMessage.{index}'] = command
 
 
 class AggregateRepository(ABC):

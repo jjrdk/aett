@@ -24,7 +24,11 @@ class TestSagaRepository(SagaRepository):
         return cls(stream)
 
     def save(self, saga: Saga) -> None:
-        stream = saga.stream
+        stream = self.storage.get(saga.id)
+        if stream is None:
+            stream = EventStream.create('test', saga.id)
+        for event in saga.uncommitted:
+            stream.add(event)
         stream.set_persisted(stream.commit_sequence + 1)
         self.storage[stream.stream_id] = stream
 
@@ -62,11 +66,3 @@ def step_impl(context):
 def step_impl(context):
     version = context.saga.version
     assert version == 1
-
-
-@then("the modified saga is saved to storage")
-def step_impl(context):
-    """
-    :type context: behave.runner.Context
-    """
-    raise NotImplementedError(u'STEP: Then the modified saga is saved to storage')

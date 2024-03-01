@@ -125,7 +125,7 @@ class SnapshotStore(IAccessSnapshots):
                 'BucketId': snapshot.bucket_id,
                 'StreamId': snapshot.stream_id,
                 'StreamRevision': snapshot.stream_revision,
-                'Payload': snapshot.payload
+                'Payload': jsonpickle.encode(snapshot.payload)
             }
             response = self.table.put_item(
                 TableName=self.table_name,

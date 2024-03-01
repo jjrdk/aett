@@ -5,6 +5,7 @@ from behave import *
 
 from aett.dyanmodb.EventStore import SnapshotStore
 from aett.eventstore.EventStream import Snapshot
+from features.steps.Types import TestAggregate
 
 use_step_matcher("re")
 
@@ -18,11 +19,12 @@ def step_impl(context):
 def step_impl(context):
     context.bucket_id = str(uuid.uuid4())
     context.stream_id = str(uuid.uuid4())
-    snapshot = Snapshot(context.bucket_id, context.stream_id, 1, 'test')
+    snapshot = Snapshot(bucket_id=context.bucket_id, stream_id=context.stream_id, stream_revision=1,
+                        payload={'key': 'test'})
     context.store.add(snapshot)
 
 
 @then("the snapshot is persisted to the store")
 def step_impl(context):
-    loaded_back: Snapshot = context.store.get(TestAggregate, context.bucket_id)
-    assert loaded_back.payload == 'test'
+    loaded_back: Snapshot = context.store.get(context.bucket_id, context.stream_id, 1)
+    assert loaded_back.payload['key'] == 'test'

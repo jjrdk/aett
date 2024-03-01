@@ -66,7 +66,7 @@ class EventMessage:
     Gets the body of the event message.
     """
 
-    headers: Dict[str, str] | None = None
+    headers: Dict[str, Any] | None = None
     """
     Gets the metadata which provides additional, unstructured information about this event message.
     """
