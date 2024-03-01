@@ -24,5 +24,5 @@ def step_impl(context):
 
 @then("the snapshot is persisted to the store")
 def step_impl(context):
-    loaded_back: Snapshot = context.store.get(context.bucket_id, context.stream_id, 1)
+    loaded_back: Snapshot = context.store.get(TestAggregate, context.bucket_id)
     assert loaded_back.payload == 'test'

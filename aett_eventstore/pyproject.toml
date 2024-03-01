@@ -10,7 +10,7 @@ include = ["aett.eventstore"]
 
 [project]
 name = "aett-eventstore"
-version = "0.1.0"
+version = "0.2.0"
 description = "Event store for Python"
 readme = "README.md"
 authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
@@ -24,6 +24,7 @@ keywords = ["events", "event store", "event sourcing"]
 dependencies = [
     'typing >= 3.7.4.3',
     'tomli; python_version >= "3.8"',
+    'jsonpickle>=3.0.3'
 ]
 requires-python = ">=3.8"
 

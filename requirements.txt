@@ -5,4 +5,5 @@ boto3[crt]~=1.34.51
 
 typing~=3.7.4.3
 behave~=1.2.6
-dataclasses-json~=0.6.1
+jsonpickle~=3.0.3
+multipledispatch~=1.0.0

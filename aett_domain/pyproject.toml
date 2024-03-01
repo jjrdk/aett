@@ -6,10 +6,10 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src/"]
-include = ["aett.dynamodb"]
+include = ["aett.domain"]
 
 [project]
-name = "aett-dynamodb"
+name = "aett-domain"
 version = "0.2.0"
 description = "DynamoDB connector for aett event store"
 readme = "README.md"
@@ -20,12 +20,12 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
-keywords = ["events", "event store", "dynamodb"]
+keywords = ["events", "event store", "ddd", "domain"]
 dependencies = [
     'typing >= 3.7.4.3',
     'tomli; python_version >= "3.8"',
-    'jsonpickle >= 3.0.3',
-    'aett-domain >= 0.2.0',
+    'multipledispatch >= 1.0.0',
+    'aett-eventstore>=0.2.0'
 ]
 requires-python = ">=3.8"
 

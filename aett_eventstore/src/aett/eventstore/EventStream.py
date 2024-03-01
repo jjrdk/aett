@@ -1,18 +1,14 @@
-import base64
+import datetime
+import typing
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from dataclasses_json import dataclass_json, LetterCase
-import datetime
-import json
-from typing import Iterable, Dict, List, Optional
+from typing import Iterable, Dict, List, Optional, Any
 from uuid import UUID
-import typing
 
 T = typing.TypeVar('T')
 
 
-@dataclass_json(letter_case=LetterCase.CAMEL)
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class BaseEvent:
     """
     Represents a single event which has occurred.
@@ -29,9 +25,8 @@ class BaseEvent:
     """
 
 
-@dataclass_json(letter_case=LetterCase.CAMEL)
-@dataclass(frozen=True)
-class DomainEvent(BaseEvent):
+@dataclass(frozen=True, kw_only=True)
+class DomainEvent(ABC, BaseEvent):
     """
     Represents a single event which has occurred within the domain.
     """
@@ -42,36 +37,7 @@ class DomainEvent(BaseEvent):
     """
 
 
-@dataclass_json(letter_case=LetterCase.CAMEL)
-@dataclass(frozen=True)
-class Snapshot:
-    """
-    Represents a materialized view of a stream at specific revision.
-    """
-
-    bucket_id: str
-    """
-    Gets the value which uniquely identifies the bucket to which the stream belongs.
-    """
-
-    stream_id: str
-    """
-    Gets the value which uniquely identifies the stream to which the snapshot applies.
-    """
-
-    stream_revision: int
-    """
-    Gets the position at which the snapshot applies.
-    """
-
-    payload: str
-    """
-    Gets the snapshot or materialized view of the stream at the revision indicated.
-    """
-
-
-@dataclass_json(letter_case=LetterCase.CAMEL)
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class Memento(typing.Generic[T]):
     id: str
     """
@@ -88,28 +54,14 @@ class Memento(typing.Generic[T]):
     Gets the state of the aggregate at the time the memento was taken.
     """
 
-    def __to_snapshot__(self, bucket_id: str) -> Snapshot:
-        """
-        Converts the memento to a snapshot which can be persisted.
-        :param bucket_id:
-        :return:
-        """
-        j = json.dumps(self.payload)
-        b = j.encode('utf-8')
-        b64 = base64.b64encode(b)
-        s = b64.decode('utf-8')
-        snapshot = Snapshot(bucket_id, self.id, self.version, s)
-        return snapshot
 
-
-@dataclass_json(letter_case=LetterCase.CAMEL)
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class EventMessage:
     """
     Represents a single event message within a commit.
     """
 
-    body: DomainEvent
+    body: BaseEvent
     """
     Gets the body of the event message.
     """
@@ -120,36 +72,7 @@ class EventMessage:
     """
 
 
-@dataclass_json(letter_case=LetterCase.CAMEL)
-@dataclass(frozen=True)
-class Snapshot:
-    """
-    Represents a materialized view of a stream at specific revision.
-    """
-
-    bucket_id: str
-    """
-    Gets the value which uniquely identifies the bucket to which the stream belongs.
-    """
-
-    stream_id: str
-    """
-    Gets the value which uniquely identifies the stream to which the snapshot applies.
-    """
-
-    stream_revision: int
-    """
-    Gets the position at which the snapshot applies.
-    """
-
-    payload: str
-    """
-    Gets the snapshot or materialized view of the stream at the revision indicated.
-    """
-
-
-@dataclass_json(letter_case=LetterCase.CAMEL)
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class Commit:
     """
     Represents a series of events which have been fully committed as a single unit
@@ -186,7 +109,7 @@ class Commit:
     Gets the point in time at which the commit was persisted.
     """
 
-    headers: Dict[str, str]
+    headers: Dict[str, object]
     """
     Gets the metadata which provides additional, unstructured information about this commit.
     """
@@ -200,6 +123,43 @@ class Commit:
     """
     The checkpoint that represents the storage level order.
     """
+
+
+@dataclass(frozen=True, kw_only=True)
+class Snapshot:
+    """
+    Represents a materialized view of a stream at specific revision.
+    """
+
+    bucket_id: str
+    """
+    Gets the value which uniquely identifies the bucket to which the stream belongs.
+    """
+
+    stream_id: str
+    """
+    Gets the value which uniquely identifies the stream to which the snapshot applies.
+    """
+
+    stream_revision: int
+    """
+    Gets the position at which the snapshot applies.
+    """
+
+    payload: Any
+    """
+    Gets the snapshot or materialized view of the stream at the revision indicated.
+    """
+
+    @staticmethod
+    def from_memento(bucket_id: str, memento: Memento) -> 'Snapshot':
+        """
+        Converts the memento to a snapshot which can be persisted.
+        :param bucket_id: The value which uniquely identifies the bucket to which the stream belongs.
+        :param memento:  The memento to be converted.
+        :return:
+        """
+        return Snapshot(bucket_id=bucket_id, stream_id=memento.id, stream_revision=memento.version, payload=memento.payload)
 
 
 class ICommitEvents(ABC):
@@ -310,11 +270,11 @@ class EventStream:
     def create(bucket_id: str, stream_id: str):
         return EventStream(bucket_id, stream_id, 0)
 
-    def add(self, event: DomainEvent):
-        self.uncommitted.append(EventMessage(event, None))
+    def add(self, event: EventMessage):
+        self.uncommitted.append(event)
         self.version += 1
 
-    def set_header(self, key: str, value: str):
+    def set_header(self, key: str, value: object):
         self.uncommitted_headers[key] = value
 
     def set_persisted(self, commit_sequence: int):
@@ -325,14 +285,15 @@ class EventStream:
         self.uncommitted_headers.clear()
 
     def to_commit(self, commit_id: UUID) -> Commit:
-        commit = Commit(self.bucket_id,
-                        self.stream_id,
-                        self.version, commit_id,
-                        self.commit_sequence + 1,
-                        datetime.datetime.now(),
-                        self.uncommitted_headers,
-                        self.uncommitted,
-                        0)
+        commit = Commit(bucket_id=self.bucket_id,
+                        stream_id=self.stream_id,
+                        stream_revision=self.version,
+                        commit_id=commit_id,
+                        commit_sequence=self.commit_sequence + 1,
+                        commit_stamp=datetime.datetime.now(),
+                        headers=self.uncommitted_headers,
+                        events=self.uncommitted,
+                        checkpoint_token=0)
         return commit
 
     def __populate_stream__(
@@ -372,14 +333,14 @@ class EventStream:
         to_be_committed = self.uncommitted.copy()
         self.uncommitted.clear()
         for event in to_be_committed:
-            self.add_event(event.body)
+            self.add(event.body)
 
     def __init__(self, bucket_id: str, stream_id: str, stream_revision: int):
         self.bucket_id = bucket_id
         self.stream_id = stream_id
         self.version = stream_revision
         self.commit_sequence: int = 0
-        self.committed_headers: dict[str, str] = {}
-        self.uncommitted_headers: dict[str, str] = {}
+        self.committed_headers: dict[str, object] = {}
+        self.uncommitted_headers: dict[str, object] = {}
         self.committed: list[EventMessage] = []
         self.uncommitted: list[EventMessage] = []

@@ -1,11 +1,11 @@
 import datetime
-import json
 from uuid import UUID
 
 import boto3
+import jsonpickle
 from boto3.dynamodb.conditions import Key
 
-from aett.eventstore.EventStream import ICommitEvents, EventStream, IAccessSnapshots, Snapshot, EventMessage
+from aett.eventstore.EventStream import ICommitEvents, EventStream, IAccessSnapshots, Snapshot
 
 
 def _get_resource(region: str):
@@ -21,28 +21,32 @@ class CommitStore(ICommitEvents):
         self.dynamodb = _get_resource(region)
         self.table = self.dynamodb.Table(table_name)
 
-    def get(self, bucket_id: str, stream_id: str, min_revision: int, max_revision: int) -> EventStream:
+    def get(self, bucket_id: str, stream_id: str, min_revision: int = 0,
+            max_revision: int = 4_000_000_000) -> EventStream:
         max_revision = 4_000_000_000 if max_revision >= 4_000_000_000 else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
         query_response = self.table.query(
             TableName=self.table_name,
             IndexName="RevisionIndex",
             ConsistentRead=True,
-            ProjectionExpression='Events',
+            ProjectionExpression='CommitSequence,Events',
             KeyConditionExpression=(Key("BucketAndStream").eq(f'{bucket_id}{stream_id}')
                                     & Key("StreamRevision").between(min_revision, max_revision)),
             ScanIndexForward=True)
         items = query_response['Items']
         stream = EventStream.create(bucket_id, stream_id)
+        commit_sequence = 0
         for item in items:
-            evt = EventMessage.schema().loads(item['Events'], many=True)
-            stream.add(evt)
+            evt = jsonpickle.decode(item['Events'])
+            for msg in evt:
+                stream.add(msg)
+            commit_sequence = int(item['CommitSequence'])
+        stream.set_persisted(commit_sequence)
         return stream
 
     def commit(self, event_stream: EventStream, commit_id: UUID):
         try:
             commit = event_stream.to_commit(commit_id)
-            ts = datetime.datetime.now(datetime.UTC).timestamp()
             item = {
                 'BucketAndStream': f'{event_stream.bucket_id}{event_stream.stream_id}',
                 'BucketId': event_stream.bucket_id,
@@ -51,8 +55,8 @@ class CommitStore(ICommitEvents):
                 'CommitId': str(commit_id),
                 'CommitSequence': commit.commit_sequence,
                 'CommitStamp': int(datetime.datetime.now(datetime.UTC).timestamp()),
-                'Headers': json.dumps(commit.headers),
-                'Events': (EventMessage.schema().dumps(commit.events, many=True)),
+                'Headers': jsonpickle.encode(commit.headers),
+                'Events': jsonpickle.encode(commit.events),
             }
             response = self.table.put_item(
                 TableName=self.table_name,
@@ -101,14 +105,15 @@ class SnapshotStore(IAccessSnapshots):
                 TableName=self.table_name,
                 ConsistentRead=True,
                 Limit=1,
-                KeyConditionExpression=(Key("BucketAndStream").eq(f'{bucket_id}{stream_id}') & Key("StreamRevision").lte(version)),
+                KeyConditionExpression=(
+                        Key("BucketAndStream").eq(f'{bucket_id}{stream_id}') & Key("StreamRevision").lte(version)),
                 ScanIndexForward=False
             )
             item = query_response['Items'][0]
-            return Snapshot(item['BucketId'],
-                            item['StreamId'],
-                            int(item['StreamRevision']),
-                            item['Payload'])
+            return Snapshot(bucket_id=item['BucketId'],
+                            stream_id=item['StreamId'],
+                            stream_revision=int(item['StreamRevision']),
+                            payload=jsonpickle.decode(item['Payload']))
         except Exception as e:
             raise Exception(
                 f"Failed to get snapshot for stream {stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}")

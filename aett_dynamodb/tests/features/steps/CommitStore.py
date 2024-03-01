@@ -1,21 +1,13 @@
-import json
-import uuid
 import datetime
-from dataclasses import dataclass
+import uuid
 
 from behave import *
-from dataclasses_json import dataclass_json, LetterCase
 
 from aett.dyanmodb.EventStore import CommitStore
-from aett.eventstore.EventStream import DomainEvent, EventStream, EventMessage
+from aett.eventstore.EventStream import EventStream
+from features.steps.Types import TestEvent
 
 use_step_matcher("re")
-
-
-@dataclass_json(letter_case=LetterCase.CAMEL)
-@dataclass(frozen=True)
-class TestEvent(DomainEvent):
-    pass
 
 
 @step("I have a commit store")
@@ -28,7 +20,7 @@ def step_impl(context):
     context.bucket_id = str(uuid.uuid4())
     context.stream_id = str(uuid.uuid4())
     stream: EventStream = EventStream.create(context.bucket_id, context.stream_id)
-    stream.add(TestEvent('test', datetime.datetime.now(),1))
+    stream.add(TestEvent(id='test', timestamp=datetime.datetime.now(), version=1, value=0))
     context.store.commit(stream, uuid.uuid4())
 
 
