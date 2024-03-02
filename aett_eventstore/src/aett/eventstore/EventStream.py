@@ -335,7 +335,7 @@ class EventStream:
         to_be_committed = self.uncommitted.copy()
         self.uncommitted.clear()
         for event in to_be_committed:
-            self.add(event.body)
+            self.add(event)
 
     def __init__(self, bucket_id: str, stream_id: str, stream_revision: int):
         self.bucket_id = bucket_id

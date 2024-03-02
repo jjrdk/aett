@@ -10,7 +10,7 @@ include = ["aett.domain"]
 
 [project]
 name = "aett-domain"
-version = "0.2.0"
+version = "0.3.0"
 description = "DynamoDB connector for aett event store"
 readme = "README.md"
 authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
@@ -24,7 +24,7 @@ keywords = ["events", "event store", "ddd", "domain"]
 dependencies = [
     'typing >= 3.7.4.3',
     'multipledispatch >= 1.0.0',
-    'aett-eventstore>=0.2.0'
+    'aett-eventstore>=0.3.0'
 ]
 requires-python = ">=3.8"
 
