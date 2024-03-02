@@ -159,7 +159,8 @@ class Snapshot:
         :param memento:  The memento to be converted.
         :return:
         """
-        return Snapshot(bucket_id=bucket_id, stream_id=memento.id, stream_revision=memento.version, payload=memento.payload)
+        return Snapshot(bucket_id=bucket_id, stream_id=memento.id, stream_revision=memento.version,
+                        payload=memento.payload)
 
 
 class ICommitEvents(ABC):
@@ -170,7 +171,8 @@ class ICommitEvents(ABC):
     """
 
     @abstractmethod
-    def get(self, bucket_id: str, stream_id: str, min_revision: int, max_revision: int) -> Iterable[Commit]:
+    def get(self, bucket_id: str, stream_id: str, min_revision: int = 0, max_revision: int = 4_000_000_000) -> (
+            Iterable)[Commit]:
         """
         Gets the corresponding commits from the stream indicated starting at the revision specified until the
         end of the stream sorted in ascending order--from oldest to newest.

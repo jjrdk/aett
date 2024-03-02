@@ -33,10 +33,10 @@ class TestAggregate(Aggregate[TestMemento]):
             TestEvent(value=value, id=self.id, version=self.version,
                       timestamp=datetime.datetime.now(datetime.UTC)))
 
-    def apply(self, event: TestEvent) -> None:
+    def _apply(self, event: TestEvent) -> None:
         self.value = event.value
 
 
 class TestSaga(Saga):
-    def apply(self, event: TestEvent) -> None:
+    def _apply(self, event: TestEvent) -> None:
         pass

@@ -42,7 +42,7 @@ class ExampleAggregate(Aggregate[Memento]):
             SampleEvent(value=value, id=self.id, version=self.version,
                       timestamp=datetime.datetime.now(datetime.UTC)))
 
-    def apply(self, event: SampleEvent) -> None:
+    def _apply(self, event: SampleEvent) -> None:
         """
         The apply method is a convention named method to apply the event to the aggregate. It is called from the raise_event method using multiple dispatch
         """
@@ -65,7 +65,7 @@ class SampleEvent(DomainEvent):
 
     
 class SampleSaga(Saga):
-    def apply(self, event: SampleEvent) -> None:
+    def _apply(self, event: SampleEvent) -> None:
         pass
 
 ```

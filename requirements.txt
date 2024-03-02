@@ -7,3 +7,4 @@ typing~=3.7.4.3
 behave~=1.2.6
 jsonpickle~=3.0.3
 multipledispatch~=1.0.0
+pymongo~=4.6.2

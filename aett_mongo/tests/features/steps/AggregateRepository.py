@@ -1,9 +1,10 @@
 import uuid
 
+import pymongo.database
 from behave import *
 
 from aett.domain.Repositories import DefaultAggregateRepository
-from aett.dyanmodb.EventStore import PersistenceManagement, CommitStore
+from aett.mongodb.EventStore import PersistenceManagement, CommitStore
 from features.steps.Types import TestAggregate
 
 use_step_matcher("re")
@@ -11,13 +12,14 @@ use_step_matcher("re")
 
 @step("I run the setup script")
 def step_impl(context):
-    context.mgmt = PersistenceManagement(region='localhost')
+    context.db = pymongo.database.Database(pymongo.MongoClient('mongodb://localhost:27017'), 'test')
+    context.mgmt = PersistenceManagement(context.db)
     context.mgmt.initialize()
 
 
 @step("a persistent aggregate repository")
 def step_impl(context):
-    context.repository = DefaultAggregateRepository(str(uuid.uuid4()), CommitStore(region='localhost'))
+    context.repository = DefaultAggregateRepository(str(uuid.uuid4()), CommitStore(context.db))
 
 
 @then("a specific aggregate type can be loaded from the repository")

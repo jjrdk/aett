@@ -67,7 +67,7 @@ class Aggregate(ABC, typing.Generic[T]):
         :return:
         """
         # Use multiple dispatch to call the correct apply method
-        self.apply(event)
+        self._apply(event)
         self._version += 1
         self.uncommitted.append(EventMessage(body=event, headers=None))
 
@@ -97,7 +97,7 @@ class Saga(ABC):
         :return: None
         """
         # Use multiple dispatch to call the correct apply method
-        self.apply(event)
+        self._apply(event)
         self.uncommitted.append(EventMessage(body=event, headers=self._headers))
         self._version += 1
 

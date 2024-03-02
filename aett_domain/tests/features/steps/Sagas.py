@@ -13,7 +13,7 @@ class TestSaga(Saga):
     def __init__(self, stream: EventStream):
         super().__init__(stream)
 
-    def apply(self, event: TestEvent):
+    def _apply(self, event: TestEvent):
         pass
 
 

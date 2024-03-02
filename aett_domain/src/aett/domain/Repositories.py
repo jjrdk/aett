@@ -2,11 +2,10 @@ import typing
 import uuid
 
 from aett.domain.Domain import AggregateRepository, Aggregate, SagaRepository, Saga
-from aett.dyanmodb.EventStore import CommitStore
-from aett.eventstore.EventStream import EventStream
+from aett.eventstore.EventStream import EventStream, ICommitEvents
 
 
-class DynamoAggregateRepository(AggregateRepository):
+class DefaultAggregateRepository(AggregateRepository):
     TAggregate = typing.TypeVar('TAggregate', bound=Aggregate)
 
     def get(self, cls: typing.Type[TAggregate], id: str, version: int) -> TAggregate:
@@ -22,15 +21,15 @@ class DynamoAggregateRepository(AggregateRepository):
             stream.add(event)
         self._store.commit(stream, uuid.uuid4())
 
-    def __init__(self, bucket_id: str, store: CommitStore):
+    def __init__(self, bucket_id: str, store: ICommitEvents):
         self._bucket_id = bucket_id
         self._store = store
 
 
-class DynamoSagaRepository(SagaRepository):
+class DefaultSagaRepository(SagaRepository):
     TSaga = typing.TypeVar('TSaga', bound=Saga)
 
-    def __init__(self, bucket_id: str, store: CommitStore):
+    def __init__(self, bucket_id: str, store: ICommitEvents):
         self._bucket_id = bucket_id
         self._store = store
 
