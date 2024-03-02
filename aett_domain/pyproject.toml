@@ -23,7 +23,6 @@ classifiers = [
 keywords = ["events", "event store", "ddd", "domain"]
 dependencies = [
     'typing >= 3.7.4.3',
-    'tomli; python_version >= "3.8"',
     'multipledispatch >= 1.0.0',
     'aett-eventstore>=0.2.0'
 ]

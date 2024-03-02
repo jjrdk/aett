@@ -16,3 +16,15 @@ mgmt.initialize()
 # Drop the store
 mgmt.drop()
 ```
+
+The package also provides `CommitStore` and `SnapshotStore` classes that can be used to store and retrieve events. They
+can be instantiated by providing AWS credentials and specifying the configured table name and region. If `localhost` is
+set as region, then the stores assume a server running at `http://localhost:8000`.
+
+```python
+from aett.dynamodb.EventStore import CommitStore, SnapshotStore
+
+commit_store = CommitStore()
+
+snapshot_store = SnapshotStore()
+```

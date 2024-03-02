@@ -23,7 +23,6 @@ classifiers = [
 keywords = ["events", "event store", "dynamodb"]
 dependencies = [
     'typing >= 3.7.4.3',
-    'tomli; python_version >= "3.8"',
     'jsonpickle >= 3.0.3',
     'aett-domain >= 0.2.0',
 ]
