@@ -40,6 +40,13 @@ jobs:
     - name: Clean folder
       run: |
         rm -rf ./dist
+    - name: Build package domain
+      run: python -m build -o ./dist ./aett_domain
+    - name: Publish package
+      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
     - name: Build package dynamodb
       run: python -m build -o ./dist ./aett_dynamodb
     - name: Publish package
@@ -50,10 +57,13 @@ jobs:
     - name: Clean folder again
       run: |
         rm -rf ./dist
-    - name: Build package domain
-      run: python -m build -o ./dist ./aett_domain
+    - name: Build package mongodb
+      run: python -m build -o ./dist ./aett_mongo
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
+    - name: Clean folder again
+      run: |
+        rm -rf ./dist
