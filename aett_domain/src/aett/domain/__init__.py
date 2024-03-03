@@ -1,8 +1,9 @@
+import inspect
 import typing
 import uuid
 from abc import ABC, abstractmethod
 
-from aett.eventstore import EventStream, EventMessage, Memento, DomainEvent, BaseEvent, ICommitEvents, IAccessSnapshots
+from aett.eventstore import EventStream, EventMessage, Memento, DomainEvent, BaseEvent, ICommitEvents
 
 T = typing.TypeVar('T', bound=Memento)
 
@@ -116,7 +117,7 @@ class AggregateRepository(ABC):
     TAggregate = typing.TypeVar('TAggregate', bound=Aggregate)
 
     @abstractmethod
-    def get(self, cls: typing.Type[TAggregate], stream_id: str, max_version: int = 2**32) -> TAggregate:
+    def get(self, cls: typing.Type[TAggregate], stream_id: str, max_version: int = 2 ** 32) -> TAggregate:
         pass
 
     @abstractmethod
@@ -134,26 +135,6 @@ class SagaRepository(ABC):
     @abstractmethod
     def save(self, saga: Saga) -> None:
         pass
-
-
-class ConflictDetector:
-    def __init__(self, delegates: typing.List[typing.Callable[[BaseEvent, BaseEvent], bool]]):
-        self.delegates: typing.Dict[
-            typing.Type, typing.Dict[typing.Type, typing.Callable[[BaseEvent, BaseEvent], bool]]] = typing.Dict[
-            typing.Type, typing.Dict[typing.Type, typing.Callable[[BaseEvent, BaseEvent], bool]]]()
-        for delegate in delegates:
-            if delegate[0] not in self.delegates:
-                self.delegates[delegate[0]] = typing.Dict[typing.Type, typing.Callable[[BaseEvent, BaseEvent], bool]]()
-            self.delegates[delegate[0]][delegate[1]] = delegate
-
-    def conflicts_with(self,
-                       uncommitted_events: typing.Iterable[BaseEvent],
-                       committed_events: typing.Iterable[BaseEvent]) -> bool:
-        for uncommitted in uncommitted_events:
-            for committed in committed_events:
-                if type(uncommitted) in self.delegates and type(committed) in self.delegates[type(uncommitted)]:
-                    if self.delegates[type(uncommitted)][type(committed)](uncommitted, committed):
-                        return True
 
 
 class DefaultAggregateRepository(AggregateRepository):
@@ -195,7 +176,40 @@ class DefaultSagaRepository(SagaRepository):
         return saga
 
     def save(self, saga: TSaga) -> None:
-        stream = EventStream.load(bucket_id=self._bucket_id, stream_id=saga.id,client=self._store)
+        stream = EventStream.load(bucket_id=self._bucket_id, stream_id=saga.id, client=self._store)
         for event in saga.uncommitted:
             stream.add(event)
         self._store.commit(stream, uuid.uuid4())
+
+
+TUncommitted = typing.TypeVar('TUncommitted', bound=BaseEvent)
+TCommitted = typing.TypeVar('TCommitted', bound=BaseEvent)
+
+
+class ConflictDelegate(ABC, typing.Generic[TUncommitted, TCommitted]):
+    def detect(self, uncommitted: TUncommitted, committed: TCommitted) -> bool:
+        pass
+
+
+class ConflictDetector:
+    def __init__(self, delegates: typing.List[ConflictDelegate] = None):
+        self.delegates: typing.Dict[
+            typing.Type, typing.Dict[typing.Type, typing.Callable[[BaseEvent, BaseEvent], bool]]] = {}
+        if delegates is not None:
+            for delegate in delegates:
+                args = inspect.getfullargspec(delegate.detect)
+                uncommitted_type = args.annotations[args.args[1]]
+                committed_type = args.annotations[args.args[2]]
+                if uncommitted_type not in self.delegates:
+                    self.delegates[uncommitted_type] = {}
+                self.delegates[uncommitted_type][committed_type] = delegate.detect
+
+    def conflicts_with(self,
+                       uncommitted_events: typing.Iterable[BaseEvent],
+                       committed_events: typing.Iterable[BaseEvent]) -> bool:
+        for uncommitted in uncommitted_events:
+            for committed in committed_events:
+                if type(uncommitted) in self.delegates and type(committed) in self.delegates[type(uncommitted)]:
+                    if self.delegates[type(uncommitted)][type(committed)](uncommitted, committed):
+                        return True
+        return False
