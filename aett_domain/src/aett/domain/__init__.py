@@ -17,16 +17,10 @@ class Aggregate(ABC, typing.Generic[T]):
     of the event relies on multiple dispatch to call the correct apply method in the subclass.
     """
 
-    def __init__(self, stream: EventStream, memento: T = None):
+    def __init__(self, stream_id: str):
         self.uncommitted: typing.List[EventMessage] = []
-        self._id = stream.stream_id
+        self._id = stream_id
         self._version = 0
-        if memento is not None:
-            self.apply_memento(memento)
-            self._version = memento.version
-        for event in stream.committed:
-            if isinstance(event.body, DomainEvent):
-                self.raise_event(event.body)
         self.uncommitted.clear()
 
     @property
@@ -141,10 +135,11 @@ class DefaultAggregateRepository(AggregateRepository):
     TAggregate = typing.TypeVar('TAggregate', bound=Aggregate)
 
     def get(self, cls: typing.Type[TAggregate], stream_id: str, version: int = 2 ** 32) -> TAggregate:
-        stream = EventStream.load(bucket_id=self._bucket_id, stream_id=stream_id, client=self._store,
-                                  max_version=version)
-        # self._store.get(bucket_id=self._bucket_id, stream_id=stream_id, min_revision=0, max_revision=version))
-        aggregate = cls(stream, None)
+        commits = self._store.get(bucket_id=self._bucket_id, stream_id=stream_id, min_revision=0, max_revision=version)
+        aggregate = cls(stream_id)
+        for commit in commits:
+            for event in commit.events:
+                aggregate.raise_event(event.body)
         return aggregate
 
     def save(self, aggregate: TAggregate) -> None:

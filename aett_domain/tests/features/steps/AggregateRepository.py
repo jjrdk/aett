@@ -2,7 +2,7 @@ import typing
 from behave import *
 
 from aett.domain import AggregateRepository, Aggregate
-from aett.eventstore import EventStream
+from aett.eventstore import EventStream, MAX_INT
 from aett_domain.tests.features.steps.Types import TestAggregate
 
 use_step_matcher("re")
@@ -14,9 +14,11 @@ class TestAggregateRepository(AggregateRepository):
     def __init__(self, storage: {}):
         self.storage: dict = storage
 
-    def get(self, cls: typing.Type[TAggregate], identifier: str, version: int) -> TestAggregate:
+    def get(self, cls: typing.Type[TAggregate], identifier: str, version: int = MAX_INT) -> TestAggregate:
         m = self.storage.get(identifier)
-        return cls(EventStream.create('bucket', identifier), m)
+        agg = cls(identifier)
+        agg.apply_memento(m)
+        return agg
 
     def save(self, aggregate: TAggregate) -> None:
         self.storage[aggregate.id] = aggregate.get_memento()
@@ -31,13 +33,13 @@ def step_impl(context):
 
 @then("a specific aggregate type can be loaded from the repository")
 def step_impl(context):
-    aggregate = context.repository.get(TestAggregate, "test", 0)
+    aggregate = context.repository.get(TestAggregate, "test")
     assert isinstance(aggregate, TestAggregate)
 
 
 @step("an aggregate is loaded from the repository and modified")
 def step_impl(context):
-    aggregate: TestAggregate = context.repository.get(TestAggregate, "test", 0)
+    aggregate: TestAggregate = context.repository.get(TestAggregate, "test")
     aggregate.set_value(10)
     context.aggregate = aggregate
 

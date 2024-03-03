@@ -22,13 +22,13 @@ def step_impl(context):
 
 @then("a specific aggregate type can be loaded from the repository")
 def step_impl(context):
-    aggregate = context.repository.get(TestAggregate, "test", 0)
+    aggregate = context.repository.get(TestAggregate, "test")
     assert isinstance(aggregate, TestAggregate)
 
 
 @step("an aggregate is loaded from the repository and modified")
 def step_impl(context):
-    aggregate: TestAggregate = context.repository.get(TestAggregate, "test", 0)
+    aggregate: TestAggregate = context.repository.get(TestAggregate, "test")
     aggregate.set_value(10)
     context.aggregate = aggregate
 

@@ -2,7 +2,7 @@ import datetime
 from dataclasses import dataclass
 
 from aett.domain import Aggregate, Saga
-from aett.eventstore import DomainEvent, Memento, EventStream
+from aett.eventstore import DomainEvent, Memento
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -16,9 +16,9 @@ class TestMemento(Memento):
 
 
 class TestAggregate(Aggregate[TestMemento]):
-    def __init__(self, event_stream: EventStream, memento: TestMemento = None):
+    def __init__(self, stream_id: str):
         self.value = 0
-        super().__init__(event_stream, memento)
+        super().__init__(stream_id=stream_id)
 
     def apply_memento(self, memento: TestMemento) -> None:
         if self.id != memento.id:

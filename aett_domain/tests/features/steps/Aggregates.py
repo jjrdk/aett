@@ -33,13 +33,8 @@ def step_impl(context):
 
 @given("an aggregate")
 def step_impl(context):
-    msgs = []
-    if hasattr(context, 'events'):
-        msgs = context.events
-    stream = EventStream.create('test', 'test')
-    for m in msgs:
-        stream.add(m)
-    context.aggregate = TestAggregate(stream, None)
+    agg = TestAggregate('test')
+    context.aggregate = agg
 
 
 @when("the events are applied to the aggregate")
