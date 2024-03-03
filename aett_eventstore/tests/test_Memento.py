@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from aett.eventstore.EventStream import Memento
+from aett.eventstore import Memento
 
 
 class TestMemento(TestCase):

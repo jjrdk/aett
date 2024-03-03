@@ -1,7 +1,7 @@
 from behave import *
 import subprocess
 
-from aett.dyanmodb.EventStore import PersistenceManagement
+from aett.dyanmodb import PersistenceManagement
 
 use_step_matcher("re")
 

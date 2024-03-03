@@ -3,8 +3,8 @@ import typing
 
 from behave import *
 
-from aett.domain.Domain import SagaRepository, Saga
-from aett.eventstore.EventStream import EventStream
+from aett.domain import SagaRepository, Saga
+from aett.eventstore import EventStream
 from aett_domain.tests.features.steps.Types import TestSaga, TestEvent
 
 use_step_matcher("re")
@@ -47,7 +47,7 @@ def step_impl(context):
 @when("a saga is loaded from the repository and modified")
 def step_impl(context):
     saga = context.repository.get(TestSaga, 'test')
-    saga.transition(TestEvent(value=1, id='test', version=0, timestamp=datetime.datetime.now(datetime.UTC)))
+    saga.transition(TestEvent(value=1, source='test', version=0, timestamp=datetime.datetime.now(datetime.UTC)))
     context.saga = saga
 
 

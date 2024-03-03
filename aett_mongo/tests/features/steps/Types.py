@@ -1,8 +1,8 @@
 import datetime
 from dataclasses import dataclass
 
-from aett.domain.Domain import Aggregate, Saga
-from aett.eventstore.EventStream import DomainEvent, Memento, EventStream
+from aett.domain import Aggregate, Saga
+from aett.eventstore import DomainEvent, Memento, EventStream
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -30,7 +30,7 @@ class TestAggregate(Aggregate[TestMemento]):
 
     def set_value(self, value: int) -> None:
         self.raise_event(
-            TestEvent(value=value, id=self.id, version=self.version, timestamp=datetime.datetime.now(datetime.UTC)))
+            TestEvent(value=value, source=self.id, version=self.version, timestamp=datetime.datetime.now(datetime.UTC)))
 
     def _apply(self, event: TestEvent) -> None:
         self.value = event.value

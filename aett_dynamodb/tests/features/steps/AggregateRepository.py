@@ -2,8 +2,8 @@ import uuid
 
 from behave import *
 
-from aett.domain.Repositories import DefaultAggregateRepository
-from aett.dyanmodb.EventStore import PersistenceManagement, CommitStore
+from aett.domain import DefaultAggregateRepository
+from aett.dyanmodb import PersistenceManagement, CommitStore
 from features.steps.Types import TestAggregate
 
 use_step_matcher("re")
@@ -40,13 +40,13 @@ def step_impl(context):
 
 @then("the modified is saved to storage")
 def step_impl(context):
-    m = context.repository.get(TestAggregate, "test", 0)
+    m = context.repository.get(TestAggregate, "test")
     assert m.value == 10
 
 
 @step("loaded again")
 def step_impl(context):
-    a = context.repository.get(TestAggregate, "test", 0)
+    a = context.repository.get(TestAggregate, "test")
     context.aggregate = a
 
 

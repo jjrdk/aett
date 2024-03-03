@@ -4,12 +4,11 @@ from typing import Iterable
 from unittest import TestCase
 from uuid import UUID
 
-from aett.eventstore.EventStream import DomainEvent, EventStream, Commit, ICommitEvents, EventMessage
+from aett.eventstore import DomainEvent, EventStream, Commit, ICommitEvents, EventMessage
 
 
 class TestEvent(DomainEvent):
-    def __init__(self):
-        super().__init__(id="a", timestamp=datetime.datetime.now(datetime.UTC), version=0)
+    pass
 
 
 class TestEventStore(ICommitEvents):
@@ -20,7 +19,9 @@ class TestEventStore(ICommitEvents):
         return [
             Commit(bucket_id=bucket_id, stream_id=stream_id, stream_revision=1, commit_id=uuid.uuid4(),
                    commit_sequence=1, commit_stamp=datetime.datetime.now(), headers={},
-                   events=[EventMessage(body=TestEvent())], checkpoint_token=1)]
+                   events=[EventMessage(
+                       body=TestEvent(source='test', timestamp=datetime.datetime.now(datetime.UTC), version=1))],
+                   checkpoint_token=1)]
 
 
 class TestEventStream(TestCase):
@@ -39,7 +40,7 @@ class TestEventStream(TestCase):
 
     def test_add_event(self):
         stream = EventStream.create('bucket', 'stream')
-        stream.add(EventMessage(body=TestEvent()))
+        stream.add(EventMessage(body=TestEvent(source='test', timestamp=datetime.datetime.now(), version=1)))
         self.assertEqual(stream.version, 1)
 
     def test_add_header(self):

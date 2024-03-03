@@ -3,8 +3,8 @@ import uuid
 
 from behave import *
 
-from aett.mongodb.EventStore import CommitStore
-from aett.eventstore.EventStream import EventStream, EventMessage
+from aett.mongodb import CommitStore
+from aett.eventstore import EventStream, EventMessage
 from features.steps.Types import TestEvent
 
 use_step_matcher("re")
@@ -20,12 +20,12 @@ def step_impl(context):
     context.bucket_id = str(uuid.uuid4())
     context.stream_id = str(uuid.uuid4())
     stream: EventStream = EventStream.create(context.bucket_id, context.stream_id)
-    stream.add(EventMessage(body=TestEvent(id='test', timestamp=datetime.datetime.now(), version=1, value=0)))
+    stream.add(EventMessage(body=TestEvent(source='test', timestamp=datetime.datetime.now(), version=1, value=0)))
     context.store.commit(stream, uuid.uuid4())
 
 
 @then("the event is persisted to the store")
 def step_impl(context):
     store: CommitStore = context.store
-    stream: EventStream = store.get(context.bucket_id, context.stream_id, 0, 1)
-    assert stream.version == 1
+    stream = [commit for commit in store.get(context.bucket_id, context.stream_id, 0, 1)]
+    assert stream[0].events[0].body.version == 1

@@ -1,7 +1,8 @@
 import typing
+import uuid
 from abc import ABC, abstractmethod
 
-from aett.eventstore.EventStream import EventStream, EventMessage, Memento, DomainEvent, BaseEvent
+from aett.eventstore import EventStream, EventMessage, Memento, DomainEvent, BaseEvent, ICommitEvents, IAccessSnapshots
 
 T = typing.TypeVar('T', bound=Memento)
 
@@ -115,7 +116,7 @@ class AggregateRepository(ABC):
     TAggregate = typing.TypeVar('TAggregate', bound=Aggregate)
 
     @abstractmethod
-    def get(self, cls: typing.Type[TAggregate], id: str, version: int) -> TAggregate:
+    def get(self, cls: typing.Type[TAggregate], stream_id: str, max_version: int = 2**32) -> TAggregate:
         pass
 
     @abstractmethod
@@ -127,9 +128,74 @@ class SagaRepository(ABC):
     TSaga = typing.TypeVar('TSaga', bound=Saga)
 
     @abstractmethod
-    def get(self, cls: typing.Type[TSaga], id: str) -> TSaga:
+    def get(self, cls: typing.Type[TSaga], stream_id: str) -> TSaga:
         pass
 
     @abstractmethod
     def save(self, saga: Saga) -> None:
         pass
+
+
+class ConflictDetector:
+    def __init__(self, delegates: typing.List[typing.Callable[[BaseEvent, BaseEvent], bool]]):
+        self.delegates: typing.Dict[
+            typing.Type, typing.Dict[typing.Type, typing.Callable[[BaseEvent, BaseEvent], bool]]] = typing.Dict[
+            typing.Type, typing.Dict[typing.Type, typing.Callable[[BaseEvent, BaseEvent], bool]]]()
+        for delegate in delegates:
+            if delegate[0] not in self.delegates:
+                self.delegates[delegate[0]] = typing.Dict[typing.Type, typing.Callable[[BaseEvent, BaseEvent], bool]]()
+            self.delegates[delegate[0]][delegate[1]] = delegate
+
+    def conflicts_with(self,
+                       uncommitted_events: typing.Iterable[BaseEvent],
+                       committed_events: typing.Iterable[BaseEvent]) -> bool:
+        for uncommitted in uncommitted_events:
+            for committed in committed_events:
+                if type(uncommitted) in self.delegates and type(committed) in self.delegates[type(uncommitted)]:
+                    if self.delegates[type(uncommitted)][type(committed)](uncommitted, committed):
+                        return True
+
+
+class DefaultAggregateRepository(AggregateRepository):
+    TAggregate = typing.TypeVar('TAggregate', bound=Aggregate)
+
+    def get(self, cls: typing.Type[TAggregate], stream_id: str, version: int = 2 ** 32) -> TAggregate:
+        stream = EventStream.load(bucket_id=self._bucket_id, stream_id=stream_id, client=self._store,
+                                  max_version=version)
+        # self._store.get(bucket_id=self._bucket_id, stream_id=stream_id, min_revision=0, max_revision=version))
+        aggregate = cls(stream, None)
+        return aggregate
+
+    def save(self, aggregate: TAggregate) -> None:
+        if len(aggregate.uncommitted) == 0:
+            return
+        stream = EventStream.load(bucket_id=self._bucket_id,
+                                  stream_id=aggregate.id,
+                                  client=self._store,
+                                  max_version=2 ** 32)
+        for event in aggregate.uncommitted:
+            stream.add(event)
+        self._store.commit(stream, uuid.uuid4())
+
+    def __init__(self, bucket_id: str, store: ICommitEvents):
+        self._bucket_id = bucket_id
+        self._store = store
+
+
+class DefaultSagaRepository(SagaRepository):
+    TSaga = typing.TypeVar('TSaga', bound=Saga)
+
+    def __init__(self, bucket_id: str, store: ICommitEvents):
+        self._bucket_id = bucket_id
+        self._store = store
+
+    def get(self, cls: typing.Type[TSaga], stream_id: str) -> TSaga:
+        stream = EventStream.load(bucket_id=self._bucket_id, stream_id=stream_id, client=self._store)
+        saga = cls(stream)
+        return saga
+
+    def save(self, saga: TSaga) -> None:
+        stream = EventStream.load(bucket_id=self._bucket_id, stream_id=saga.id,client=self._store)
+        for event in saga.uncommitted:
+            stream.add(event)
+        self._store.commit(stream, uuid.uuid4())

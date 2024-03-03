@@ -2,7 +2,7 @@ import pymongo.database
 from behave import *
 import subprocess
 
-from aett.mongodb.EventStore import PersistenceManagement
+from aett.mongodb import PersistenceManagement
 
 use_step_matcher("re")
 

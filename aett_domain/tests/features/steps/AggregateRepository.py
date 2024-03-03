@@ -1,8 +1,8 @@
 import typing
 from behave import *
 
-from aett.domain.Domain import AggregateRepository, Aggregate
-from aett.eventstore.EventStream import EventStream
+from aett.domain import AggregateRepository, Aggregate
+from aett.eventstore import EventStream
 from aett_domain.tests.features.steps.Types import TestAggregate
 
 use_step_matcher("re")

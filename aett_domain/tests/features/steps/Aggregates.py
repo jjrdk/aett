@@ -3,7 +3,7 @@ import datetime
 import jsonpickle.pickler
 from behave import *
 
-from aett.eventstore.EventStream import EventMessage, EventStream
+from aett.eventstore import EventMessage, EventStream
 from aett_domain.tests.features.steps.Types import TestEvent, TestAggregate
 
 use_step_matcher("re")
@@ -12,7 +12,7 @@ use_step_matcher("re")
 @when("an event is applied to the aggregate")
 def step_impl(context):
     a: TestAggregate = context.aggregate
-    a.raise_event(TestEvent(id='test', timestamp=datetime.datetime.now(datetime.UTC), version=1, value=1))
+    a.raise_event(TestEvent(source='test', timestamp=datetime.datetime.now(datetime.UTC), version=1, value=1))
 
 
 @then("the aggregate version is (\\d+)")
@@ -23,8 +23,8 @@ def step_impl(context, version: str):
 
 @given("a deserialized stream of events")
 def step_impl(context):
-    event1: TestEvent = TestEvent(id='test', timestamp=datetime.datetime.now(datetime.UTC), version=1, value=1)
-    event2: TestEvent = TestEvent(id='test', timestamp=datetime.datetime.now(datetime.UTC), version=2, value=1)
+    event1: TestEvent = TestEvent(source='test', timestamp=datetime.datetime.now(datetime.UTC), version=1, value=1)
+    event2: TestEvent = TestEvent(source='test', timestamp=datetime.datetime.now(datetime.UTC), version=2, value=1)
     msgs = [EventMessage(body=event1, headers=None),
             EventMessage(body=event2, headers=None)]
     j = jsonpickle.encode(msgs)
