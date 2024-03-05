@@ -64,6 +64,11 @@ class EventMessage:
     Represents a single event message within a commit.
     """
 
+    topic: str
+    """
+    Gets the topic of the event message, which will give a type hint of the payload.
+    """
+
     body: BaseEvent
     """
     Gets the body of the event message.

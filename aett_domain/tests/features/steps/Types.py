@@ -20,7 +20,7 @@ class TestAggregate(Aggregate[TestMemento]):
         self.value = 0
         super().__init__(stream_id=stream_id)
 
-    def apply_memento(self, memento: TestMemento | None) -> None:
+    def apply_memento(self, memento: TestMemento) -> None:
         if memento is None:
             return
         if self.id != memento.id:

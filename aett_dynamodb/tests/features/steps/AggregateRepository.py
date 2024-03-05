@@ -3,7 +3,7 @@ import uuid
 from behave import *
 
 from aett.domain import DefaultAggregateRepository
-from aett.dyanmodb import PersistenceManagement, CommitStore
+from aett.dyanmodb import PersistenceManagement, CommitStore, SnapshotStore
 from features.steps.Types import TestAggregate
 
 use_step_matcher("re")
@@ -17,7 +17,8 @@ def step_impl(context):
 
 @step("a persistent aggregate repository")
 def step_impl(context):
-    context.repository = DefaultAggregateRepository(str(uuid.uuid4()), CommitStore(region='localhost'))
+    context.repository = DefaultAggregateRepository(str(uuid.uuid4()), CommitStore(region='localhost'),
+                                                    SnapshotStore(region='localhost'))
 
 
 @then("a specific aggregate type can be loaded from the repository")

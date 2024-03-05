@@ -6,7 +6,7 @@ import boto3
 import jsonpickle
 from boto3.dynamodb.conditions import Key
 
-from aett.eventstore import ICommitEvents, EventStream, IAccessSnapshots, Snapshot, Commit
+from aett.eventstore import ICommitEvents, EventStream, IAccessSnapshots, Snapshot, Commit, MAX_INT
 
 
 def _get_resource(region: str):
@@ -23,8 +23,8 @@ class CommitStore(ICommitEvents):
         self.table = self.dynamodb.Table(table_name)
 
     def get(self, bucket_id: str, stream_id: str, min_revision: int = 0,
-            max_revision: int = 4_000_000_000) -> typing.Iterable[Commit]:
-        max_revision = 4_000_000_000 if max_revision >= 4_000_000_000 else max_revision + 1
+            max_revision: int = MAX_INT) -> typing.Iterable[Commit]:
+        max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
         query_response = self.table.query(
             TableName=self.table_name,
@@ -102,16 +102,18 @@ class SnapshotStore(IAccessSnapshots):
         self.table = self.dynamodb.Table(table_name)
         self.table_name = table_name
 
-    def get(self, bucket_id: str, stream_id: str, version: int) -> Snapshot:
+    def get(self, bucket_id: str, stream_id: str, max_revision: int = MAX_INT) -> Snapshot | None:
         try:
             query_response = self.table.query(
                 TableName=self.table_name,
                 ConsistentRead=True,
                 Limit=1,
                 KeyConditionExpression=(
-                        Key("BucketAndStream").eq(f'{bucket_id}{stream_id}') & Key("StreamRevision").lte(version)),
+                        Key("BucketAndStream").eq(f'{bucket_id}{stream_id}') & Key("StreamRevision").lte(max_revision)),
                 ScanIndexForward=False
             )
+            if len(query_response['Items']) == 0:
+                return None
             item = query_response['Items'][0]
             return Snapshot(bucket_id=item['BucketId'],
                             stream_id=item['StreamId'],
@@ -155,7 +157,7 @@ class PersistenceManagement:
         tables = self.dynamodb.tables.all()
         table_names = [table.name for table in tables]
         if self.commits_table_name not in table_names:
-            commits_response = self.dynamodb.create_table(
+            _ = self.dynamodb.create_table(
                 TableName=self.commits_table_name,
                 KeySchema=[
                     {'AttributeName': 'BucketAndStream', 'KeyType': 'HASH'},
@@ -180,7 +182,7 @@ class PersistenceManagement:
                 ProvisionedThroughput={"ReadCapacityUnits": 10, "WriteCapacityUnits": 10, })
 
         if self.snapshots_table_name not in table_names:
-            snapshots_response = self.dynamodb.create_table(
+            _ = self.dynamodb.create_table(
                 TableName=self.snapshots_table_name,
                 KeySchema=[
                     {'AttributeName': 'BucketAndStream', 'KeyType': 'HASH'},

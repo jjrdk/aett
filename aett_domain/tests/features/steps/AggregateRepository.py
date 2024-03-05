@@ -1,3 +1,4 @@
+import inspect
 import typing
 from behave import *
 
@@ -11,10 +12,14 @@ use_step_matcher("re")
 class TestAggregateRepository(AggregateRepository):
     TAggregate = typing.TypeVar('TAggregate', bound=Aggregate)
 
+    def snapshot(self, cls: typing.Type[TAggregate], stream_id: str, version: int) -> None:
+        pass
+
     def __init__(self, storage: {}):
         self.storage: dict = storage
 
     def get(self, cls: typing.Type[TAggregate], identifier: str, version: int = MAX_INT) -> TestAggregate:
+        memento_type: typing.Union = inspect.signature(cls.apply_memento).parameters['memento'].annotation
         m = self.storage.get(identifier)
         agg = cls(identifier)
         agg.apply_memento(m)

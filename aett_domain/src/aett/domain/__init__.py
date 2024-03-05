@@ -1,9 +1,7 @@
 import inspect
-import typing
 import uuid
-from abc import ABC, abstractmethod
 
-from aett.eventstore import EventStream, EventMessage, Memento, DomainEvent, BaseEvent, ICommitEvents
+from aett.eventstore import *
 
 T = typing.TypeVar('T', bound=Memento)
 
@@ -65,7 +63,7 @@ class Aggregate(ABC, typing.Generic[T]):
         # Use multiple dispatch to call the correct apply method
         self._apply(event)
         self._version += 1
-        self.uncommitted.append(EventMessage(body=event, headers=None))
+        self.uncommitted.append(EventMessage(body=event, topic=event.__class__.__name__, headers=None))
 
 
 class Saga(ABC):
@@ -94,7 +92,7 @@ class Saga(ABC):
         """
         # Use multiple dispatch to call the correct apply method
         self._apply(event)
-        self.uncommitted.append(EventMessage(body=event, headers=self._headers))
+        self.uncommitted.append(EventMessage(body=event, headers=self._headers, topic=event.__class__.__name__))
         self._version += 1
 
     def dispatch(self, command: T) -> None:
@@ -118,6 +116,10 @@ class AggregateRepository(ABC):
     def save(self, aggregate: T) -> None:
         pass
 
+    @abstractmethod
+    def snapshot(self, cls: typing.Type[TAggregate], stream_id: str, version: int) -> None:
+        pass
+
 
 class SagaRepository(ABC):
     TSaga = typing.TypeVar('TSaga', bound=Saga)
@@ -134,9 +136,20 @@ class SagaRepository(ABC):
 class DefaultAggregateRepository(AggregateRepository):
     TAggregate = typing.TypeVar('TAggregate', bound=Aggregate)
 
-    def get(self, cls: typing.Type[TAggregate], stream_id: str, version: int = 2 ** 32) -> TAggregate:
-        commits = self._store.get(bucket_id=self._bucket_id, stream_id=stream_id, min_revision=0, max_revision=version)
+    def get(self, cls: typing.Type[TAggregate], stream_id: str, max_version: int = 2 ** 32) -> TAggregate:
+        memento_type = inspect.signature(cls.apply_memento).parameters['memento'].annotation
+        snapshot = self._snapshot_store.get(bucket_id=self._bucket_id, stream_id=stream_id, max_revision=max_version)
+        min_version = 0
+        if snapshot is not None:
+            min_version = snapshot.stream_revision
+        commits = self._store.get(bucket_id=self._bucket_id,
+                                  stream_id=stream_id,
+                                  min_revision=min_version,
+                                  max_revision=max_version)
+
         aggregate = cls(stream_id)
+        if snapshot is not None:
+            aggregate.apply_memento(memento_type(**jsonpickle.decode(snapshot.payload)))
         for commit in commits:
             for event in commit.events:
                 aggregate.raise_event(event.body)
@@ -153,9 +166,17 @@ class DefaultAggregateRepository(AggregateRepository):
             stream.add(event)
         self._store.commit(stream, uuid.uuid4())
 
-    def __init__(self, bucket_id: str, store: ICommitEvents):
+    def snapshot(self, cls: typing.Type[TAggregate], stream_id: str, version: int = MAX_INT) -> None:
+        agg = self.get(cls, stream_id, version)
+        memento = agg.get_memento()
+        snapshot = Snapshot(bucket_id=self._bucket_id, stream_id=stream_id, payload=jsonpickle.encode(memento.payload),
+                            stream_revision=memento.version)
+        self._snapshot_store.add(snapshot)
+
+    def __init__(self, bucket_id: str, store: ICommitEvents, snapshot_store: IAccessSnapshots):
         self._bucket_id = bucket_id
         self._store = store
+        self._snapshot_store = snapshot_store
 
 
 class DefaultSagaRepository(SagaRepository):

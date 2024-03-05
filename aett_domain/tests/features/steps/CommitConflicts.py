@@ -39,7 +39,7 @@ def step_impl(context):
     committed = map(convert_row, context.table)
     stream = EventStream.create('test', 'stream')
     for event in committed:
-        stream.add(EventMessage(body=event))
+        stream.add(EventMessage(body=event, topic=event.__class__.__name__))
     stream.set_persisted(1)
     context.stream = stream
 
@@ -48,7 +48,7 @@ def step_impl(context):
 def step_impl(context):
     new_rows = map(convert_row, context.table)
     for event in new_rows:
-        context.stream.add(EventMessage(body=event))
+        context.stream.add(EventMessage(body=event, topic=event.__class__.__name__))
 
 
 @then("I should see no conflicting commits")

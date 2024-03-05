@@ -20,7 +20,8 @@ class TestEventStore(ICommitEvents):
             Commit(bucket_id=bucket_id, stream_id=stream_id, stream_revision=1, commit_id=uuid.uuid4(),
                    commit_sequence=1, commit_stamp=datetime.datetime.now(), headers={},
                    events=[EventMessage(
-                       body=TestEvent(source='test', timestamp=datetime.datetime.now(datetime.UTC), version=1))],
+                       body=TestEvent(source='test', timestamp=datetime.datetime.now(datetime.UTC), version=1),
+                       topic='TestEvent')],
                    checkpoint_token=1)]
 
 
@@ -40,7 +41,8 @@ class TestEventStream(TestCase):
 
     def test_add_event(self):
         stream = EventStream.create('bucket', 'stream')
-        stream.add(EventMessage(body=TestEvent(source='test', timestamp=datetime.datetime.now(), version=1)))
+        stream.add(EventMessage(body=TestEvent(source='test', timestamp=datetime.datetime.now(), version=1),
+                                topic='TestEvent'))
         self.assertEqual(stream.version, 1)
 
     def test_add_header(self):
