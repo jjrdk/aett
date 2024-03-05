@@ -78,10 +78,10 @@ class SnapshotStore(IAccessSnapshots):
     def __init__(self, db: database.Database, table_name: str = 'snapshots'):
         self.collection: database.Collection = db.get_collection(table_name)
 
-    def get(self, bucket_id: str, stream_id: str, version: int) -> Snapshot | None:
+    def get(self, bucket_id: str, stream_id: str, max_revision: int = MAX_INT) -> Snapshot | None:
         try:
             item = self.collection.find_one(
-                {'BucketId': bucket_id, 'StreamId': stream_id, 'StreamRevision': version})
+                {'BucketId': bucket_id, 'StreamId': stream_id, 'StreamRevision': max_revision})
             if item is None:
                 return None
 
