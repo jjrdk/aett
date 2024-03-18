@@ -1,12 +1,4 @@
-# This workflow will upload a Python Package using Twine when a release is created
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python#publishing-to-package-registries
-
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-name: Upload Python Package
+name: Upload Python Packages
 
 on:
   release:
@@ -16,10 +8,10 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
+  deploy-eventstore:
 
     runs-on: ubuntu-latest
-
+    if: ${{ always() }}
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -37,33 +29,75 @@ jobs:
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
-    - name: Clean folder
-      run: |
-        rm -rf ./dist
-    - name: Build package domain
-      run: python -m build -o ./dist ./aett_domain
-    - name: Publish package
-      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
-    - name: Build package dynamodb
-      run: python -m build -o ./dist ./aett_dynamodb
-    - name: Publish package
-      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
-    - name: Clean folder again
-      run: |
-        rm -rf ./dist
-    - name: Build package mongodb
-      run: python -m build -o ./dist ./aett_mongo
-    - name: Publish package
-      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
-    - name: Clean folder again
-      run: |
-        rm -rf ./dist
+
+  deploy-domain:
+
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+      - name: Clean folder
+        run: |
+          rm -rf ./dist
+      - name: Build package domain
+        run: python -m build -o ./dist ./aett_domain
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+  deploy-dynamodb:
+
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+      - name: Build package dynamodb
+        run: python -m build -o ./dist ./aett_dynamodb
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+  deploy-mongo:
+
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+      - name: Build package mongodb
+        run: python -m build -o ./dist ./aett_mongo
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
