@@ -3,8 +3,8 @@ import uuid
 
 from behave import *
 
-from aett.mongodb import CommitStore
 from aett.eventstore import EventStream, EventMessage
+from aett.mongodb import CommitStore
 from features.steps.Types import TestEvent
 
 use_step_matcher("re")

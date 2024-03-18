@@ -2,7 +2,7 @@ import uuid
 
 from behave import *
 
-from aett.dyanmodb import SnapshotStore
+from aett.dynamodb import SnapshotStore
 from aett.eventstore import Snapshot
 
 use_step_matcher("re")

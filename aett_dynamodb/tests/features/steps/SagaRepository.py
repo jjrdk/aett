@@ -4,7 +4,7 @@ import uuid
 from behave import *
 
 from aett.domain import DefaultSagaRepository
-from aett.dyanmodb import CommitStore
+from aett.dynamodb import CommitStore
 from features.steps.Types import TestSaga, TestEvent
 
 use_step_matcher("re")

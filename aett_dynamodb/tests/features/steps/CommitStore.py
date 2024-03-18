@@ -3,7 +3,7 @@ import uuid
 
 from behave import *
 
-from aett.dyanmodb import CommitStore
+from aett.dynamodb import CommitStore
 from aett.eventstore import EventStream, EventMessage
 from features.steps.Types import TestEvent
 

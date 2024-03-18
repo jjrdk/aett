@@ -3,7 +3,7 @@ import uuid
 from behave import *
 
 from aett.domain import DefaultAggregateRepository
-from aett.dyanmodb import PersistenceManagement, CommitStore, SnapshotStore
+from aett.dynamodb import PersistenceManagement, CommitStore, SnapshotStore
 from features.steps.Types import TestAggregate
 
 use_step_matcher("re")

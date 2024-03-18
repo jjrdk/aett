@@ -1,7 +1,7 @@
 from behave import *
 import subprocess
 
-from aett.dyanmodb import PersistenceManagement
+from aett.dynamodb import PersistenceManagement
 
 use_step_matcher("re")
 

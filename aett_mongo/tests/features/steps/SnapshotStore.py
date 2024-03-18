@@ -2,7 +2,7 @@ import uuid
 
 from behave import *
 
-from aett.dyanmodb import SnapshotStore
+from aett.mongodb import SnapshotStore
 from aett.eventstore import Snapshot
 
 use_step_matcher("re")
@@ -10,7 +10,7 @@ use_step_matcher("re")
 
 @step("I have a snapshot store")
 def step_impl(context):
-    context.store = SnapshotStore(region='localhost')
+    context.store = SnapshotStore(context.db)
 
 
 @step("make a snapshot of the stream")
