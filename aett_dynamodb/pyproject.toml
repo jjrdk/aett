@@ -10,7 +10,7 @@ include = ["aett.dynamodb"]
 
 [project]
 name = "aett-dynamodb"
-Upversion = "0.4.1"
+version = "0.4.1"
 description = "DynamoDB connector for aett event store"
 readme = "README.md"
 authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
