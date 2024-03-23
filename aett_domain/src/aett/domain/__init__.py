@@ -153,6 +153,7 @@ class DefaultAggregateRepository(AggregateRepository):
         for commit in commits:
             for event in commit.events:
                 aggregate.raise_event(event.body)
+        aggregate.uncommitted.clear()
         return aggregate
 
     def save(self, aggregate: TAggregate) -> None:
@@ -165,6 +166,7 @@ class DefaultAggregateRepository(AggregateRepository):
         for event in aggregate.uncommitted:
             stream.add(event)
         self._store.commit(stream, uuid.uuid4())
+        aggregate.uncommitted.clear()
 
     def snapshot(self, cls: typing.Type[TAggregate], stream_id: str, version: int = MAX_INT) -> None:
         agg = self.get(cls, stream_id, version)
@@ -196,6 +198,7 @@ class DefaultSagaRepository(SagaRepository):
         for event in saga.uncommitted:
             stream.add(event)
         self._store.commit(stream, uuid.uuid4())
+        saga.uncommitted.clear()
 
 
 TUncommitted = typing.TypeVar('TUncommitted', bound=BaseEvent)
