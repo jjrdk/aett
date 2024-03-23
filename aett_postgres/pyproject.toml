@@ -6,12 +6,12 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src/"]
-include = ["aett.mongodb"]
+include = ["aett.postgres"]
 
 [project]
-name = "aett-mongodb"
+name = "aett-postgres"
 version = "0.4.1"
-description = "MongoDB connector for aett event store"
+description = "Postgres connector for aett event store"
 readme = "README.md"
 authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
 license = { file = "LICENSE" }
@@ -20,10 +20,10 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
-keywords = ["events", "event store", "mongo", "mongodb"]
+keywords = ["events", "event store", "postgres"]
 dependencies = [
     'aett-domain >= 0.4.1',
-    'pymongo~=4.6.2'
+    'psycopg-binary~=3.1.18'
 ]
 requires-python = ">=3.8"
 
