@@ -10,7 +10,7 @@ include = ["aett.domain"]
 
 [project]
 name = "aett-domain"
-version = "0.5.0"
+version = "0.6.0"
 description = "Domain modeling types aett event store"
 readme = "README.md"
 authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
@@ -23,7 +23,7 @@ classifiers = [
 keywords = ["events", "event store", "ddd", "domain"]
 dependencies = [
     'multipledispatch >= 1.0.0',
-    'aett-eventstore>=0.5.0'
+    'aett-eventstore>=0.6.0'
 ]
 requires-python = ">=3.8"
 
