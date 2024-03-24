@@ -1,5 +1,7 @@
 # Æt (Aett) is an Event Store for Python
 
+[![Downloads](https://static.pepy.tech/badge/aett-eventstore)](https://pepy.tech/project/aett-eventstore)
+
 Provides a framework for managing event streams.
 
 ## Usage

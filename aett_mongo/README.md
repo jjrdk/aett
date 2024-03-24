@@ -1,5 +1,7 @@
 # Æt (Aett) is an Event Store for Python
 
+[![Downloads](https://static.pepy.tech/badge/aett-mongodb)](https://pepy.tech/project/aett-mongodb)
+
 Aett Mongo provides the ability to store and retrieve events from a MongoDB collection.
 
 ## Usage

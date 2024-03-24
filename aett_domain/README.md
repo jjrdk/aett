@@ -1,5 +1,7 @@
 # Æt (Aett) is an Event Store for Python
 
+[![Downloads](https://static.pepy.tech/badge/aett-domain)](https://pepy.tech/project/aett-domain)
+
 Aett Domain provide base classes for `aggregate` and `saga` as encapsulations of business rules and processes, respectively.
 
 ## Usage

@@ -1,5 +1,7 @@
 # Æt (Aett) is an Event Store for Python
 
+[![Downloads](https://static.pepy.tech/badge/aett-postgres)](https://pepy.tech/project/aett-postgres)
+
 Aett Postgres provides the ability to store and retrieve events from a Postgres.
 
 ## Usage
