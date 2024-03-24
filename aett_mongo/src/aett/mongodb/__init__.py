@@ -6,12 +6,14 @@ import jsonpickle
 import pymongo
 from pymongo import database, results, errors
 
-from aett.eventstore import ICommitEvents, EventStream, IAccessSnapshots, Snapshot, Commit, MAX_INT
+from aett.eventstore import ICommitEvents, EventStream, IAccessSnapshots, Snapshot, Commit, MAX_INT, EventMessage, \
+    TopicMap
 
 
 # noinspection DuplicatedCode
 class CommitStore(ICommitEvents):
-    def __init__(self, db: database.Database, table_name='commits'):
+    def __init__(self, db: database.Database, topic_map: TopicMap, table_name='commits'):
+        self.topic_map = topic_map
         self.collection: database.Collection = db.get_collection(table_name)
         self.counters_collection: database.Collection = db.get_collection('counters')
 
@@ -34,7 +36,7 @@ class CommitStore(ICommitEvents):
                          commit_sequence=doc['CommitSequence'],
                          commit_stamp=datetime.datetime.fromtimestamp(int(doc['CommitStamp']), datetime.UTC),
                          headers=jsonpickle.decode(doc['Headers']),
-                         events=jsonpickle.decode(doc['Events']),
+                         events=[EventMessage.from_json(e, self.topic_map) for e in jsonpickle.decode(doc['Events'])],
                          checkpoint_token=doc['CheckpointToken'])
 
     def commit(self, event_stream: EventStream, commit_id: UUID):
@@ -50,8 +52,8 @@ class CommitStore(ICommitEvents):
                 'CommitId': str(commit_id),
                 'CommitSequence': commit.commit_sequence,
                 'CommitStamp': int(datetime.datetime.now(datetime.UTC).timestamp()),
-                'Headers': jsonpickle.encode(commit.headers),
-                'Events': jsonpickle.encode(commit.events),
+                'Headers': jsonpickle.encode(commit.headers, unpicklable=False),
+                'Events': jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False),
                 'CheckpointToken': int(ret)
             }
             _: pymongo.results.InsertOneResult = self.collection.insert_one(doc)

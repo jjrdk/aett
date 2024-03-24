@@ -1,9 +1,7 @@
 Feature: Saga repository behavior
 
   Background: Server started
-    Given I have a clean database
-    And I run the setup script
-    And a persistent saga repository
+    Given I have a persistent saga repository
 
   Scenario: Loading an saga from the repository
     Then a specific saga type can be loaded from the repository

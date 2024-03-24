@@ -1,17 +1,21 @@
 import uuid
-
+import features
 from behave import *
 
 from aett.domain import DefaultAggregateRepository
+from aett.eventstore import TopicMap
 from aett.postgres import CommitStore, SnapshotStore
 from features.steps.Types import TestAggregate
 
 use_step_matcher("re")
 
 
-@step("a persistent aggregate repository")
+@given("I have a persistent aggregate repository")
 def step_impl(context):
-    context.repository = DefaultAggregateRepository(str(uuid.uuid4()), CommitStore(context.db), SnapshotStore(context.db))
+    tm = TopicMap()
+    tm.register_module(features.steps.Types)
+    context.repository = DefaultAggregateRepository(str(uuid.uuid4()), CommitStore(context.db, tm),
+                                                    SnapshotStore(context.db))
 
 
 @then("a specific aggregate type can be loaded from the repository")

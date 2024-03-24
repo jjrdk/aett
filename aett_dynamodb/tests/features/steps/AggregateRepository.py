@@ -1,9 +1,10 @@
 import uuid
 
 from behave import *
-
+import features
 from aett.domain import DefaultAggregateRepository
 from aett.dynamodb import PersistenceManagement, CommitStore, SnapshotStore
+from aett.eventstore import TopicMap
 from features.steps.Types import TestAggregate
 
 use_step_matcher("re")
@@ -17,7 +18,9 @@ def step_impl(context):
 
 @step("a persistent aggregate repository")
 def step_impl(context):
-    context.repository = DefaultAggregateRepository(str(uuid.uuid4()), CommitStore(region='localhost'),
+    tm = TopicMap()
+    tm.register_module(features.steps.Types)
+    context.repository = DefaultAggregateRepository(str(uuid.uuid4()), CommitStore(region='localhost', topic_map=tm),
                                                     SnapshotStore(region='localhost'))
 
 

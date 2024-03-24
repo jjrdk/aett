@@ -1,4 +1,3 @@
-import inspect
 import uuid
 
 from aett.eventstore import *
@@ -63,7 +62,7 @@ class Aggregate(ABC, typing.Generic[T]):
         # Use multiple dispatch to call the correct apply method
         self._apply(event)
         self._version += 1
-        self.uncommitted.append(EventMessage(body=event, topic=event.__class__.__name__, headers=None))
+        self.uncommitted.append(EventMessage(body=event, headers=None))
 
 
 class Saga(ABC):
@@ -92,7 +91,7 @@ class Saga(ABC):
         """
         # Use multiple dispatch to call the correct apply method
         self._apply(event)
-        self.uncommitted.append(EventMessage(body=event, headers=self._headers, topic=event.__class__.__name__))
+        self.uncommitted.append(EventMessage(body=event, headers=self._headers))
         self._version += 1
 
     def dispatch(self, command: T) -> None:
@@ -171,7 +170,8 @@ class DefaultAggregateRepository(AggregateRepository):
     def snapshot(self, cls: typing.Type[TAggregate], stream_id: str, version: int = MAX_INT) -> None:
         agg = self.get(cls, stream_id, version)
         memento = agg.get_memento()
-        snapshot = Snapshot(bucket_id=self._bucket_id, stream_id=stream_id, payload=jsonpickle.encode(memento.payload),
+        snapshot = Snapshot(bucket_id=self._bucket_id, stream_id=stream_id,
+                            payload=jsonpickle.encode(memento.payload, unpicklable=False),
                             stream_revision=memento.version)
         self._snapshot_store.add(snapshot)
 

@@ -4,12 +4,14 @@ from uuid import UUID
 import jsonpickle
 import psycopg
 
-from aett.eventstore import ICommitEvents, EventStream, IAccessSnapshots, Snapshot, Commit, MAX_INT
+from aett.eventstore import ICommitEvents, EventStream, IAccessSnapshots, Snapshot, Commit, MAX_INT, TopicMap, \
+    EventMessage
 
 
 # noinspection DuplicatedCode
 class CommitStore(ICommitEvents):
-    def __init__(self, db: psycopg.connect, table_name='commits'):
+    def __init__(self, db: psycopg.connect, topic_map: TopicMap, table_name='commits'):
+        self.topic_map = topic_map
         self.connection: psycopg.connect = db
         self._table_name = table_name
 
@@ -35,7 +37,7 @@ class CommitStore(ICommitEvents):
                          commit_sequence=doc[5],
                          commit_stamp=doc[6],
                          headers=jsonpickle.decode(doc[8]),
-                         events=jsonpickle.decode(doc[9]),
+                         events=[EventMessage.from_json(e, self.topic_map) for e in jsonpickle.decode(doc[9])],
                          checkpoint_token=doc[7])
 
     def commit(self, event_stream: EventStream, commit_id: UUID):
@@ -48,8 +50,9 @@ class CommitStore(ICommitEvents):
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 RETURNING CheckpointNumber;""", (commit.bucket_id, commit.stream_id, commit.stream_id,
                                  commit_id, commit.commit_sequence, commit.stream_revision, len(commit.events),
-                                 commit.commit_stamp, jsonpickle.encode(commit.headers),
-                                 jsonpickle.encode(commit.events)))
+                                 commit.commit_stamp,
+                                 jsonpickle.encode(commit.headers, unpicklable=False).encode('utf-8'),
+                                 jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False).encode('utf-8')))
             checkpoint_number = cur.fetchone()
             self.connection.commit()
             return Commit(bucket_id=commit.bucket_id,
@@ -113,12 +116,13 @@ class SnapshotStore(IAccessSnapshots):
     def add(self, snapshot: Snapshot):
         try:
             cur = self.connection.cursor()
-            j = jsonpickle.encode(snapshot.payload)
-            cur.execute(f"""INSERT INTO {self._table_name} ( BucketId, StreamId, StreamRevision, Payload) VALUES (%s, %s, %s, %s);""",
-                        (snapshot.bucket_id,
-                         snapshot.stream_id,
-                         snapshot.stream_revision,
-                         j.encode('utf-8')))
+            j = jsonpickle.encode(snapshot.payload, unpicklable=False)
+            cur.execute(
+                f"""INSERT INTO {self._table_name} ( BucketId, StreamId, StreamRevision, Payload) VALUES (%s, %s, %s, %s);""",
+                (snapshot.bucket_id,
+                 snapshot.stream_id,
+                 snapshot.stream_revision,
+                 j.encode('utf-8')))
             self.connection.commit()
         except Exception as e:
             raise Exception(
@@ -165,6 +169,7 @@ CREATE TABLE {self.snapshots_table_name}
     Payload bytea NOT NULL,
     CONSTRAINT PK_Snapshots PRIMARY KEY (BucketId, StreamId, StreamRevision)
 );""")
+            c.commit()
         except Exception as e:
             pass
 

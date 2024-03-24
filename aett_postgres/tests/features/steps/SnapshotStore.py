@@ -8,7 +8,7 @@ from aett.eventstore import Snapshot
 use_step_matcher("re")
 
 
-@step("I have a snapshot store")
+@given("I have a snapshot store")
 def step_impl(context):
     context.store = SnapshotStore(context.db)
 

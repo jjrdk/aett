@@ -1,9 +1,7 @@
 Feature: Aggregate repository behavior
 
   Background: Server started
-    Given I have a clean database
-    And I run the setup script
-    And a persistent aggregate repository
+    Given I have a persistent aggregate repository
 
   Scenario: Loading an aggregate from the repository
     Then a specific aggregate type can be loaded from the repository

@@ -6,7 +6,8 @@ import boto3
 import jsonpickle
 from boto3.dynamodb.conditions import Key
 
-from aett.eventstore import ICommitEvents, EventStream, IAccessSnapshots, Snapshot, Commit, MAX_INT
+from aett.eventstore import ICommitEvents, EventStream, IAccessSnapshots, Snapshot, Commit, MAX_INT, EventMessage, \
+    TopicMap
 
 
 def _get_resource(region: str):
@@ -16,7 +17,8 @@ def _get_resource(region: str):
 
 
 class CommitStore(ICommitEvents):
-    def __init__(self, table_name: str = 'commits', region: str = 'eu-central-1'):
+    def __init__(self, topic_map: TopicMap, table_name: str = 'commits', region: str = 'eu-central-1'):
+        self.topic_map = topic_map
         self.table_name = table_name
         self.region = region
         self.dynamodb = _get_resource(region)
@@ -44,7 +46,7 @@ class CommitStore(ICommitEvents):
                 commit_sequence=int(item['CommitSequence']),
                 commit_stamp=datetime.datetime.fromtimestamp(int(item['CommitStamp']), datetime.UTC),
                 headers=jsonpickle.decode(item['Headers']),
-                events=jsonpickle.decode(item['Events']),
+                events=[EventMessage.from_json(e, self.topic_map) for e in jsonpickle.decode(item['Events'])],
                 checkpoint_token=0)
 
     def commit(self, event_stream: EventStream, commit_id: UUID):
@@ -58,8 +60,8 @@ class CommitStore(ICommitEvents):
                 'CommitId': str(commit_id),
                 'CommitSequence': commit.commit_sequence,
                 'CommitStamp': int(datetime.datetime.now(datetime.UTC).timestamp()),
-                'Headers': jsonpickle.encode(commit.headers),
-                'Events': jsonpickle.encode(commit.events),
+                'Headers': jsonpickle.encode(commit.headers, unpicklable=False),
+                'Events': jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False)
             }
             response = self.table.put_item(
                 TableName=self.table_name,

@@ -1,9 +1,10 @@
 import uuid
-
+import features
 import pymongo.database
 from behave import *
 
 from aett.domain import DefaultAggregateRepository
+from aett.eventstore import TopicMap
 from aett.mongodb import PersistenceManagement, CommitStore, SnapshotStore
 from features.steps.Types import TestAggregate
 
@@ -19,7 +20,10 @@ def step_impl(context):
 
 @step("a persistent aggregate repository")
 def step_impl(context):
-    context.repository = DefaultAggregateRepository(str(uuid.uuid4()), CommitStore(context.db), SnapshotStore(context.db))
+    tm = TopicMap()
+    tm.register_module(features.steps.Types)
+    context.repository = DefaultAggregateRepository(str(uuid.uuid4()), CommitStore(context.db, topic_map=tm),
+                                                    SnapshotStore(context.db))
 
 
 @then("a specific aggregate type can be loaded from the repository")
