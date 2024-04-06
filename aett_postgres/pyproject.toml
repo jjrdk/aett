@@ -25,7 +25,7 @@ dependencies = [
     'aett-domain >= 0.6.0',
     'psycopg-binary~=3.1.18'
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 
 [project.optional-dependencies]
 dev = ["pip-tools", "pytest", "behave"]

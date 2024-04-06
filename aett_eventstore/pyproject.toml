@@ -25,7 +25,7 @@ dependencies = [
     'typing >= 3.7.4.3',
     'jsonpickle>=3.0.3'
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 
 [project.optional-dependencies]
 dev = ["pip-tools", "pytest", "behave"]

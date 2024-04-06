@@ -25,7 +25,7 @@ dependencies = [
     'multipledispatch >= 1.0.0',
     'aett-eventstore>=0.6.0'
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 
 [project.optional-dependencies]
 dev = ["pip-tools", "pytest", "behave"]
