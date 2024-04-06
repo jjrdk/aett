@@ -83,6 +83,10 @@ class Saga(ABC):
     def version(self) -> int:
         return self._version
 
+    @property
+    def headers(self):
+        return self._headers
+
     def transition(self, event: BaseEvent) -> None:
         """
         Transitions the saga to the next state based on the event
@@ -109,14 +113,27 @@ class AggregateRepository(ABC):
 
     @abstractmethod
     def get(self, cls: typing.Type[TAggregate], stream_id: str, max_version: int = 2 ** 32) -> TAggregate:
+        """
+        Gets the aggregate with the specified stream id and type
+
+        :param cls: The type of the aggregate
+        :param stream_id: The id of the stream to load
+        :param max_version: The max aggregate version to load.
+        """
         pass
 
     @abstractmethod
-    def save(self, aggregate: T) -> None:
+    def save(self, aggregate: T, headers: Dict[str, str] = None) -> None:
+        """
+        Save the aggregate to the repository.
+
+        :param aggregate: The aggregate to save.
+        :param headers: The headers to assign to the commit.
+        """
         pass
 
     @abstractmethod
-    def snapshot(self, cls: typing.Type[TAggregate], stream_id: str, version: int) -> None:
+    def snapshot(self, cls: typing.Type[TAggregate], stream_id: str, version: int, headers: Dict[str, str]) -> None:
         pass
 
 
@@ -155,7 +172,9 @@ class DefaultAggregateRepository(AggregateRepository):
         aggregate.uncommitted.clear()
         return aggregate
 
-    def save(self, aggregate: TAggregate) -> None:
+    def save(self, aggregate: TAggregate, headers: Dict[str, str] = None) -> None:
+        if headers is None:
+            headers = {}
         if len(aggregate.uncommitted) == 0:
             return
         stream = EventStream.load(bucket_id=self._bucket_id,
@@ -164,16 +183,19 @@ class DefaultAggregateRepository(AggregateRepository):
                                   max_version=2 ** 32)
         for event in aggregate.uncommitted:
             stream.add(event)
+        for key, value in headers.items():
+            stream.set_header(key=key, value=value)
         self._store.commit(stream, uuid.uuid4())
         aggregate.uncommitted.clear()
 
-    def snapshot(self, cls: typing.Type[TAggregate], stream_id: str, version: int = MAX_INT) -> None:
+    def snapshot(self, cls: typing.Type[TAggregate], stream_id: str, version: int = MAX_INT,
+                 headers: Dict[str, str] = None) -> None:
         agg = self.get(cls, stream_id, version)
         memento = agg.get_memento()
         snapshot = Snapshot(bucket_id=self._bucket_id, stream_id=stream_id,
                             payload=jsonpickle.encode(memento.payload, unpicklable=False),
                             stream_revision=memento.version)
-        self._snapshot_store.add(snapshot)
+        self._snapshot_store.add(snapshot=snapshot, headers=headers)
 
     def __init__(self, bucket_id: str, store: ICommitEvents, snapshot_store: IAccessSnapshots):
         self._bucket_id = bucket_id

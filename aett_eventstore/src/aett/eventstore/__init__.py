@@ -37,6 +37,7 @@ class TopicMap:
 
     def __init__(self):
         self.__topics = {}
+
     #
     # def __new__(cls):
     #     if not hasattr(cls, '__singleton_instance'):
@@ -244,16 +245,19 @@ class Snapshot:
     Gets the snapshot or materialized view of the stream at the revision indicated.
     """
 
+    headers: Dict[str, str]
+
     @staticmethod
-    def from_memento(bucket_id: str, memento: Memento) -> 'Snapshot':
+    def from_memento(bucket_id: str, memento: Memento, headers: Dict[str, str]) -> 'Snapshot':
         """
         Converts the memento to a snapshot which can be persisted.
         :param bucket_id: The value which uniquely identifies the bucket to which the stream belongs.
         :param memento:  The memento to be converted.
+        :param headers: The headers to assign to the snapshot
         :return:
         """
         return Snapshot(bucket_id=bucket_id, stream_id=memento.id, stream_revision=memento.version,
-                        payload=jsonpickle.encode(memento.payload))
+                        payload=jsonpickle.encode(memento.payload), headers=headers)
 
 
 class ICommitEvents(ABC):
@@ -314,11 +318,12 @@ class IAccessSnapshots(ABC):
         pass
 
     @abstractmethod
-    def add(self, snapshot: Snapshot):
+    def add(self, snapshot: Snapshot, headers: Dict[str, str] = None):
         """
         Adds the snapshot provided to the stream indicated. Using a snapshotId of Guid.Empty will always persist the snapshot.
 
         :param snapshot: The snapshot to save.
+        :param headers: The metadata to assign to the snapshot.
         :raises StorageException:
         :raises StorageUnavailableException:
         """
@@ -440,4 +445,3 @@ class EventStream:
         self.uncommitted_headers: dict[str, object] = {}
         self.committed: list[EventMessage] = []
         self.uncommitted: list[EventMessage] = []
-

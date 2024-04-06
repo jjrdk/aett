@@ -120,19 +120,23 @@ class SnapshotStore(IAccessSnapshots):
             return Snapshot(bucket_id=item['BucketId'],
                             stream_id=item['StreamId'],
                             stream_revision=int(item['StreamRevision']),
-                            payload=item['Payload'])
+                            payload=item['Payload'],
+                            headers=dict(jsonpickle.decode(item['Headers'])))
         except Exception as e:
             raise Exception(
                 f"Failed to get snapshot for stream {stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}")
 
-    def add(self, snapshot: Snapshot):
+    def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] = None):
+        if headers is None:
+            headers = {}
         try:
             item = {
                 'BucketAndStream': f"{snapshot.bucket_id}{snapshot.stream_id}",
                 'BucketId': snapshot.bucket_id,
                 'StreamId': snapshot.stream_id,
                 'StreamRevision': snapshot.stream_revision,
-                'Payload': snapshot.payload
+                'Payload': snapshot.payload,
+                'Headers': jsonpickle.encode(headers, unpicklable=False)
             }
             _ = self.table.put_item(
                 TableName=self.table_name,
