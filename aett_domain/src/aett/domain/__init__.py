@@ -122,6 +122,17 @@ class AggregateRepository(ABC):
         """
         pass
 
+    def get_to(self, cls: typing.Type[TAggregate], stream_id: str,
+               max_time: datetime = datetime.datetime.max) -> TAggregate:
+        """
+        Gets the aggregate with the specified stream id and type
+
+        :param cls: The type of the aggregate
+        :param stream_id: The id of the stream to load
+        :param max_time: The max aggregate timestamp to load.
+        """
+        pass
+
     @abstractmethod
     def save(self, aggregate: T, headers: Dict[str, str] = None) -> None:
         """
@@ -166,6 +177,18 @@ class DefaultAggregateRepository(AggregateRepository):
         aggregate = cls(stream_id)
         if snapshot is not None:
             aggregate.apply_memento(memento_type(**jsonpickle.decode(snapshot.payload)))
+        for commit in commits:
+            for event in commit.events:
+                aggregate.raise_event(event.body)
+        aggregate.uncommitted.clear()
+        return aggregate
+
+    def get_to(self, cls: typing.Type[TAggregate], stream_id: str,
+               max_time: datetime = datetime.datetime.max) -> TAggregate:
+        commits = self._store.get_to(bucket_id=self._bucket_id,
+                                     stream_id=stream_id,
+                                     max_time=max_time)
+        aggregate = cls(stream_id)
         for commit in commits:
             for event in commit.events:
                 aggregate.raise_event(event.body)

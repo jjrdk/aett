@@ -1,5 +1,6 @@
 import datetime
 import typing
+from typing import Iterable
 from uuid import UUID
 
 import jsonpickle
@@ -29,15 +30,26 @@ class CommitStore(ICommitEvents):
 
         query_response: pymongo.cursor.Cursor = self.collection.find({'$and': [filters]})
         for doc in query_response.sort('CheckpointToken', direction=pymongo.ASCENDING):
-            yield Commit(bucket_id=doc['BucketId'],
-                         stream_id=doc['StreamId'],
-                         stream_revision=doc['StreamRevision'],
-                         commit_id=UUID(doc['CommitId']),
-                         commit_sequence=doc['CommitSequence'],
-                         commit_stamp=datetime.datetime.fromtimestamp(int(doc['CommitStamp']), datetime.UTC),
-                         headers=jsonpickle.decode(doc['Headers']),
-                         events=[EventMessage.from_json(e, self.topic_map) for e in jsonpickle.decode(doc['Events'])],
-                         checkpoint_token=doc['CheckpointToken'])
+            yield self._doc_to_commit(doc)
+
+    def get_to(self, bucket_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+            Iterable[Commit]:
+        filters = {"BucketId": bucket_id, "StreamId": stream_id, "CommitStamp": {'$lte': int(max_time.timestamp())}}
+
+        query_response: pymongo.cursor.Cursor = self.collection.find({'$and': [filters]})
+        for doc in query_response.sort('CheckpointToken', direction=pymongo.ASCENDING):
+            yield self._doc_to_commit(doc)
+
+    def _doc_to_commit(self, doc: dict) -> Commit:
+        return Commit(bucket_id=doc['BucketId'],
+                      stream_id=doc['StreamId'],
+                      stream_revision=doc['StreamRevision'],
+                      commit_id=UUID(doc['CommitId']),
+                      commit_sequence=doc['CommitSequence'],
+                      commit_stamp=datetime.datetime.fromtimestamp(int(doc['CommitStamp']), datetime.UTC),
+                      headers=jsonpickle.decode(doc['Headers']),
+                      events=[EventMessage.from_json(e, self.topic_map) for e in jsonpickle.decode(doc['Events'])],
+                      checkpoint_token=doc['CheckpointToken'])
 
     def commit(self, event_stream: EventStream, commit_id: UUID):
         try:
@@ -132,11 +144,10 @@ class PersistenceManagement:
         try:
             commits_collection: database.Collection = self.db.create_collection(self.commits_table_name,
                                                                                 check_exists=True)
-            commits_collection.create_index([("BucketId", pymongo.ASCENDING), ("CheckpointNumber", pymongo.ASCENDING)],
+            commits_collection.create_index([("BucketId", pymongo.ASCENDING), ("CheckpointToken", pymongo.ASCENDING)],
                                             comment="GetFromCheckpoint", unique=True)
             commits_collection.create_index([("BucketId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
-                                             ("StreamRevisionFrom", pymongo.ASCENDING),
-                                             ("StreamRevisionTo", pymongo.ASCENDING)], comment="GetFrom", unique=True)
+                                             ("StreamRevision", pymongo.ASCENDING)], comment="GetFrom", unique=True)
             commits_collection.create_index([("BucketId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
                                              ("CommitSequence", pymongo.ASCENDING)], comment="LogicalKey", unique=True)
             commits_collection.create_index([("CommitStamp", pymongo.ASCENDING)], comment="CommitStamp", unique=False)

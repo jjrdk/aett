@@ -1,10 +1,11 @@
 import datetime
 import typing
+from typing import Iterable
 from uuid import UUID
 
 import boto3
 import jsonpickle
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Key, Attr
 
 from aett.eventstore import ICommitEvents, EventStream, IAccessSnapshots, Snapshot, Commit, MAX_INT, EventMessage, \
     TopicMap
@@ -38,16 +39,33 @@ class CommitStore(ICommitEvents):
             ScanIndexForward=True)
         items = query_response['Items']
         for item in items:
-            yield Commit(
-                bucket_id=item['BucketId'],
-                stream_id=item['StreamId'],
-                stream_revision=int(item['StreamRevision']),
-                commit_id=UUID(item['CommitId']),
-                commit_sequence=int(item['CommitSequence']),
-                commit_stamp=datetime.datetime.fromtimestamp(int(item['CommitStamp']), datetime.UTC),
-                headers=jsonpickle.decode(item['Headers']),
-                events=[EventMessage.from_json(e, self.topic_map) for e in jsonpickle.decode(item['Events'])],
-                checkpoint_token=0)
+            yield self._item_to_commit(item)
+
+    def get_to(self, bucket_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+            Iterable[Commit]:
+        query_response = self.table.scan(IndexName="CommitStampIndex",
+                                         ConsistentRead=True,
+                                         Select='ALL_ATTRIBUTES',
+                                         FilterExpression=(
+                                                 Key("BucketAndStream").eq(f'{bucket_id}{stream_id}')
+                                                 & Attr('CommitStamp').lte(int(max_time.timestamp()))))
+        items = query_response['Items']
+        for item in items:
+            if item['CommitStamp'] > max_time.timestamp():
+                break
+            yield self._item_to_commit(item)
+
+    def _item_to_commit(self, item: dict) -> Commit:
+        return Commit(
+            bucket_id=item['BucketId'],
+            stream_id=item['StreamId'],
+            stream_revision=int(item['StreamRevision']),
+            commit_id=UUID(item['CommitId']),
+            commit_sequence=int(item['CommitSequence']),
+            commit_stamp=datetime.datetime.fromtimestamp(int(item['CommitStamp']), datetime.UTC),
+            headers=jsonpickle.decode(item['Headers']),
+            events=[EventMessage.from_json(e, self.topic_map) for e in jsonpickle.decode(item['Events'])],
+            checkpoint_token=0)
 
     def commit(self, event_stream: EventStream, commit_id: UUID):
         try:
@@ -59,7 +77,7 @@ class CommitStore(ICommitEvents):
                 'StreamRevision': commit.stream_revision,
                 'CommitId': str(commit_id),
                 'CommitSequence': commit.commit_sequence,
-                'CommitStamp': int(datetime.datetime.now(datetime.UTC).timestamp()),
+                'CommitStamp': int(commit.commit_stamp.timestamp()),
                 'Headers': jsonpickle.encode(commit.headers, unpicklable=False),
                 'Events': jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False)
             }
@@ -172,7 +190,8 @@ class PersistenceManagement:
                 AttributeDefinitions=[
                     {'AttributeName': 'BucketAndStream', 'AttributeType': 'S'},
                     {'AttributeName': 'CommitSequence', 'AttributeType': 'N'},
-                    {'AttributeName': 'StreamRevision', 'AttributeType': 'N'}
+                    {'AttributeName': 'StreamRevision', 'AttributeType': 'N'},
+                    {'AttributeName': 'CommitStamp', 'AttributeType': 'N'}
                 ],
                 LocalSecondaryIndexes=[
                     {
@@ -180,6 +199,14 @@ class PersistenceManagement:
                         'KeySchema': [
                             {'AttributeName': 'BucketAndStream', 'KeyType': 'HASH'},
                             {'AttributeName': 'StreamRevision', 'KeyType': 'RANGE'}
+                        ],
+                        'Projection': {'ProjectionType': 'ALL'}
+                    },
+                    {
+                        'IndexName': "CommitStampIndex",
+                        'KeySchema': [
+                            {'AttributeName': 'BucketAndStream', 'KeyType': 'HASH'},
+                            {'AttributeName': 'CommitStamp', 'KeyType': 'RANGE'}
                         ],
                         'Projection': {'ProjectionType': 'ALL'}
                     }],

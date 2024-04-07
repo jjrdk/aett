@@ -285,6 +285,22 @@ class ICommitEvents(ABC):
         pass
 
     @abstractmethod
+    def get_to(self, bucket_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> Iterable[
+        Commit]:
+        """
+        Gets the corresponding commits from the stream indicated starting at the revision specified until the
+        end of the stream sorted in ascending order--from oldest to newest.
+
+        :param bucket_id: The value which uniquely identifies bucket the stream belongs to.
+        :param stream_id: The stream from which the events will be read.
+        :param max_time: The max timestamp to return.
+        :return: A series of committed events from the stream specified sorted in ascending order.
+        :raises StorageException:
+        :raises StorageUnavailableException:
+        """
+        pass
+
+    @abstractmethod
     def commit(self, event_stream: 'EventStream', commit_id: UUID):
         """
         Writes the to-be-committed events stream provided to the underlying persistence mechanism.

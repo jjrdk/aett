@@ -1,4 +1,6 @@
+import datetime
 import typing
+from typing import Iterable
 from uuid import UUID
 
 import jsonpickle
@@ -30,15 +32,31 @@ class CommitStore(ICommitEvents):
  ORDER BY CommitSequence;""", (bucket_id, stream_id, min_revision, max_revision, 0))
         fetchall = cur.fetchall()
         for doc in fetchall:
-            yield Commit(bucket_id=doc[0],
-                         stream_id=doc[1],
-                         stream_revision=doc[3],
-                         commit_id=doc[4],
-                         commit_sequence=doc[5],
-                         commit_stamp=doc[6],
-                         headers=jsonpickle.decode(doc[8]),
-                         events=[EventMessage.from_json(e, self.topic_map) for e in jsonpickle.decode(doc[9])],
-                         checkpoint_token=doc[7])
+            yield self._item_to_commit(doc)
+
+    def get_to(self, bucket_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+            Iterable[Commit]:
+        cur = self.connection.cursor()
+        cur.execute(f"""SELECT BucketId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+          FROM {self._table_name}
+         WHERE BucketId = %s
+           AND StreamId = %s
+           AND CommitStamp <= %s
+         ORDER BY CommitSequence;""", (bucket_id, stream_id, max_time))
+        fetchall = cur.fetchall()
+        for doc in fetchall:
+            yield self._item_to_commit(doc)
+
+    def _item_to_commit(self, item):
+        return Commit(bucket_id=item[0],
+                      stream_id=item[1],
+                      stream_revision=item[3],
+                      commit_id=item[4],
+                      commit_sequence=item[5],
+                      commit_stamp=item[6],
+                      headers=jsonpickle.decode(item[8]),
+                      events=[EventMessage.from_json(e, self.topic_map) for e in jsonpickle.decode(item[9])],
+                      checkpoint_token=item[7])
 
     def commit(self, event_stream: EventStream, commit_id: UUID):
         try:

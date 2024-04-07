@@ -18,3 +18,8 @@ Feature: Aggregate repository behavior
     When an aggregate is loaded from the repository and modified
     And an aggregate is saved to the repository
     Then the modified is saved to storage
+
+  Scenario: Retrieving based on time
+    When a series of commits is persisted
+    And a specific aggregate is loaded at a specific time
+    Then the aggregate is loaded at the correct state

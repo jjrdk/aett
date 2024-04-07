@@ -1,4 +1,6 @@
+import datetime
 import typing
+from typing import Iterable
 from uuid import UUID
 
 import boto3
@@ -21,18 +23,21 @@ class S3Config:
         self.region = region
         self.endpoint_url = endpoint_url
 
+    def to_client(self):
+        return boto3.client('s3',
+                            aws_access_key_id=self.aws_access_key_id,
+                            aws_secret_access_key=self.aws_secret_access_key,
+                            aws_session_token=self.aws_session_token,
+                            region_name=self.region,
+                            endpoint_url=self.endpoint_url,
+                            verify=self.use_tls)
+
 
 class CommitStore(ICommitEvents):
     def __init__(self, s3_config: S3Config, topic_map: TopicMap, folder_name='commits'):
         self._s3_bucket = s3_config.bucket
         self._topic_map = topic_map
-        self._resource: client = boto3.client('s3',
-                                              aws_access_key_id=s3_config.aws_access_key_id,
-                                              aws_secret_access_key=s3_config.aws_secret_access_key,
-                                              aws_session_token=s3_config.aws_session_token,
-                                              region_name=s3_config.region,
-                                              endpoint_url=s3_config.endpoint_url,
-                                              verify=s3_config.use_tls)
+        self._resource: client = s3_config.to_client()
         self._folder_name = folder_name
 
     def get(self, bucket_id: str, stream_id: str, min_revision: int = 0,
@@ -46,22 +51,40 @@ class CommitStore(ICommitEvents):
             return []
         keys = [key for key in map(lambda r: r.get('Key'), response.get('Contents')) if
                 min_revision <= int(key.split('_')[-1].replace('.json', '')) <= max_revision]
+        keys.sort()
         for key in keys:
-            file = self._resource.get_object(Bucket=self._s3_bucket, Key=key)
-            doc = jsonpickle.decode(file.get('Body').read().decode('utf-8'))
-            yield Commit(bucket_id=doc.get('bucket_id'),
-                         stream_id=doc.get('stream_id'),
-                         stream_revision=doc.get('stream_revision'),
-                         commit_id=doc.get('commit_id'),
-                         commit_sequence=doc.get('commit_sequence'),
-                         commit_stamp=doc.get('commit_stamp'),
-                         headers=doc.get('headers'),
-                         events=[EventMessage.from_json(e, self._topic_map) for e in doc.get('events')],
-                         checkpoint_token=0)
+            yield self._file_to_commit(key)
+
+    def get_to(self, bucket_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+            Iterable[Commit]:
+        response = self._resource.list_objects(Bucket=self._s3_bucket,
+                                               Delimiter='/',
+                                               Prefix=f'{self._folder_name}/{bucket_id}/{stream_id}/')
+        if 'Contents' not in response:
+            return []
+        timestamp = max_time.timestamp()
+        keys = [key for key in map(lambda r: r.get('Key'), response.get('Contents')) if
+                int(key.split('/')[-1].split('_')[0]) <= timestamp]
+        keys.sort()
+        for key in keys:
+            yield self._file_to_commit(key)
+
+    def _file_to_commit(self, key):
+        file = self._resource.get_object(Bucket=self._s3_bucket, Key=key)
+        doc = jsonpickle.decode(file.get('Body').read().decode('utf-8'))
+        return Commit(bucket_id=doc.get('bucket_id'),
+                      stream_id=doc.get('stream_id'),
+                      stream_revision=doc.get('stream_revision'),
+                      commit_id=doc.get('commit_id'),
+                      commit_sequence=doc.get('commit_sequence'),
+                      commit_stamp=doc.get('commit_stamp'),
+                      headers=doc.get('headers'),
+                      events=[EventMessage.from_json(e, self._topic_map) for e in doc.get('events')],
+                      checkpoint_token=0)
 
     def commit(self, event_stream: EventStream, commit_id: UUID):
         commit = event_stream.to_commit(commit_id)
-        commit_key = f'{self._folder_name}/{commit.bucket_id}/{commit.stream_id}/{commit.commit_sequence}_{commit.commit_stamp.timestamp()}_{commit.stream_revision}.json'
+        commit_key = f'{self._folder_name}/{commit.bucket_id}/{commit.stream_id}/{int(commit.commit_stamp.timestamp())}_{commit.commit_sequence}_{commit.stream_revision}.json'
         if not self.check_exists(commit_key):
             d = commit.__dict__
             d['events'] = [e.to_json() for e in commit.events]
@@ -88,13 +111,7 @@ class SnapshotStore(IAccessSnapshots):
     def __init__(self, s3_config: S3Config, folder_name: str = 'snapshots'):
         self._s3_bucket = s3_config.bucket
         self._folder_name = folder_name
-        self._resource: client = boto3.client('s3',
-                                              aws_access_key_id=s3_config.aws_access_key_id,
-                                              aws_secret_access_key=s3_config.aws_secret_access_key,
-                                              aws_session_token=s3_config.aws_session_token,
-                                              region_name=s3_config.region,
-                                              endpoint_url=s3_config.endpoint_url,
-                                              verify=s3_config.use_tls)
+        self._resource: client = s3_config.to_client()
 
     def get(self, bucket_id: str, stream_id: str, max_revision: int = MAX_INT) -> Snapshot | None:
         files = self._resource.list_objects(Bucket=self._s3_bucket,
@@ -128,13 +145,7 @@ class SnapshotStore(IAccessSnapshots):
 class PersistenceManagement:
     def __init__(self, s3_config: S3Config):
         self._s3_bucket = s3_config.bucket
-        self._resource: client = boto3.client('s3',
-                                              aws_access_key_id=s3_config.aws_access_key_id,
-                                              aws_secret_access_key=s3_config.aws_secret_access_key,
-                                              aws_session_token=s3_config.aws_session_token,
-                                              region_name=s3_config.region,
-                                              endpoint_url=s3_config.endpoint_url,
-                                              verify=s3_config.use_tls)
+        self._resource: client = s3_config.to_client()
 
     def initialize(self):
         try:
