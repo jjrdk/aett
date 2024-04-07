@@ -10,7 +10,7 @@ include = ["aett.dynamodb"]
 
 [project]
 name = "aett-dynamodb"
-version = "0.6.0"
+version = "0.7.0"
 description = "DynamoDB connector for aett event store"
 readme = "README.md"
 authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
@@ -22,8 +22,8 @@ classifiers = [
 ]
 keywords = ["events", "event store", "dynamodb"]
 dependencies = [
-    'aett-domain >= 0.6.0',
-    'boto3[crt]~=1.34.64'
+    'aett-domain >= 0.7.0',
+    'boto3[crt]~=1.34.79'
 ]
 requires-python = ">=3.10"
 
