@@ -147,6 +147,11 @@ class AggregateRepository(ABC):
     def snapshot(self, cls: typing.Type[TAggregate], stream_id: str, version: int, headers: Dict[str, str]) -> None:
         pass
 
+    @abstractmethod
+    def snapshot_at(self, cls: typing.Type[TAggregate], stream_id: str, cut_off: datetime.datetime,
+                    headers: Dict[str, str]) -> None:
+        pass
+
 
 class SagaRepository(ABC):
     TSaga = typing.TypeVar('TSaga', bound=Saga)
@@ -214,10 +219,18 @@ class DefaultAggregateRepository(AggregateRepository):
     def snapshot(self, cls: typing.Type[TAggregate], stream_id: str, version: int = MAX_INT,
                  headers: Dict[str, str] = None) -> None:
         agg = self.get(cls, stream_id, version)
-        memento = agg.get_memento()
-        snapshot = Snapshot(bucket_id=self._bucket_id, stream_id=stream_id,
+        self._snapshot_aggregate(agg, headers)
+
+    def snapshot_at(self, cls: typing.Type[TAggregate], stream_id: str, cut_off: datetime.datetime,
+                    headers: Dict[str, str] = None) -> None:
+        agg = self.get_to(cls, stream_id, cut_off)
+        self._snapshot_aggregate(agg, headers)
+
+    def _snapshot_aggregate(self, aggregate: Aggregate, headers: Dict[str, str] = None) -> None:
+        memento = aggregate.get_memento()
+        snapshot = Snapshot(bucket_id=self._bucket_id, stream_id=aggregate.id,
                             payload=jsonpickle.encode(memento.payload, unpicklable=False),
-                            stream_revision=memento.version)
+                            stream_revision=memento.version, headers={})
         self._snapshot_store.add(snapshot=snapshot, headers=headers)
 
     def __init__(self, bucket_id: str, store: ICommitEvents, snapshot_store: IAccessSnapshots):
