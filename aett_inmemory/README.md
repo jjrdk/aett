@@ -1,6 +1,6 @@
 # Æt (Aett) is an Event Store for Python
 
-[![Downloads](https://static.pepy.tech/badge/aett-postgres)](https://pepy.tech/project/aett-postgres)
+[![Downloads](https://static.pepy.tech/badge/aett-inmemory)](https://pepy.tech/project/aett-inmemory)
 
 Aett In-Memory provides the ability to store and retrieve events from an in-memory storage.
 This module should not be used for production. It is intended only for testsing.

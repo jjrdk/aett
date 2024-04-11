@@ -23,6 +23,7 @@ Currently supported persistence stores are:
 - DynamoDB
 - MongoDB
 - Postgres
+- In-Memory
 
 ## Downloads
 
@@ -34,3 +35,4 @@ Currently supported persistence stores are:
 | [aett-mongodb](https://github.com/jjrdk/aett/tree/master/aett_monog)         | [![Downloads](https://static.pepy.tech/badge/aett-mongodb)](https://pepy.tech/project/aett-mongodb)       |
 | [aett-postgres](https://github.com/jjrdk/aett/tree/master/aett_postgres)     | [![Downloads](https://static.pepy.tech/badge/aett-postgres)](https://pepy.tech/project/aett-postgres)     |
 | [aett-s3](https://github.com/jjrdk/aett/tree/master/aett_s3)                 | [![Downloads](https://static.pepy.tech/badge/aett-s3)](https://pepy.tech/project/aett-s3)                 |
+| [aett-inmemory](https://github.com/jjrdk/aett/tree/master/aett_inmemory)     | [![Downloads](https://static.pepy.tech/badge/aett-inmemory)](https://pepy.tech/project/aett-inmemory)     |
