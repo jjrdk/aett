@@ -12,10 +12,17 @@ class Aggregate(ABC, typing.Generic[T]):
     of the event relies on multiple dispatch to call the correct apply method in the subclass.
     """
 
-    def __init__(self, stream_id: str):
+    def __init__(self, stream_id: str, commit_sequence: int):
+        """
+        Initialize the aggregate
+
+        param stream_id: The id of the stream
+        param commit_sequence: The commit sequence number which the aggregate was built from
+        """
         self.uncommitted: typing.List[EventMessage] = []
         self._id = stream_id
         self._version = 0
+        self._commit_sequence = commit_sequence
         self.uncommitted.clear()
 
     @property
@@ -25,6 +32,10 @@ class Aggregate(ABC, typing.Generic[T]):
     @property
     def version(self) -> int:
         return self._version
+
+    @property
+    def commit_sequence(self):
+        return self._commit_sequence
 
     @abstractmethod
     def apply_memento(self, memento: T) -> None:
@@ -172,12 +183,12 @@ class DefaultAggregateRepository(AggregateRepository):
         min_version = 0
         if snapshot is not None:
             min_version = snapshot.stream_revision
-        commits = self._store.get(tenant_id=self._tenant_id,
-                                  stream_id=stream_id,
-                                  min_revision=min_version,
-                                  max_revision=max_version)
-
-        aggregate = cls(stream_id)
+        commits = list(self._store.get(tenant_id=self._tenant_id,
+                                       stream_id=stream_id,
+                                       min_revision=min_version,
+                                       max_revision=max_version))
+        commit_sequence = commits[-1].commit_sequence if len(commits) > 0 else 0
+        aggregate = cls(stream_id, commit_sequence)
         if snapshot is not None:
             aggregate.apply_memento(memento_type(**jsonpickle.decode(snapshot.payload)))
         for commit in commits:
@@ -188,10 +199,11 @@ class DefaultAggregateRepository(AggregateRepository):
 
     def get_to(self, cls: typing.Type[TAggregate], stream_id: str,
                max_time: datetime = datetime.datetime.max) -> TAggregate:
-        commits = self._store.get_to(tenant_id=self._tenant_id,
-                                     stream_id=stream_id,
-                                     max_time=max_time)
-        aggregate = cls(stream_id)
+        commits = list(self._store.get_to(tenant_id=self._tenant_id,
+                                          stream_id=stream_id,
+                                          max_time=max_time))
+        commit_sequence = commits[-1].commit_sequence if len(commits) > 0 else 0
+        aggregate = cls(stream_id, commit_sequence)
         for commit in commits:
             for event in commit.events:
                 aggregate.raise_event(event.body)
@@ -214,7 +226,7 @@ class DefaultAggregateRepository(AggregateRepository):
                         stream_id=aggregate.id,
                         stream_revision=aggregate.version,
                         commit_id=uuid.uuid4(),
-                        commit_sequence=0,
+                        commit_sequence=aggregate.commit_sequence + 1,
                         commit_stamp=datetime.datetime.now(datetime.UTC),
                         headers=dict(headers),
                         events=list(aggregate.uncommitted),

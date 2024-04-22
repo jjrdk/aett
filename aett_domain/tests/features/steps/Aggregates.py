@@ -35,7 +35,7 @@ def step_impl(context):
 
 @given("an aggregate")
 def step_impl(context):
-    agg = TestAggregate('test')
+    agg = TestAggregate('test', 0)
     context.aggregate = agg
 
 

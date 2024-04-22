@@ -40,10 +40,10 @@ class CommitStore(ICommitEvents):
     def commit(self, commit: Commit):
         self._ensure_stream(commit.tenant_id, commit.stream_id)
         existing = self._buckets[commit.tenant_id][commit.stream_id]
-        if len(existing) > 0 and existing[-1].stream_revision >= commit.stream_revision:
+        if len(existing) > 0 and existing[-1].commit_sequence >= commit.commit_sequence:
             if existing[-1].commit_id == commit.commit_id:
                 raise DuplicateCommitException('Duplicate commit')
-            commits = [e for c in (c.events for c in existing if c.stream_revision >= commit.stream_revision) for e in
+            commits = [e for c in (c.events for c in existing if c.commit_sequence >= commit.commit_sequence) for e in
                        c]
             if self._conflict_detector.conflicts_with(list(map(self._get_body, commit.events)),
                                                       list(map(self._get_body, commits))):

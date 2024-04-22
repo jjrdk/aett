@@ -16,9 +16,9 @@ class TestMemento(Memento):
 
 
 class TestAggregate(Aggregate[TestMemento]):
-    def __init__(self, stream_id: str):
+    def __init__(self, stream_id: str, commit_sequence: int):
         self.value = 0
-        super().__init__(stream_id=stream_id)
+        super().__init__(stream_id=stream_id, commit_sequence=commit_sequence)
 
     def apply_memento(self, memento: TestMemento) -> None:
         if memento is None:

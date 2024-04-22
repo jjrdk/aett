@@ -56,7 +56,7 @@ class CommitStore(ICommitEvents):
                       stream_id=doc['StreamId'],
                       stream_revision=int(doc['StreamRevision']),
                       commit_id=UUID(doc['CommitId']),
-                      commit_sequence=0,
+                      commit_sequence=int(doc['CommitSequence']),
                       commit_stamp=datetime.datetime.fromtimestamp(int(doc['CommitStamp']), datetime.UTC),
                       headers=jsonpickle.decode(doc['Headers']),
                       events=[EventMessage.from_json(e, self._topic_map) for e in jsonpickle.decode(doc['Events'])],
@@ -72,6 +72,7 @@ class CommitStore(ICommitEvents):
                 'StreamId': commit.stream_id,
                 'StreamRevision': commit.stream_revision,
                 'CommitId': str(commit.commit_id),
+                'CommitSequence': commit.commit_sequence,
                 'CommitStamp': int(datetime.datetime.now(datetime.UTC).timestamp()),
                 'Headers': jsonpickle.encode(commit.headers, unpicklable=False),
                 'Events': jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False),
@@ -81,7 +82,7 @@ class CommitStore(ICommitEvents):
         except Exception as e:
             if isinstance(e, pymongo.errors.DuplicateKeyError):
                 if self._detect_duplicate(commit.commit_id, commit.tenant_id, commit.stream_id,
-                                          commit.stream_revision):
+                                          commit.commit_sequence):
                     raise Exception(
                         f"Commit {commit.commit_id} already exists in stream {commit.stream_id}")
                 else:
@@ -96,15 +97,15 @@ class CommitStore(ICommitEvents):
                 raise Exception(
                     f"Failed to commit event to stream {commit.stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}")
 
-    def _detect_duplicate(self, commit_id: UUID, tenant_id: str, stream_id: str, stream_revision: int) -> bool:
+    def _detect_duplicate(self, commit_id: UUID, tenant_id: str, stream_id: str, commit_sequence: int) -> bool:
         duplicate_check = self._collection.find_one(
-            {'TenantId': tenant_id, 'StreamId': stream_id, 'StreamRevision': stream_revision})
+            {'TenantId': tenant_id, 'StreamId': stream_id, 'CommitSequence': commit_sequence})
         s = str(duplicate_check.get('CommitId'))
         return s == str(commit_id)
 
     def _detect_conflicts(self, commit: Commit) -> (bool, int):
         filters = {"TenantId": commit.tenant_id, "StreamId": commit.stream_id,
-                   "StreamRevision": {'$lte': commit.stream_revision}}
+                   "CommitSequence": {'$lte': commit.commit_sequence}}
         query_response: pymongo.cursor.Cursor = \
             self._collection.find({'$and': [filters]}).sort('CheckpointToken',
                                                             direction=pymongo.ASCENDING)
@@ -186,7 +187,7 @@ class PersistenceManagement:
             commits_collection.create_index([("TenantId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
                                              ("StreamRevision", pymongo.ASCENDING)], comment="GetFrom", unique=True)
             commits_collection.create_index([("TenantId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
-                                             ("StreamRevision", pymongo.ASCENDING)], comment="LogicalKey", unique=True)
+                                             ("CommitSequence", pymongo.ASCENDING)], comment="LogicalKey", unique=True)
             commits_collection.create_index([("CommitStamp", pymongo.ASCENDING)], comment="CommitStamp", unique=False)
             commits_collection.create_index([("TenantId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
                                              ("CommitId", pymongo.ASCENDING)], comment="CommitId", unique=True)

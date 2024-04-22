@@ -76,20 +76,13 @@ class CommitStore(ICommitEvents):
 
     def commit(self, commit: Commit):
         try:
-            commit_seq_cur: psycopg.Cursor = self._connection.cursor()
-            commit_seq_cur.execute(
-                f"""SELECT MAX(CommitSequence) FROM {self._table_name} WHERE TenantId = %s AND StreamId = %s;""",
-                (commit.tenant_id, commit.stream_id))
-            commit_sequence = commit_seq_cur.fetchone()
-            commit_sequence = 0 if commit_sequence[0] is None else int(commit_sequence[0])
-            commit_seq_cur.close()
             cur = self._connection.cursor()
             cur.execute(f"""INSERT
   INTO {self._table_name}
      ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 RETURNING CheckpointNumber;""", (commit.tenant_id, commit.stream_id, commit.stream_id,
-                                 commit.commit_id, commit_sequence + 1, commit.stream_revision, len(commit.events),
+                                 commit.commit_id, commit.commit_sequence, commit.stream_revision, len(commit.events),
                                  commit.commit_stamp,
                                  jsonpickle.encode(commit.headers, unpicklable=False).encode('utf-8'),
                                  jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False).encode(
@@ -101,7 +94,7 @@ RETURNING CheckpointNumber;""", (commit.tenant_id, commit.stream_id, commit.stre
                           stream_id=commit.stream_id,
                           stream_revision=commit.stream_revision,
                           commit_id=commit.commit_id,
-                          commit_sequence=commit_sequence + 1,
+                          commit_sequence=commit.commit_sequence,
                           commit_stamp=commit.commit_stamp,
                           headers=commit.headers,
                           events=commit.events,

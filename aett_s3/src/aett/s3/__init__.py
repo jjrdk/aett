@@ -93,9 +93,8 @@ class CommitStore(ICommitEvents):
                       checkpoint_token=0)
 
     def commit(self, commit: Commit):
-        commit_sequence = self._get_commit_sequence(commit) + 1
-        self.check_exists(commit_sequence=commit_sequence, commit=commit)
-        commit_key = f'{self._folder_name}/{commit.tenant_id}/{commit.stream_id}/{int(commit.commit_stamp.timestamp())}_{commit.commit_id}_{commit_sequence}_{commit.stream_revision}.json'
+        self.check_exists(commit_sequence=commit.commit_sequence, commit=commit)
+        commit_key = f'{self._folder_name}/{commit.tenant_id}/{commit.stream_id}/{int(commit.commit_stamp.timestamp())}_{commit.commit_id}_{commit.commit_sequence}_{commit.stream_revision}.json'
         d = commit.__dict__
         d['events'] = [e.to_json() for e in commit.events]
         d['headers'] = {k: jsonpickle.encode(v, unpicklable=False) for k, v in commit.headers.items()}
@@ -137,17 +136,6 @@ class CommitStore(ICommitEvents):
     @staticmethod
     def _get_body(em: EventMessage):
         return em.body
-
-    def _get_commit_sequence(self, commit: Commit):
-        response = self._resource.list_objects(
-            Delimiter='/',
-            Prefix=f'{self._folder_name}/{commit.tenant_id}/{commit.stream_id}/',
-            Bucket=self._s3_bucket)
-        if 'Contents' not in response:
-            return 0
-        keys = list(key for key in map(lambda r: r.get('Key'), response.get('Contents')))
-        keys.sort(reverse=True)
-        return int(keys[0].split('_')[-2])
 
 
 class SnapshotStore(IAccessSnapshots):

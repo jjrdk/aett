@@ -21,9 +21,9 @@ class TestEventConflictDelegate(ConflictDelegate[TestEvent, TestEvent]):
 
 
 class TestAggregate(Aggregate[TestMemento]):
-    def __init__(self, stream_id):
+    def __init__(self, stream_id, commit_sequence):
         self.value = 0
-        super().__init__(stream_id)
+        super().__init__(stream_id, commit_sequence)
 
     def apply_memento(self, memento: TestMemento) -> None:
         if self.id != memento.id:

@@ -89,26 +89,13 @@ class CommitStore(ICommitEvents):
 
     def commit(self, commit: Commit):
         try:
-            query_response = self.table.query(
-                TableName=self._table_name,
-                IndexName="RevisionIndex",
-                ConsistentRead=True,
-                Limit=1,
-                ProjectionExpression='CommitSequence,StreamRevision',
-                KeyConditionExpression=(Key("TenantAndStream").eq(f'{commit.tenant_id}{commit.stream_id}')),
-                ScanIndexForward=False)
-            items = query_response['Items']
-            commit_sequence = int(items[0]['CommitSequence']) if len(items) > 0 else 0
-            last_revision = int(items[0]['StreamRevision']) if len(items) > 0 else 0
-            if 0 < last_revision != commit.stream_revision - len(commit.events):
-                self._raise_conflict(commit)
             item = {
                 'TenantAndStream': f'{commit.tenant_id}{commit.stream_id}',
                 'TenantId': commit.tenant_id,
                 'StreamId': commit.stream_id,
                 'StreamRevision': commit.stream_revision,
                 'CommitId': str(commit.commit_id),
-                'CommitSequence': commit_sequence + 1,
+                'CommitSequence': commit.commit_sequence,
                 'CommitStamp': int(commit.commit_stamp.timestamp()),
                 'Headers': jsonpickle.encode(commit.headers, unpicklable=False),
                 'Events': jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False)

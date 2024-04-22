@@ -29,7 +29,7 @@ class TestAggregateRepository(AggregateRepository):
     def get(self, cls: typing.Type[TAggregate], identifier: str, version: int = MAX_INT) -> TestAggregate:
         memento_type: typing.Union = inspect.signature(cls.apply_memento).parameters['memento'].annotation
         m = self.storage.get(identifier)
-        agg = cls(identifier)
+        agg = cls(identifier, 0)
         agg.apply_memento(m)
         return agg
 
