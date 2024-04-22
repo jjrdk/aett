@@ -5,7 +5,7 @@ import uuid
 import boto3
 import jsonpickle
 from behave import *
-import features
+import Types
 from aett.domain import DefaultAggregateRepository
 from aett.dynamodb import PersistenceManagement, CommitStore, SnapshotStore
 from aett.eventstore import TopicMap, EventMessage
@@ -23,10 +23,10 @@ def step_impl(context):
 @step("a persistent aggregate repository")
 def step_impl(context):
     tm = TopicMap()
-    tm.register_module(features.steps.Types)
+    tm.register_module(Types)
     context.stream_id = str(uuid.uuid4())
-    context.bucket_id = str(uuid.uuid4())
-    context.repository = DefaultAggregateRepository(context.bucket_id, CommitStore(region='localhost', topic_map=tm),
+    context.tenant_id = str(uuid.uuid4())
+    context.repository = DefaultAggregateRepository(context.tenant_id, CommitStore(region='localhost', topic_map=tm),
                                                     SnapshotStore(region='localhost'))
 
 
@@ -76,8 +76,8 @@ def step_impl(context):
     for x in range(1, 10):
         time_stamp = (start_time + datetime.timedelta(days=x))
         item = {
-            'BucketAndStream': f'{context.bucket_id}time_test',
-            'BucketId': context.bucket_id,
+            'TenantAndStream': f'{context.tenant_id}{context.stream_id}',
+            'TenantId': context.tenant_id,
             'StreamId': context.stream_id,
             'StreamRevision': x,
             'CommitId': str(uuid.uuid4()),
@@ -93,7 +93,7 @@ def step_impl(context):
             Item=item,
             ReturnValues='NONE',
             ReturnValuesOnConditionCheckFailure='NONE',
-            ConditionExpression='attribute_not_exists(BucketAndStream) AND attribute_not_exists(CommitSequence)')
+            ConditionExpression='attribute_not_exists(TenantAndStream) AND attribute_not_exists(CommitSequence)')
         print(response)
 
 
@@ -107,6 +107,7 @@ def step_impl(context):
 @then('the aggregate is loaded at version (\\d+)')
 def step_impl(context, version):
     agg: TestAggregate = context.aggregate
+    print(agg.version)
     assert agg.version == int(version)
 
 

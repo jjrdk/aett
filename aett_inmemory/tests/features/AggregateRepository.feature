@@ -17,6 +17,6 @@ Feature: Aggregate repository behavior
     Then the aggregate is loaded at version 5
 
   Scenario: Thousand event aggregate
-    When 10000 events are persisted to an aggregate
+    When 1000 events are persisted to an aggregate
     And loaded again
-    Then the aggregate is loaded at version 10000
+    Then the aggregate is loaded at version 1000

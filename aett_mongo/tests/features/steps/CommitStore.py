@@ -19,9 +19,9 @@ def step_impl(context):
 
 @step("I commit an event to the stream")
 def step_impl(context):
-    context.bucket_id = str(uuid.uuid4())
+    context.tenant_id = str(uuid.uuid4())
     context.stream_id = str(uuid.uuid4())
-    stream: EventStream = EventStream.create(context.bucket_id, context.stream_id)
+    stream: EventStream = EventStream.create(context.tenant_id, context.stream_id)
     stream.add(EventMessage(body=TestEvent(source='test',
                                            timestamp=datetime.datetime.now(),
                                            version=1,
@@ -32,5 +32,5 @@ def step_impl(context):
 @then("the event is persisted to the store")
 def step_impl(context):
     store: CommitStore = context.store
-    stream = [commit for commit in store.get(context.bucket_id, context.stream_id, 0, 1)]
+    stream = [commit for commit in store.get(context.tenant_id, context.stream_id, 0, 1)]
     assert stream[0].events[0].body.version == 1

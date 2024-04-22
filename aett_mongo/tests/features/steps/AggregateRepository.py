@@ -28,8 +28,8 @@ def step_impl(context):
     context.stream_id = str(uuid.uuid4())
     tm = TopicMap()
     tm.register_module(Types)
-    context.bucket_id = str(uuid.uuid4())
-    context.repository = DefaultAggregateRepository(context.bucket_id, CommitStore(context.db, topic_map=tm),
+    context.tenant_id = str(uuid.uuid4())
+    context.repository = DefaultAggregateRepository(context.tenant_id, CommitStore(context.db, topic_map=tm),
                                                     SnapshotStore(context.db))
 
 
@@ -76,7 +76,7 @@ def step_impl(context):
     for x in range(1, 10):
         time_stamp = (start_time + datetime.timedelta(days=x))
         doc = {
-            'BucketId': context.bucket_id,
+            'TenantId': context.tenant_id,
             'StreamId': 'time_test',
             'StreamRevision': x,
             'CommitId': str(uuid.uuid4()),

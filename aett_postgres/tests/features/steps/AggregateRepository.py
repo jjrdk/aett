@@ -20,8 +20,8 @@ def step_impl(context):
     tm = TopicMap()
     tm.register_module(features.steps.Types)
     context.stream_id = str(uuid.uuid4())
-    context.bucket_id = str(uuid.uuid4())
-    context.repository = DefaultAggregateRepository(context.bucket_id, CommitStore(context.db, tm),
+    context.tenant_id = str(uuid.uuid4())
+    context.repository = DefaultAggregateRepository(context.tenant_id, CommitStore(context.db, tm),
                                                     SnapshotStore(context.db))
 
 
@@ -69,9 +69,9 @@ def step_impl(context):
         cur = context.db.cursor()
         cur.execute(f"""INSERT
           INTO commits
-             ( BucketId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
+             ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        RETURNING CheckpointNumber;""", (context.bucket_id, context.stream_id, context.stream_id,
+        RETURNING CheckpointNumber;""", (context.tenant_id, context.stream_id, context.stream_id,
                                          str(uuid.uuid4()), x, x, 1,
                                          time_stamp,
                                          jsonpickle.encode({}, unpicklable=False).encode('utf-8'),

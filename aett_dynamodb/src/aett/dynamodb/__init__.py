@@ -30,7 +30,7 @@ class CommitStore(ICommitEvents):
         self._conflict_detector: ConflictDetector = conflict_detector if conflict_detector is not None \
             else ConflictDetector()
 
-    def get(self, bucket_id: str, stream_id: str, min_revision: int = 0,
+    def get(self, tenant_id: str, stream_id: str, min_revision: int = 0,
             max_revision: int = MAX_INT) -> typing.Iterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
@@ -38,21 +38,21 @@ class CommitStore(ICommitEvents):
             TableName=self._table_name,
             IndexName="RevisionIndex",
             ConsistentRead=True,
-            ProjectionExpression='BucketId,StreamId,StreamRevision,CommitId,CommitSequence,CommitStamp,Headers,Events',
-            KeyConditionExpression=(Key("BucketAndStream").eq(f'{bucket_id}{stream_id}')
+            ProjectionExpression='TenantId,StreamId,StreamRevision,CommitId,CommitSequence,CommitStamp,Headers,Events',
+            KeyConditionExpression=(Key("TenantAndStream").eq(f'{tenant_id}{stream_id}')
                                     & Key("StreamRevision").between(min_revision, max_revision)),
             ScanIndexForward=True)
         items = query_response['Items']
         for item in items:
             yield self._item_to_commit(item)
 
-    def get_to(self, bucket_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+    def get_to(self, tenant_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
         query_response = self.table.scan(IndexName="CommitStampIndex",
                                          ConsistentRead=True,
                                          Select='ALL_ATTRIBUTES',
                                          FilterExpression=(
-                                                 Key("BucketAndStream").eq(f'{bucket_id}{stream_id}')
+                                                 Key("TenantAndStream").eq(f'{tenant_id}{stream_id}')
                                                  & Attr('CommitStamp').lte(int(max_time.timestamp()))))
         items = query_response['Items']
         for item in items:
@@ -60,13 +60,14 @@ class CommitStore(ICommitEvents):
                 break
             yield self._item_to_commit(item)
 
-    def get_all_to(self, bucket_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+    def get_all_to(self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
         query_response = self.table.scan(IndexName="CommitStampIndex",
                                          ConsistentRead=True,
                                          Select='ALL_ATTRIBUTES',
+                                         ProjectionExpression='CommitStamp',
                                          FilterExpression=(
-                                                 Key("BucketAndStream").begins_with(f'{bucket_id}')
+                                                 Key("TenantAndStream").begins_with(f'{tenant_id}')
                                                  & Attr('CommitStamp').lte(int(max_time.timestamp()))))
         items = query_response['Items']
         for item in items:
@@ -76,7 +77,7 @@ class CommitStore(ICommitEvents):
 
     def _item_to_commit(self, item: dict) -> Commit:
         return Commit(
-            bucket_id=item['BucketId'],
+            tenant_id=item['TenantId'],
             stream_id=item['StreamId'],
             stream_revision=int(item['StreamRevision']),
             commit_id=UUID(item['CommitId']),
@@ -88,13 +89,26 @@ class CommitStore(ICommitEvents):
 
     def commit(self, commit: Commit):
         try:
+            query_response = self.table.query(
+                TableName=self._table_name,
+                IndexName="RevisionIndex",
+                ConsistentRead=True,
+                Limit=1,
+                ProjectionExpression='CommitSequence,StreamRevision',
+                KeyConditionExpression=(Key("TenantAndStream").eq(f'{commit.tenant_id}{commit.stream_id}')),
+                ScanIndexForward=False)
+            items = query_response['Items']
+            commit_sequence = int(items[0]['CommitSequence']) if len(items) > 0 else 0
+            last_revision = int(items[0]['StreamRevision']) if len(items) > 0 else 0
+            if 0 < last_revision != commit.stream_revision - len(commit.events):
+                self._raise_conflict(commit)
             item = {
-                'BucketAndStream': f'{commit.bucket_id}{commit.stream_id}',
-                'BucketId': commit.bucket_id,
+                'TenantAndStream': f'{commit.tenant_id}{commit.stream_id}',
+                'TenantId': commit.tenant_id,
                 'StreamId': commit.stream_id,
                 'StreamRevision': commit.stream_revision,
                 'CommitId': str(commit.commit_id),
-                'CommitSequence': commit.commit_sequence,
+                'CommitSequence': commit_sequence + 1,
                 'CommitStamp': int(commit.commit_stamp.timestamp()),
                 'Headers': jsonpickle.encode(commit.headers, unpicklable=False),
                 'Events': jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False)
@@ -104,25 +118,27 @@ class CommitStore(ICommitEvents):
                 Item=item,
                 ReturnValues='NONE',
                 ReturnValuesOnConditionCheckFailure='NONE',
-                ConditionExpression='attribute_not_exists(BucketAndStream) AND attribute_not_exists(CommitSequence)')
+                ConditionExpression='attribute_not_exists(TenantAndStream) AND attribute_not_exists(CommitSequence)')
             print(response)
         except Exception as e:
             if e.__class__.__name__ == 'ConditionalCheckFailedException':
-                if self._detect_duplicate(commit.commit_id, commit.bucket_id, commit.stream_id,
+                if self._detect_duplicate(commit.commit_id, commit.tenant_id, commit.stream_id,
                                           commit.commit_sequence):
                     raise DuplicateCommitException('Duplicate commit detected')
                 else:
-                    if self._detect_conflicts(commit=commit):
-                        raise ConflictingCommitException(
-                            f"Conflict detected in stream {commit.stream_id} with revision {commit.stream_revision}")
-                    else:
-                        raise NonConflictingCommitException(
-                            f'Non-conflicting version conflict detected in stream {commit.stream_id} with revision {commit.stream_revision}')
+                    self._raise_conflict(commit)
             else:
-                raise Exception(
-                    f"Failed to commit event to stream {commit.stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}")
+                raise e
 
-    def _detect_duplicate(self, commit_id: UUID, bucket_id: str, stream_id: str, commit_sequence: int) -> bool:
+    def _raise_conflict(self, commit: Commit):
+        if self._detect_conflicts(commit=commit):
+            raise ConflictingCommitException(
+                f"Conflict detected in stream {commit.stream_id} with revision {commit.stream_revision}")
+        else:
+            raise NonConflictingCommitException(
+                f'Non-conflicting version conflict detected in stream {commit.stream_id} with revision {commit.stream_revision}')
+
+    def _detect_duplicate(self, commit_id: UUID, tenant_id: str, stream_id: str, commit_sequence: int) -> bool:
         duplicate_check = self.table.query(
             TableName=self._table_name,
             ConsistentRead=True,
@@ -130,15 +146,15 @@ class CommitStore(ICommitEvents):
             Limit=1,
             Select='SPECIFIC_ATTRIBUTES',
             ProjectionExpression='CommitId',
-            KeyConditionExpression=(Key("BucketAndStream").eq(f'{bucket_id}{stream_id}')
-                                    & Key("CommitSequence").eq(commit_sequence)),)
+            KeyConditionExpression=(Key("TenantAndStream").eq(f'{tenant_id}{stream_id}')
+                                    & Key("CommitSequence").eq(commit_sequence)), )
         items = duplicate_check['Items']
         return items[0]['CommitId'] == str(commit_id)
 
     def _detect_conflicts(self, commit: Commit) -> bool:
         if commit.commit_sequence == 0:
             return False
-        previous_commits = self.get(commit.bucket_id, commit.stream_id, commit.commit_sequence - 1,
+        previous_commits = self.get(commit.tenant_id, commit.stream_id, commit.commit_sequence - 1,
                                     commit.commit_sequence)
         for previous_commit in previous_commits:
             if self._conflict_detector.conflicts_with(list(map(self._get_body, commit.events)),
@@ -157,20 +173,20 @@ class SnapshotStore(IAccessSnapshots):
         self.table = self.dynamodb.Table(table_name)
         self.table_name = table_name
 
-    def get(self, bucket_id: str, stream_id: str, max_revision: int = MAX_INT) -> Snapshot | None:
+    def get(self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT) -> Snapshot | None:
         try:
             query_response = self.table.query(
                 TableName=self.table_name,
                 ConsistentRead=True,
                 Limit=1,
                 KeyConditionExpression=(
-                        Key("BucketAndStream").eq(f'{bucket_id}{stream_id}') & Key("StreamRevision").lte(max_revision)),
+                        Key("TenantAndStream").eq(f'{tenant_id}{stream_id}') & Key("StreamRevision").lte(max_revision)),
                 ScanIndexForward=False
             )
             if len(query_response['Items']) == 0:
                 return None
             item = query_response['Items'][0]
-            return Snapshot(bucket_id=item['BucketId'],
+            return Snapshot(tenant_id=item['TenantId'],
                             stream_id=item['StreamId'],
                             stream_revision=int(item['StreamRevision']),
                             payload=item['Payload'],
@@ -184,8 +200,8 @@ class SnapshotStore(IAccessSnapshots):
             headers = {}
         try:
             item = {
-                'BucketAndStream': f"{snapshot.bucket_id}{snapshot.stream_id}",
-                'BucketId': snapshot.bucket_id,
+                'TenantAndStream': f"{snapshot.tenant_id}{snapshot.stream_id}",
+                'TenantId': snapshot.tenant_id,
                 'StreamId': snapshot.stream_id,
                 'StreamRevision': snapshot.stream_revision,
                 'Payload': snapshot.payload,
@@ -196,7 +212,7 @@ class SnapshotStore(IAccessSnapshots):
                 Item=item,
                 ReturnValues='NONE',
                 ReturnValuesOnConditionCheckFailure='NONE',
-                ConditionExpression='attribute_not_exists(BucketAndStream) AND attribute_not_exists(StreamRevision)'
+                ConditionExpression='attribute_not_exists(TenantAndStream) AND attribute_not_exists(StreamRevision)'
             )
         except Exception as e:
             raise Exception(
@@ -219,11 +235,11 @@ class PersistenceManagement:
             _ = self.dynamodb.create_table(
                 TableName=self.commits_table_name,
                 KeySchema=[
-                    {'AttributeName': 'BucketAndStream', 'KeyType': 'HASH'},
+                    {'AttributeName': 'TenantAndStream', 'KeyType': 'HASH'},
                     {'AttributeName': 'CommitSequence', 'KeyType': 'RANGE'}
                 ],
                 AttributeDefinitions=[
-                    {'AttributeName': 'BucketAndStream', 'AttributeType': 'S'},
+                    {'AttributeName': 'TenantAndStream', 'AttributeType': 'S'},
                     {'AttributeName': 'CommitSequence', 'AttributeType': 'N'},
                     {'AttributeName': 'StreamRevision', 'AttributeType': 'N'},
                     {'AttributeName': 'CommitStamp', 'AttributeType': 'N'}
@@ -232,7 +248,7 @@ class PersistenceManagement:
                     {
                         'IndexName': "RevisionIndex",
                         'KeySchema': [
-                            {'AttributeName': 'BucketAndStream', 'KeyType': 'HASH'},
+                            {'AttributeName': 'TenantAndStream', 'KeyType': 'HASH'},
                             {'AttributeName': 'StreamRevision', 'KeyType': 'RANGE'}
                         ],
                         'Projection': {'ProjectionType': 'ALL'}
@@ -240,7 +256,7 @@ class PersistenceManagement:
                     {
                         'IndexName': "CommitStampIndex",
                         'KeySchema': [
-                            {'AttributeName': 'BucketAndStream', 'KeyType': 'HASH'},
+                            {'AttributeName': 'TenantAndStream', 'KeyType': 'HASH'},
                             {'AttributeName': 'CommitStamp', 'KeyType': 'RANGE'}
                         ],
                         'Projection': {'ProjectionType': 'ALL'}
@@ -253,11 +269,11 @@ class PersistenceManagement:
             _ = self.dynamodb.create_table(
                 TableName=self.snapshots_table_name,
                 KeySchema=[
-                    {'AttributeName': 'BucketAndStream', 'KeyType': 'HASH'},
+                    {'AttributeName': 'TenantAndStream', 'KeyType': 'HASH'},
                     {'AttributeName': 'StreamRevision', 'KeyType': 'RANGE'}
                 ],
                 AttributeDefinitions=[
-                    {'AttributeName': 'BucketAndStream', 'AttributeType': 'S'},
+                    {'AttributeName': 'TenantAndStream', 'AttributeType': 'S'},
                     {'AttributeName': 'StreamRevision', 'AttributeType': 'N'}
                 ],
                 TableClass='STANDARD',

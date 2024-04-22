@@ -14,9 +14,9 @@ use_step_matcher("re")
 
 @given("I have a persistent aggregate repository")
 def step_impl(context):
-    context.bucket_id = str(uuid.uuid4())
+    context.tenant_id = str(uuid.uuid4())
     context.stream_id = str(uuid.uuid4())
-    context.repository = DefaultAggregateRepository(context.bucket_id,
+    context.repository = DefaultAggregateRepository(context.tenant_id,
                                                     CommitStore(),
                                                     SnapshotStore())
 
@@ -54,11 +54,11 @@ def step_impl(context):
 @when("a series of commits is persisted")
 def step_impl(context):
     start_time = datetime.datetime.fromtimestamp(0, datetime.timezone.utc)
-    context.repository._store._ensure_stream(context.bucket_id, 'time_test')
-    persistence = context.repository._store._buckets[context.bucket_id]['time_test']
+    context.repository._store._ensure_stream(context.tenant_id, 'time_test')
+    persistence = context.repository._store._buckets[context.tenant_id]['time_test']
     for x in range(1, 10):
         time_stamp = (start_time + datetime.timedelta(days=x))
-        commit = Commit(bucket_id=context.bucket_id, stream_id='time_test', commit_stamp=time_stamp, commit_sequence=x,
+        commit = Commit(tenant_id=context.tenant_id, stream_id='time_test', commit_stamp=time_stamp, commit_sequence=x,
                         stream_revision=1,
                         events=[EventMessage(body=TestEvent(source='time_test',
                                                             timestamp=time_stamp,

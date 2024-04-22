@@ -19,9 +19,9 @@ use_step_matcher("re")
 def step_impl(context):
     tm = TopicMap()
     tm.register_module(features.steps.Types)
-    context.bucket_id = str(uuid.uuid4())
+    context.tenant_id = str(uuid.uuid4())
     context.stream_id = str(uuid.uuid4())
-    context.repository = DefaultAggregateRepository(context.bucket_id,
+    context.repository = DefaultAggregateRepository(context.tenant_id,
                                                     CommitStore(s3_config=context.s3_config, topic_map=tm),
                                                     SnapshotStore(s3_config=context.s3_config))
 
@@ -67,7 +67,7 @@ def step_impl(context):
     start_time = datetime.datetime.fromtimestamp(0, datetime.timezone.utc)
     for x in range(1, 10):
         time_stamp = (start_time + datetime.timedelta(days=x))
-        commit = Commit(bucket_id=context.bucket_id, stream_id=context.stream_id, commit_stamp=time_stamp, commit_sequence=x,
+        commit = Commit(tenant_id=context.tenant_id, stream_id=context.stream_id, commit_stamp=time_stamp, commit_sequence=x,
                         stream_revision=1,
                         events=[EventMessage(body=TestEvent(source=context.stream_id,
                                                             timestamp=time_stamp,
@@ -76,7 +76,7 @@ def step_impl(context):
                         headers={},
                         checkpoint_token=0,
                         commit_id=uuid.uuid4())
-        commit_key = f'commits/{commit.bucket_id}/{commit.stream_id}/{int(commit.commit_stamp.timestamp())}_{commit.commit_sequence}_{commit.stream_revision}.json'
+        commit_key = f'commits/{commit.tenant_id}/{commit.stream_id}/{int(commit.commit_stamp.timestamp())}_{commit.commit_sequence}_{commit.stream_revision}.json'
         d = commit.__dict__
         d['events'] = [e.to_json() for e in commit.events]
         d['headers'] = {k: jsonpickle.encode(v, unpicklable=False) for k, v in commit.headers.items()}

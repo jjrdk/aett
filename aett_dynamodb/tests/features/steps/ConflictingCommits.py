@@ -19,7 +19,7 @@ def step_impl(context):
 
 @step("I commit a conflicting event to the stream")
 def step_impl(context):
-    stream: EventStream = EventStream.create(context.bucket_id, context.stream_id)
+    stream: EventStream = EventStream.create(context.tenant_id, context.stream_id)
     stream.add(EventMessage(body=TestEvent(source='test', timestamp=datetime.datetime.now(), version=1, value=0)))
     commit = stream.to_commit()
     try:
@@ -30,7 +30,7 @@ def step_impl(context):
 
 @step("I commit a non-conflicting event to the stream")
 def step_impl(context):
-    stream: EventStream = EventStream.create(context.bucket_id, context.stream_id)
+    stream: EventStream = EventStream.create(context.tenant_id, context.stream_id)
     stream.add(EventMessage(body=TestEvent(source='test', timestamp=datetime.datetime.now(), version=1, value=1)))
     commit = stream.to_commit()
     try:

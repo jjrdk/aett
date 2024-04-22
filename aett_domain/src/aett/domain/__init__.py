@@ -168,11 +168,11 @@ class DefaultAggregateRepository(AggregateRepository):
 
     def get(self, cls: typing.Type[TAggregate], stream_id: str, max_version: int = 2 ** 32) -> TAggregate:
         memento_type = inspect.signature(cls.apply_memento).parameters['memento'].annotation
-        snapshot = self._snapshot_store.get(bucket_id=self._bucket_id, stream_id=stream_id, max_revision=max_version)
+        snapshot = self._snapshot_store.get(tenant_id=self._tenant_id, stream_id=stream_id, max_revision=max_version)
         min_version = 0
         if snapshot is not None:
             min_version = snapshot.stream_revision
-        commits = self._store.get(bucket_id=self._bucket_id,
+        commits = self._store.get(tenant_id=self._tenant_id,
                                   stream_id=stream_id,
                                   min_revision=min_version,
                                   max_revision=max_version)
@@ -188,7 +188,7 @@ class DefaultAggregateRepository(AggregateRepository):
 
     def get_to(self, cls: typing.Type[TAggregate], stream_id: str,
                max_time: datetime = datetime.datetime.max) -> TAggregate:
-        commits = self._store.get_to(bucket_id=self._bucket_id,
+        commits = self._store.get_to(tenant_id=self._tenant_id,
                                      stream_id=stream_id,
                                      max_time=max_time)
         aggregate = cls(stream_id)
@@ -204,13 +204,13 @@ class DefaultAggregateRepository(AggregateRepository):
         if len(aggregate.uncommitted) == 0:
             return
         start_version = aggregate.version - len(aggregate.uncommitted)
-        persisted = list(self._store.get(self._bucket_id, aggregate.id, start_version))
+        persisted = list(self._store.get(self._tenant_id, aggregate.id, start_version))
         persisted.sort(key=lambda c: c.stream_revision)
         if len(persisted) == 0 and start_version != 0:
             raise ValueError('Invalid version')
         if len(persisted) > 0 and persisted[-1].stream_revision != start_version:
             raise ValueError('Invalid version')
-        commit = Commit(bucket_id=self._bucket_id,
+        commit = Commit(tenant_id=self._tenant_id,
                         stream_id=aggregate.id,
                         stream_revision=aggregate.version,
                         commit_id=uuid.uuid4(),
@@ -234,13 +234,13 @@ class DefaultAggregateRepository(AggregateRepository):
 
     def _snapshot_aggregate(self, aggregate: Aggregate, headers: Dict[str, str] = None) -> None:
         memento = aggregate.get_memento()
-        snapshot = Snapshot(bucket_id=self._bucket_id, stream_id=aggregate.id,
+        snapshot = Snapshot(tenant_id=self._tenant_id, stream_id=aggregate.id,
                             payload=jsonpickle.encode(memento.payload, unpicklable=False),
                             stream_revision=memento.version, headers={})
         self._snapshot_store.add(snapshot=snapshot, headers=headers)
 
-    def __init__(self, bucket_id: str, store: ICommitEvents, snapshot_store: IAccessSnapshots):
-        self._bucket_id = bucket_id
+    def __init__(self, tenant_id: str, store: ICommitEvents, snapshot_store: IAccessSnapshots):
+        self._tenant_id = tenant_id
         self._store = store
         self._snapshot_store = snapshot_store
 
@@ -248,17 +248,17 @@ class DefaultAggregateRepository(AggregateRepository):
 class DefaultSagaRepository(SagaRepository):
     TSaga = typing.TypeVar('TSaga', bound=Saga)
 
-    def __init__(self, bucket_id: str, store: ICommitEvents):
-        self._bucket_id = bucket_id
+    def __init__(self, tenant_id: str, store: ICommitEvents):
+        self._tenant_id = tenant_id
         self._store = store
 
     def get(self, cls: typing.Type[TSaga], stream_id: str) -> TSaga:
-        stream = EventStream.load(bucket_id=self._bucket_id, stream_id=stream_id, client=self._store)
+        stream = EventStream.load(tenant_id=self._tenant_id, stream_id=stream_id, client=self._store)
         saga = cls(stream)
         return saga
 
     def save(self, saga: TSaga) -> None:
-        stream = EventStream.load(bucket_id=self._bucket_id, stream_id=saga.id, client=self._store)
+        stream = EventStream.load(tenant_id=self._tenant_id, stream_id=saga.id, client=self._store)
         for event in saga.uncommitted:
             stream.add(event)
         self._store.commit(stream.to_commit())

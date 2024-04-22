@@ -21,11 +21,11 @@ class CommitStore(ICommitEvents):
         self._counters_collection: database.Collection = db.get_collection('counters')
         self._conflict_detector = conflict_detector if conflict_detector is not None else ConflictDetector()
 
-    def get(self, bucket_id: str, stream_id: str, min_revision: int = 0,
+    def get(self, tenant_id: str, stream_id: str, min_revision: int = 0,
             max_revision: int = MAX_INT) -> typing.Iterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
-        filters = {"BucketId": bucket_id, "StreamId": stream_id}
+        filters = {"TenantId": tenant_id, "StreamId": stream_id}
         if min_revision > 0:
             filters['StreamRevision']: {'$gte': min_revision}
         if max_revision < MAX_INT:
@@ -35,24 +35,24 @@ class CommitStore(ICommitEvents):
         for doc in query_response.sort('CheckpointToken', direction=pymongo.ASCENDING):
             yield self._doc_to_commit(doc)
 
-    def get_to(self, bucket_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+    def get_to(self, tenant_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
-        filters = {"BucketId": bucket_id, "StreamId": stream_id, "CommitStamp": {'$lte': int(max_time.timestamp())}}
+        filters = {"TenantId": tenant_id, "StreamId": stream_id, "CommitStamp": {'$lte': int(max_time.timestamp())}}
 
         query_response: pymongo.cursor.Cursor = self._collection.find({'$and': [filters]})
         for doc in query_response.sort('CheckpointToken', direction=pymongo.ASCENDING):
             yield self._doc_to_commit(doc)
 
-    def get_all_to(self, bucket_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+    def get_all_to(self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
-        filters = {"BucketId": bucket_id, "CommitStamp": {'$lte': int(max_time.timestamp())}}
+        filters = {"TenantId": tenant_id, "CommitStamp": {'$lte': int(max_time.timestamp())}}
 
         query_response: pymongo.cursor.Cursor = self._collection.find({'$and': [filters]})
         for doc in query_response.sort('CheckpointToken', direction=pymongo.ASCENDING):
             yield self._doc_to_commit(doc)
 
     def _doc_to_commit(self, doc: dict) -> Commit:
-        return Commit(bucket_id=doc['BucketId'],
+        return Commit(tenant_id=doc['TenantId'],
                       stream_id=doc['StreamId'],
                       stream_revision=int(doc['StreamRevision']),
                       commit_id=UUID(doc['CommitId']),
@@ -68,7 +68,7 @@ class CommitStore(ICommitEvents):
                 filter={'_id': 'CheckpointToken'},
                 update={'$inc': {'seq': 1}}).get('seq')
             doc = {
-                'BucketId': commit.bucket_id,
+                'TenantId': commit.tenant_id,
                 'StreamId': commit.stream_id,
                 'StreamRevision': commit.stream_revision,
                 'CommitId': str(commit.commit_id),
@@ -80,7 +80,7 @@ class CommitStore(ICommitEvents):
             _: pymongo.results.InsertOneResult = self._collection.insert_one(doc)
         except Exception as e:
             if isinstance(e, pymongo.errors.DuplicateKeyError):
-                if self._detect_duplicate(commit.commit_id, commit.bucket_id, commit.stream_id,
+                if self._detect_duplicate(commit.commit_id, commit.tenant_id, commit.stream_id,
                                           commit.stream_revision):
                     raise Exception(
                         f"Commit {commit.commit_id} already exists in stream {commit.stream_id}")
@@ -96,14 +96,14 @@ class CommitStore(ICommitEvents):
                 raise Exception(
                     f"Failed to commit event to stream {commit.stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}")
 
-    def _detect_duplicate(self, commit_id: UUID, bucket_id: str, stream_id: str, stream_revision: int) -> bool:
+    def _detect_duplicate(self, commit_id: UUID, tenant_id: str, stream_id: str, stream_revision: int) -> bool:
         duplicate_check = self._collection.find_one(
-            {'BucketId': bucket_id, 'StreamId': stream_id, 'StreamRevision': stream_revision})
+            {'TenantId': tenant_id, 'StreamId': stream_id, 'StreamRevision': stream_revision})
         s = str(duplicate_check.get('CommitId'))
         return s == str(commit_id)
 
     def _detect_conflicts(self, commit: Commit) -> (bool, int):
-        filters = {"BucketId": commit.bucket_id, "StreamId": commit.stream_id,
+        filters = {"TenantId": commit.tenant_id, "StreamId": commit.stream_id,
                    "StreamRevision": {'$lte': commit.stream_revision}}
         query_response: pymongo.cursor.Cursor = \
             self._collection.find({'$and': [filters]}).sort('CheckpointToken',
@@ -129,14 +129,14 @@ class SnapshotStore(IAccessSnapshots):
     def __init__(self, db: database.Database, table_name: str = 'snapshots'):
         self.collection: database.Collection = db.get_collection(table_name)
 
-    def get(self, bucket_id: str, stream_id: str, max_revision: int = MAX_INT) -> Snapshot | None:
+    def get(self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT) -> Snapshot | None:
         try:
             item = self.collection.find_one(
-                {'BucketId': bucket_id, 'StreamId': stream_id, 'StreamRevision': max_revision})
+                {'TenantId': tenant_id, 'StreamId': stream_id, 'StreamRevision': max_revision})
             if item is None:
                 return None
 
-            return Snapshot(bucket_id=item.get('BucketId'),
+            return Snapshot(tenant_id=item.get('TenantId'),
                             stream_id=item.get('StreamId'),
                             stream_revision=int(item.get('StreamRevision')),
                             payload=jsonpickle.decode(item.get('Payload')),
@@ -150,7 +150,7 @@ class SnapshotStore(IAccessSnapshots):
             headers = {}
         try:
             doc = {
-                'BucketId': snapshot.bucket_id,
+                'TenantId': snapshot.tenant_id,
                 'StreamId': snapshot.stream_id,
                 'StreamRevision': snapshot.stream_revision,
                 'Payload': jsonpickle.encode(snapshot.payload, unpicklable=False),
@@ -181,14 +181,14 @@ class PersistenceManagement:
         try:
             commits_collection: database.Collection = self.db.create_collection(self.commits_table_name,
                                                                                 check_exists=True)
-            commits_collection.create_index([("BucketId", pymongo.ASCENDING), ("CheckpointToken", pymongo.ASCENDING)],
+            commits_collection.create_index([("TenantId", pymongo.ASCENDING), ("CheckpointToken", pymongo.ASCENDING)],
                                             comment="GetFromCheckpoint", unique=True)
-            commits_collection.create_index([("BucketId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
+            commits_collection.create_index([("TenantId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
                                              ("StreamRevision", pymongo.ASCENDING)], comment="GetFrom", unique=True)
-            commits_collection.create_index([("BucketId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
+            commits_collection.create_index([("TenantId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
                                              ("StreamRevision", pymongo.ASCENDING)], comment="LogicalKey", unique=True)
             commits_collection.create_index([("CommitStamp", pymongo.ASCENDING)], comment="CommitStamp", unique=False)
-            commits_collection.create_index([("BucketId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
+            commits_collection.create_index([("TenantId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
                                              ("CommitId", pymongo.ASCENDING)], comment="CommitId", unique=True)
         except pymongo.errors.CollectionInvalid as e:
             pass
@@ -196,7 +196,7 @@ class PersistenceManagement:
         try:
             snapshots_collection: database.Collection = self.db.create_collection(self.snapshots_table_name,
                                                                                   check_exists=True)
-            snapshots_collection.create_index([("BucketId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
+            snapshots_collection.create_index([("TenantId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
                                                ("StreamRevision", pymongo.ASCENDING)], comment="LogicalKey",
                                               unique=True)
         except pymongo.errors.CollectionInvalid as e:

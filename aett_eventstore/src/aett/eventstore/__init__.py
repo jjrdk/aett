@@ -174,9 +174,9 @@ class Commit:
     and which apply to the stream indicated.
     """
 
-    bucket_id: str
+    tenant_id: str
     """
-    Gets or sets the value which identifies bucket to which the stream and the commit belongs.
+    Gets or sets the value which identifies tenant to which the stream and the commit belongs.
     """
 
     stream_id: str
@@ -226,9 +226,9 @@ class Snapshot:
     Represents a materialized view of a stream at specific revision.
     """
 
-    bucket_id: str
+    tenant_id: str
     """
-    Gets the value which uniquely identifies the bucket to which the stream belongs.
+    Gets the value which uniquely identifies the tenant to which the stream belongs.
     """
 
     stream_id: str
@@ -249,15 +249,15 @@ class Snapshot:
     headers: Dict[str, str]
 
     @staticmethod
-    def from_memento(bucket_id: str, memento: Memento, headers: Dict[str, str]) -> 'Snapshot':
+    def from_memento(tenant_id: str, memento: Memento, headers: Dict[str, str]) -> 'Snapshot':
         """
         Converts the memento to a snapshot which can be persisted.
-        :param bucket_id: The value which uniquely identifies the bucket to which the stream belongs.
+        :param tenant_id: The value which uniquely identifies the bucket to which the stream belongs.
         :param memento:  The memento to be converted.
         :param headers: The headers to assign to the snapshot
         :return:
         """
-        return Snapshot(bucket_id=bucket_id, stream_id=memento.id, stream_revision=memento.version,
+        return Snapshot(tenant_id=tenant_id, stream_id=memento.id, stream_revision=memento.version,
                         payload=jsonpickle.encode(memento.payload), headers=headers)
 
 
@@ -269,13 +269,13 @@ class ICommitEvents(ABC):
     """
 
     @abstractmethod
-    def get(self, bucket_id: str, stream_id: str, min_revision: int = 0, max_revision: int = MAX_INT) -> \
+    def get(self, tenant_id: str, stream_id: str, min_revision: int = 0, max_revision: int = MAX_INT) -> \
             Iterable[Commit]:
         """
         Gets the corresponding commits from the stream indicated starting at the revision specified until the
         end of the stream sorted in ascending order--from oldest to newest.
 
-        :param bucket_id: The value which uniquely identifies bucket the stream belongs to.
+        :param tenant_id: The value which uniquely identifies bucket the stream belongs to.
         :param stream_id: The stream from which the events will be read.
         :param min_revision: The minimum revision of the stream to be read.
         :param max_revision: The maximum revision of the stream to be read.
@@ -286,13 +286,13 @@ class ICommitEvents(ABC):
         pass
 
     @abstractmethod
-    def get_to(self, bucket_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+    def get_to(self, tenant_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
         """
         Gets the corresponding commits from the stream indicated starting at the revision specified until the
         end of the stream sorted in ascending order--from oldest to newest.
 
-        :param bucket_id: The value which uniquely identifies bucket the stream belongs to.
+        :param tenant_id: The value which uniquely identifies bucket the stream belongs to.
         :param stream_id: The stream from which the events will be read.
         :param max_time: The max timestamp to return.
         :return: A series of committed events from the stream specified sorted in ascending order.
@@ -302,13 +302,13 @@ class ICommitEvents(ABC):
         pass
 
     @abstractmethod
-    def get_all_to(self, bucket_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+    def get_all_to(self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
         """
         Gets the corresponding commits from the stream indicated starting at the revision specified until the
         end of the stream sorted in ascending order--from oldest to newest.
 
-        :param bucket_id: The value which uniquely identifies bucket the stream belongs to.
+        :param tenant_id: The value which uniquely identifies bucket the stream belongs to.
         :param max_time: The max timestamp to return.
         :return: A series of committed events from the stream specified sorted in ascending order.
         :raises StorageException:
@@ -335,11 +335,11 @@ class IAccessSnapshots(ABC):
     """
 
     @abstractmethod
-    def get(self, bucket_id: str, stream_id: str, max_revision: int) -> Optional[Snapshot]:
+    def get(self, tenant_id: str, stream_id: str, max_revision: int) -> Optional[Snapshot]:
         """
         Gets the snapshot at the revision indicated or the most recent snapshot below that revision.
 
-        :param bucket_id: The value which uniquely identifies the bucket to which the stream and the snapshot belong.
+        :param tenant_id: The value which uniquely identifies the bucket to which the stream and the snapshot belong.
         :param stream_id: The stream for which the snapshot should be returned.
         :param max_revision: The maximum revision possible for the desired snapshot.
         :return: If found, returns the snapshot for the stream indicated; otherwise null.
@@ -377,30 +377,30 @@ class EventStream:
     """
 
     @staticmethod
-    def load(bucket_id: str,
+    def load(tenant_id: str,
              stream_id: str,
              client: ICommitEvents,
              min_version: int = 0,
              max_version: int = 2 ** 32) -> 'EventStream':
         """
         Loads the event stream from the underlying persistence mechanism.
-        :param bucket_id: The value which uniquely identifies the bucket to which the stream belongs.
+        :param tenant_id: The value which uniquely identifies the bucket to which the stream belongs.
         :param stream_id: The value which uniquely identifies the stream to be loaded.
         :param client: The client to use to access the underlying persistence mechanism.
         :param min_version: The minimum revision of the stream to be read.
         :param max_version: The maximum revision of the stream to be read.
         :return: An instance of the event stream.
         """
-        instance = EventStream(bucket_id, stream_id, 0)
-        commits = client.get(bucket_id, stream_id, min_version, max_version)
+        instance = EventStream(tenant_id, stream_id, 0)
+        commits = client.get(tenant_id, stream_id, min_version, max_version)
         instance.__populate_stream__(min_version, max_version, commits)
         if min_version > 0 and len(instance.committed) == 0:
-            raise StreamNotFoundException(f"Stream {stream_id} not found in {bucket_id}")
+            raise StreamNotFoundException(f"Stream {stream_id} not found in {tenant_id}")
         return instance
 
     @staticmethod
-    def create(bucket_id: str, stream_id: str):
-        return EventStream(bucket_id, stream_id, 0)
+    def create(tenant_id: str, stream_id: str):
+        return EventStream(tenant_id=tenant_id, stream_id=stream_id, stream_revision=0)
 
     def add(self, event: EventMessage):
         self.uncommitted.append(event)
@@ -419,7 +419,7 @@ class EventStream:
     def to_commit(self, commit_id: UUID = None) -> Commit:
         if commit_id is None:
             commit_id = uuid.uuid4()
-        commit = Commit(bucket_id=self.bucket_id,
+        commit = Commit(tenant_id=self.tenant_id,
                         stream_id=self.stream_id,
                         stream_revision=self.version,
                         commit_id=commit_id,
@@ -463,15 +463,15 @@ class EventStream:
 
     def __update__(self, event_store: ICommitEvents):
         version = self.version - len(self.uncommitted)
-        commits = event_store.get(self.bucket_id, self.stream_id, version + 1, MAX_INT)
+        commits = event_store.get(self.tenant_id, self.stream_id, version + 1, MAX_INT)
         self.__populate_stream__(version + 1, MAX_INT, commits)
         to_be_committed = self.uncommitted.copy()
         self.uncommitted.clear()
         for event in to_be_committed:
             self.add(event)
 
-    def __init__(self, bucket_id: str, stream_id: str, stream_revision: int):
-        self.bucket_id = bucket_id
+    def __init__(self, tenant_id: str, stream_id: str, stream_revision: int):
+        self.tenant_id = tenant_id
         self.stream_id = stream_id
         self.version = stream_revision
         self.commit_sequence: int = 0

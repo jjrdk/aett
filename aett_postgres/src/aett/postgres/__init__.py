@@ -21,50 +21,50 @@ class CommitStore(ICommitEvents):
         self._conflict_detector = conflict_detector if conflict_detector is not None else ConflictDetector()
         self._table_name = table_name
 
-    def get(self, bucket_id: str, stream_id: str, min_revision: int = 0,
+    def get(self, tenant_id: str, stream_id: str, min_revision: int = 0,
             max_revision: int = MAX_INT) -> typing.Iterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
         cur = self._connection.cursor()
-        cur.execute(f"""SELECT BucketId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+        cur.execute(f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
   FROM {self._table_name}
- WHERE BucketId = %s
+ WHERE TenantId = %s
    AND StreamId = %s
    AND StreamRevision >= %s
    AND (StreamRevision - Items) < %s
    AND CommitSequence > %s
- ORDER BY CommitSequence;""", (bucket_id, stream_id, min_revision, max_revision, 0))
+ ORDER BY CommitSequence;""", (tenant_id, stream_id, min_revision, max_revision, 0))
         fetchall = cur.fetchall()
         for doc in fetchall:
             yield self._item_to_commit(doc)
 
-    def get_to(self, bucket_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+    def get_to(self, tenant_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
         cur = self._connection.cursor()
-        cur.execute(f"""SELECT BucketId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+        cur.execute(f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
           FROM {self._table_name}
-         WHERE BucketId = %s
+         WHERE TenantId = %s
            AND StreamId = %s
            AND CommitStamp <= %s
-         ORDER BY CommitSequence;""", (bucket_id, stream_id, max_time))
+         ORDER BY CommitSequence;""", (tenant_id, stream_id, max_time))
         fetchall = cur.fetchall()
         for doc in fetchall:
             yield self._item_to_commit(doc)
 
-    def get_all_to(self, bucket_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+    def get_all_to(self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
         cur = self._connection.cursor()
-        cur.execute(f"""SELECT BucketId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+        cur.execute(f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
                   FROM {self._table_name}
-                 WHERE BucketId = %s
+                 WHERE TenantId = %s
                    AND CommitStamp <= %s
-                 ORDER BY CheckpointNumber;""", (bucket_id, max_time))
+                 ORDER BY CheckpointNumber;""", (tenant_id, max_time))
         fetchall = cur.fetchall()
         for doc in fetchall:
             yield self._item_to_commit(doc)
 
     def _item_to_commit(self, item):
-        return Commit(bucket_id=item[0],
+        return Commit(tenant_id=item[0],
                       stream_id=item[1],
                       stream_revision=item[3],
                       commit_id=item[4],
@@ -78,17 +78,17 @@ class CommitStore(ICommitEvents):
         try:
             commit_seq_cur: psycopg.Cursor = self._connection.cursor()
             commit_seq_cur.execute(
-                f"""SELECT MAX(CommitSequence) FROM {self._table_name} WHERE BucketId = %s AND StreamId = %s;""",
-                (commit.bucket_id, commit.stream_id))
+                f"""SELECT MAX(CommitSequence) FROM {self._table_name} WHERE TenantId = %s AND StreamId = %s;""",
+                (commit.tenant_id, commit.stream_id))
             commit_sequence = commit_seq_cur.fetchone()
             commit_sequence = 0 if commit_sequence[0] is None else int(commit_sequence[0])
             commit_seq_cur.close()
             cur = self._connection.cursor()
             cur.execute(f"""INSERT
   INTO {self._table_name}
-     ( BucketId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
+     ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-RETURNING CheckpointNumber;""", (commit.bucket_id, commit.stream_id, commit.stream_id,
+RETURNING CheckpointNumber;""", (commit.tenant_id, commit.stream_id, commit.stream_id,
                                  commit.commit_id, commit_sequence + 1, commit.stream_revision, len(commit.events),
                                  commit.commit_stamp,
                                  jsonpickle.encode(commit.headers, unpicklable=False).encode('utf-8'),
@@ -97,7 +97,7 @@ RETURNING CheckpointNumber;""", (commit.bucket_id, commit.stream_id, commit.stre
             checkpoint_number = cur.fetchone()
             cur.close()
             self._connection.commit()
-            return Commit(bucket_id=commit.bucket_id,
+            return Commit(tenant_id=commit.tenant_id,
                           stream_id=commit.stream_id,
                           stream_revision=commit.stream_revision,
                           commit_id=commit.commit_id,
@@ -107,7 +107,7 @@ RETURNING CheckpointNumber;""", (commit.bucket_id, commit.stream_id, commit.stre
                           events=commit.events,
                           checkpoint_token=checkpoint_number)
         except psycopg.errors.UniqueViolation as e:
-            if self._detect_duplicate(commit.commit_id, commit.bucket_id, commit.stream_id):
+            if self._detect_duplicate(commit.commit_id, commit.tenant_id, commit.stream_id):
                 raise DuplicateCommitException(
                     f"Commit {commit.commit_id} already exists in stream {commit.stream_id}")
             else:
@@ -121,14 +121,14 @@ RETURNING CheckpointNumber;""", (commit.bucket_id, commit.stream_id, commit.stre
         except Exception as e:
             raise Exception(f"Failed to commit {commit.commit_id} with error {e}")
 
-    def _detect_duplicate(self, commit_id: UUID, bucket_id: str, stream_id: str) -> bool:
+    def _detect_duplicate(self, commit_id: UUID, tenant_id: str, stream_id: str) -> bool:
         try:
             cur: psycopg.Cursor = self._connection.cursor()
             cur.execute(f"""SELECT COUNT(*)
   FROM {self._table_name}
- WHERE BucketId = %s
+ WHERE TenantId = %s
    AND StreamId = %s
-   AND CommitId = %s;""", (bucket_id, stream_id, str(commit_id)))
+   AND CommitId = %s;""", (tenant_id, stream_id, str(commit_id)))
             result = cur.fetchone()
             cur.close()
             return result[0] > 0
@@ -139,10 +139,10 @@ RETURNING CheckpointNumber;""", (commit.bucket_id, commit.stream_id, commit.stre
         cur = self._connection.cursor()
         cur.execute(f"""SELECT StreamRevision, Payload
                   FROM {self._table_name}
-                 WHERE BucketId = %s
+                 WHERE TenantId = %s
                    AND StreamId = %s
                    AND StreamRevision <= %s
-                 ORDER BY CommitSequence;""", (commit.bucket_id, commit.stream_id, commit.stream_revision))
+                 ORDER BY CommitSequence;""", (commit.tenant_id, commit.stream_id, commit.stream_revision))
         fetchall = cur.fetchall()
         latest_revision = 0
         for doc in fetchall:
@@ -164,21 +164,21 @@ class SnapshotStore(IAccessSnapshots):
         self.connection: psycopg.connect = db
         self._table_name = table_name
 
-    def get(self, bucket_id: str, stream_id: str, max_revision: int = MAX_INT) -> Snapshot | None:
+    def get(self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT) -> Snapshot | None:
         try:
             cur = self.connection.cursor()
             cur.execute(f"""SELECT *
   FROM {self._table_name}
- WHERE BucketId = %s
+ WHERE TenantId = %s
    AND StreamId = %s
    AND StreamRevision <= %s
  ORDER BY StreamRevision DESC
- LIMIT 1;""", (bucket_id, stream_id, max_revision))
+ LIMIT 1;""", (tenant_id, stream_id, max_revision))
             item = cur.fetchone()
             if item is None:
                 return None
 
-            return Snapshot(bucket_id=item[0],
+            return Snapshot(tenant_id=item[0],
                             stream_id=item[1],
                             stream_revision=int(item[2]),
                             payload=jsonpickle.decode(item[3].decode('utf-8')),
@@ -194,8 +194,8 @@ class SnapshotStore(IAccessSnapshots):
             cur = self.connection.cursor()
             j = jsonpickle.encode(snapshot.payload, unpicklable=False)
             cur.execute(
-                f"""INSERT INTO {self._table_name} ( BucketId, StreamId, StreamRevision, Payload, Headers) VALUES (%s, %s, %s, %s, %s);""",
-                (snapshot.bucket_id,
+                f"""INSERT INTO {self._table_name} ( TenantId, StreamId, StreamRevision, Payload, Headers) VALUES (%s, %s, %s, %s, %s);""",
+                (snapshot.tenant_id,
                  snapshot.stream_id,
                  snapshot.stream_revision,
                  j.encode('utf-8'),
@@ -220,7 +220,7 @@ class PersistenceManagement:
             c = self.db.cursor()
             c.execute(f"""CREATE TABLE {self.commits_table_name}
 (
-    BucketId varchar(64) NOT NULL,
+    TenantId varchar(64) NOT NULL,
     StreamId char(64) NOT NULL,
     StreamIdOriginal varchar(1000) NOT NULL,
     StreamRevision int NOT NULL CHECK (StreamRevision > 0),
@@ -233,19 +233,19 @@ class PersistenceManagement:
     Payload bytea NOT NULL,
     CONSTRAINT PK_Commits PRIMARY KEY (CheckpointNumber)
 );
-CREATE UNIQUE INDEX IX_Commits_CommitSequence ON {self.commits_table_name} (BucketId, StreamId, CommitSequence);
-CREATE UNIQUE INDEX IX_Commits_CommitId ON {self.commits_table_name} (BucketId, StreamId, CommitId);
-CREATE UNIQUE INDEX IX_Commits_Revisions ON {self.commits_table_name} (BucketId, StreamId, StreamRevision, Items);
+CREATE UNIQUE INDEX IX_Commits_CommitSequence ON {self.commits_table_name} (TenantId, StreamId, CommitSequence);
+CREATE UNIQUE INDEX IX_Commits_CommitId ON {self.commits_table_name} (TenantId, StreamId, CommitId);
+CREATE UNIQUE INDEX IX_Commits_Revisions ON {self.commits_table_name} (TenantId, StreamId, StreamRevision, Items);
 CREATE INDEX IX_Commits_Stamp ON {self.commits_table_name} (CommitStamp);
 
 CREATE TABLE {self.snapshots_table_name}
 (
-    BucketId varchar(40) NOT NULL,
+    TenantId varchar(40) NOT NULL,
     StreamId char(40) NOT NULL,
     StreamRevision int NOT NULL CHECK (StreamRevision > 0),
     Payload bytea NOT NULL,
     Headers bytea NOT NULL,
-    CONSTRAINT PK_Snapshots PRIMARY KEY (BucketId, StreamId, StreamRevision)
+    CONSTRAINT PK_Snapshots PRIMARY KEY (TenantId, StreamId, StreamRevision)
 );""")
             c.commit()
         except Exception as e:

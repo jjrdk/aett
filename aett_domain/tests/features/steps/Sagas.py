@@ -19,7 +19,7 @@ class TestSaga(Saga):
 
 @given("a new saga")
 def step_impl(context):
-    context.saga = TestSaga(EventStream.create('bucket_id', 'saga_id'))
+    context.saga = TestSaga(EventStream.create('tenant_id', 'saga_id'))
 
 
 @when("an event is applied to the saga")

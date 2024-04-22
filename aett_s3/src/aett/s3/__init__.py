@@ -36,13 +36,13 @@ class CommitStore(ICommitEvents):
         self._conflict_detector = conflict_detector
         self._folder_name = folder_name
 
-    def get(self, bucket_id: str, stream_id: str, min_revision: int = 0,
+    def get(self, tenant_id: str, stream_id: str, min_revision: int = 0,
             max_revision: int = MAX_INT) -> typing.Iterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
         response = self._resource.list_objects(Bucket=self._s3_bucket,
                                                Delimiter='/',
-                                               Prefix=f'{self._folder_name}/{bucket_id}/{stream_id}/')
+                                               Prefix=f'{self._folder_name}/{tenant_id}/{stream_id}/')
         if 'Contents' not in response:
             return []
         keys = [key for key in map(lambda r: r.get('Key'), response.get('Contents')) if
@@ -51,11 +51,11 @@ class CommitStore(ICommitEvents):
         for key in keys:
             yield self._file_to_commit(key)
 
-    def get_to(self, bucket_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+    def get_to(self, tenant_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
         response = self._resource.list_objects(Bucket=self._s3_bucket,
                                                Delimiter='/',
-                                               Prefix=f'{self._folder_name}/{bucket_id}/{stream_id}/')
+                                               Prefix=f'{self._folder_name}/{tenant_id}/{stream_id}/')
         if 'Contents' not in response:
             return []
         timestamp = max_time.timestamp()
@@ -65,11 +65,11 @@ class CommitStore(ICommitEvents):
         for key in keys:
             yield self._file_to_commit(key)
 
-    def get_all_to(self, bucket_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+    def get_all_to(self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
         response = self._resource.list_objects(Bucket=self._s3_bucket,
                                                Delimiter='/',
-                                               Prefix=f'{self._folder_name}/{bucket_id}/')
+                                               Prefix=f'{self._folder_name}/{tenant_id}/')
         if 'Contents' not in response:
             return []
         timestamp = max_time.timestamp()
@@ -82,7 +82,7 @@ class CommitStore(ICommitEvents):
     def _file_to_commit(self, key: str):
         file = self._resource.get_object(Bucket=self._s3_bucket, Key=key)
         doc = jsonpickle.decode(file.get('Body').read().decode('utf-8'))
-        return Commit(bucket_id=doc.get('bucket_id'),
+        return Commit(tenant_id=doc.get('tenant_id'),
                       stream_id=doc.get('stream_id'),
                       stream_revision=doc.get('stream_revision'),
                       commit_id=doc.get('commit_id'),
@@ -95,7 +95,7 @@ class CommitStore(ICommitEvents):
     def commit(self, commit: Commit):
         commit_sequence = self._get_commit_sequence(commit) + 1
         self.check_exists(commit_sequence=commit_sequence, commit=commit)
-        commit_key = f'{self._folder_name}/{commit.bucket_id}/{commit.stream_id}/{int(commit.commit_stamp.timestamp())}_{commit.commit_id}_{commit_sequence}_{commit.stream_revision}.json'
+        commit_key = f'{self._folder_name}/{commit.tenant_id}/{commit.stream_id}/{int(commit.commit_stamp.timestamp())}_{commit.commit_id}_{commit_sequence}_{commit.stream_revision}.json'
         d = commit.__dict__
         d['events'] = [e.to_json() for e in commit.events]
         d['headers'] = {k: jsonpickle.encode(v, unpicklable=False) for k, v in commit.headers.items()}
@@ -110,7 +110,7 @@ class CommitStore(ICommitEvents):
     def check_exists(self, commit_sequence: int, commit: Commit):
         response = self._resource.list_objects(
             Delimiter='/',
-            Prefix=f'{self._folder_name}/{commit.bucket_id}/{commit.stream_id}/',
+            Prefix=f'{self._folder_name}/{commit.tenant_id}/{commit.stream_id}/',
             Bucket=self._s3_bucket)
         if 'Contents' not in response:
             return
@@ -141,7 +141,7 @@ class CommitStore(ICommitEvents):
     def _get_commit_sequence(self, commit: Commit):
         response = self._resource.list_objects(
             Delimiter='/',
-            Prefix=f'{self._folder_name}/{commit.bucket_id}/{commit.stream_id}/',
+            Prefix=f'{self._folder_name}/{commit.tenant_id}/{commit.stream_id}/',
             Bucket=self._s3_bucket)
         if 'Contents' not in response:
             return 0
@@ -156,10 +156,10 @@ class SnapshotStore(IAccessSnapshots):
         self._folder_name = folder_name
         self._resource: client = s3_config.to_client()
 
-    def get(self, bucket_id: str, stream_id: str, max_revision: int = MAX_INT) -> Snapshot | None:
+    def get(self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT) -> Snapshot | None:
         files = self._resource.list_objects(Bucket=self._s3_bucket,
                                             Delimiter='/',
-                                            Prefix=f'{self._folder_name}/{bucket_id}/{stream_id}/')
+                                            Prefix=f'{self._folder_name}/{tenant_id}/{stream_id}/')
         if 'Contents' not in files:
             return None
         keys = list(
@@ -168,10 +168,10 @@ class SnapshotStore(IAccessSnapshots):
             int(key.split('/')[-1].replace('.json', '')) <= max_revision)
         keys.sort(reverse=True)
 
-        key = f'{self._folder_name}/{bucket_id}/{stream_id}/{keys[0]}.json'
+        key = f'{self._folder_name}/{tenant_id}/{stream_id}/{keys[0]}.json'
         j = self._resource.get_object(Bucket=self._s3_bucket, Key=key)
         d = jsonpickle.decode(j['Body'].read())
-        return Snapshot(bucket_id=d.get('bucket_id'),
+        return Snapshot(tenant_id=d.get('tenant_id'),
                         stream_id=d.get('stream_id'),
                         stream_revision=int(d.get('stream_revision')),
                         payload=d.get('payload'),
@@ -180,7 +180,7 @@ class SnapshotStore(IAccessSnapshots):
     def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] = None):
         if headers is None:
             headers = {}
-        key = f'{self._folder_name}/{snapshot.bucket_id}/{snapshot.stream_id}/{snapshot.stream_revision}.json'
+        key = f'{self._folder_name}/{snapshot.tenant_id}/{snapshot.stream_id}/{snapshot.stream_revision}.json'
         self._resource.put_object(Bucket=self._s3_bucket, Key=key,
                                   Body=jsonpickle.encode(snapshot, unpicklable=False).encode('utf-8'))
 
