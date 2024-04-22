@@ -1,12 +1,12 @@
 import datetime
 import uuid
-import features
+import Types
 from behave import *
 
 from aett.domain import DefaultSagaRepository
 from aett.eventstore import TopicMap
 from aett.mongodb import CommitStore
-from features.steps.Types import TestSaga, TestEvent
+from Types import TestSaga, TestEvent
 
 use_step_matcher("re")
 
@@ -14,7 +14,7 @@ use_step_matcher("re")
 @step("a persistent saga repository")
 def step_impl(context):
     tm = TopicMap()
-    tm.register_module(features.steps.Types)
+    tm.register_module(Types)
     context.repository = DefaultSagaRepository(str(uuid.uuid4()), CommitStore(context.db, tm))
 
 

@@ -13,7 +13,7 @@ def before_scenario(context, _):
         stdout=None,
         stderr=None)
     time.sleep(1)
-    context.db = psycopg.connect("host=localhost port=5432 dbname=aett user=aett password=aett")
+    context.db = psycopg.connect("host=localhost port=5432 dbname=aett user=aett password=aett", autocommit=True)
     mgmt = PersistenceManagement(context.db)
     mgmt.initialize()
     cur = context.db.cursor()

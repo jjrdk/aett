@@ -1,4 +1,5 @@
 import datetime
+import time
 import uuid
 
 import jsonpickle
@@ -18,6 +19,7 @@ use_step_matcher("re")
 def step_impl(context):
     tm = TopicMap()
     tm.register_module(features.steps.Types)
+    context.stream_id = str(uuid.uuid4())
     context.bucket_id = str(uuid.uuid4())
     context.repository = DefaultAggregateRepository(context.bucket_id, CommitStore(context.db, tm),
                                                     SnapshotStore(context.db))
@@ -25,13 +27,13 @@ def step_impl(context):
 
 @then("a specific aggregate type can be loaded from the repository")
 def step_impl(context):
-    aggregate = context.repository.get(TestAggregate, "test")
+    aggregate = context.repository.get(TestAggregate, context.stream_id)
     assert isinstance(aggregate, TestAggregate)
 
 
 @step("an aggregate is loaded from the repository and modified")
 def step_impl(context):
-    aggregate: TestAggregate = context.repository.get(TestAggregate, "test")
+    aggregate: TestAggregate = context.repository.get(TestAggregate, context.stream_id)
     aggregate.set_value(10)
     context.aggregate = aggregate
 
@@ -43,13 +45,13 @@ def step_impl(context):
 
 @then("the modified is saved to storage")
 def step_impl(context):
-    m = context.repository.get(TestAggregate, "test")
+    m = context.repository.get(TestAggregate, context.stream_id)
     assert m.value == 10
 
 
 @step("loaded again")
 def step_impl(context):
-    a = context.repository.get(TestAggregate, "test")
+    a = context.repository.get(TestAggregate, context.stream_id)
     context.aggregate = a
 
 
@@ -69,7 +71,7 @@ def step_impl(context):
           INTO commits
              ( BucketId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        RETURNING CheckpointNumber;""", (context.bucket_id, 'time_test', 'time_test',
+        RETURNING CheckpointNumber;""", (context.bucket_id, context.stream_id, context.stream_id,
                                          str(uuid.uuid4()), x, x, 1,
                                          time_stamp,
                                          jsonpickle.encode({}, unpicklable=False).encode('utf-8'),
@@ -84,10 +86,23 @@ def step_impl(context):
 def step_impl(context):
     date_to_load = datetime.datetime.fromtimestamp(0, datetime.timezone.utc) + datetime.timedelta(days=5, hours=12)
     repo: DefaultAggregateRepository = context.repository
-    context.aggregate = repo.get_to(TestAggregate, "time_test", date_to_load)
+    context.aggregate = repo.get_to(TestAggregate, context.stream_id, date_to_load)
 
 
-@then("the aggregate is loaded at the correct state")
-def step_impl(context):
+@then('the aggregate is loaded at version (\\d+)')
+def step_impl(context, version):
     agg: TestAggregate = context.aggregate
-    assert agg.version == 5
+    assert agg.version == int(version)
+
+
+@when('(\\d+) events are persisted to an aggregate')
+def step_impl(context, count):
+    start_time = time.time()
+    for i in range(0, int(count)):
+        agg: TestAggregate = context.repository.get(TestAggregate, context.stream_id)
+        agg.raise_event(
+            TestEvent(source=context.stream_id, timestamp=datetime.datetime.now(datetime.UTC), version=i + 1, value=i))
+        context.repository.save(agg)
+    end_time = time.time()
+    elapsed = end_time - start_time
+    print(elapsed)

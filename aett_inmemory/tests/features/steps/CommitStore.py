@@ -5,7 +5,7 @@ from behave import *
 
 from aett.eventstore import EventStream, EventMessage
 from aett.inmemory import CommitStore
-from features.steps.Types import TestEvent
+from Types import TestEvent
 
 use_step_matcher("re")
 
@@ -24,7 +24,7 @@ def step_impl(context):
                                            timestamp=datetime.datetime.now(),
                                            version=1,
                                            value=0)))
-    context.store.commit(stream, uuid.uuid4())
+    context.store.commit(stream.to_commit())
 
 
 @then("the event is persisted to the store")

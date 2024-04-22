@@ -6,22 +6,26 @@ from uuid import UUID
 import jsonpickle
 import psycopg
 
-from aett.eventstore import ICommitEvents, EventStream, IAccessSnapshots, Snapshot, Commit, MAX_INT, TopicMap, \
+from aett.domain import ConflictDetector, ConflictingCommitException, NonConflictingCommitException, \
+    DuplicateCommitException
+from aett.eventstore import ICommitEvents, IAccessSnapshots, Snapshot, Commit, MAX_INT, TopicMap, \
     EventMessage
 
 
 # noinspection DuplicatedCode
 class CommitStore(ICommitEvents):
-    def __init__(self, db: psycopg.connect, topic_map: TopicMap, table_name='commits'):
-        self.topic_map = topic_map
-        self.connection: psycopg.connect = db
+    def __init__(self, db: psycopg.connect, topic_map: TopicMap, conflict_detector: ConflictDetector = None,
+                 table_name='commits'):
+        self._topic_map = topic_map
+        self._connection: psycopg.connect = db
+        self._conflict_detector = conflict_detector if conflict_detector is not None else ConflictDetector()
         self._table_name = table_name
 
     def get(self, bucket_id: str, stream_id: str, min_revision: int = 0,
             max_revision: int = MAX_INT) -> typing.Iterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
-        cur = self.connection.cursor()
+        cur = self._connection.cursor()
         cur.execute(f"""SELECT BucketId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
   FROM {self._table_name}
  WHERE BucketId = %s
@@ -36,13 +40,25 @@ class CommitStore(ICommitEvents):
 
     def get_to(self, bucket_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
-        cur = self.connection.cursor()
+        cur = self._connection.cursor()
         cur.execute(f"""SELECT BucketId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
           FROM {self._table_name}
          WHERE BucketId = %s
            AND StreamId = %s
            AND CommitStamp <= %s
          ORDER BY CommitSequence;""", (bucket_id, stream_id, max_time))
+        fetchall = cur.fetchall()
+        for doc in fetchall:
+            yield self._item_to_commit(doc)
+
+    def get_all_to(self, bucket_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+            Iterable[Commit]:
+        cur = self._connection.cursor()
+        cur.execute(f"""SELECT BucketId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+                  FROM {self._table_name}
+                 WHERE BucketId = %s
+                   AND CommitStamp <= %s
+                 ORDER BY CheckpointNumber;""", (bucket_id, max_time))
         fetchall = cur.fetchall()
         for doc in fetchall:
             yield self._item_to_commit(doc)
@@ -55,54 +71,92 @@ class CommitStore(ICommitEvents):
                       commit_sequence=item[5],
                       commit_stamp=item[6],
                       headers=jsonpickle.decode(item[8]),
-                      events=[EventMessage.from_json(e, self.topic_map) for e in jsonpickle.decode(item[9])],
+                      events=[EventMessage.from_json(e, self._topic_map) for e in jsonpickle.decode(item[9])],
                       checkpoint_token=item[7])
 
-    def commit(self, event_stream: EventStream, commit_id: UUID):
+    def commit(self, commit: Commit):
         try:
-            commit = event_stream.to_commit(commit_id)
-            cur = self.connection.cursor()
+            commit_seq_cur: psycopg.Cursor = self._connection.cursor()
+            commit_seq_cur.execute(
+                f"""SELECT MAX(CommitSequence) FROM {self._table_name} WHERE BucketId = %s AND StreamId = %s;""",
+                (commit.bucket_id, commit.stream_id))
+            commit_sequence = commit_seq_cur.fetchone()
+            commit_sequence = 0 if commit_sequence[0] is None else int(commit_sequence[0])
+            commit_seq_cur.close()
+            cur = self._connection.cursor()
             cur.execute(f"""INSERT
   INTO {self._table_name}
      ( BucketId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 RETURNING CheckpointNumber;""", (commit.bucket_id, commit.stream_id, commit.stream_id,
-                                 commit_id, commit.commit_sequence, commit.stream_revision, len(commit.events),
+                                 commit.commit_id, commit_sequence + 1, commit.stream_revision, len(commit.events),
                                  commit.commit_stamp,
                                  jsonpickle.encode(commit.headers, unpicklable=False).encode('utf-8'),
                                  jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False).encode(
                                      'utf-8')))
             checkpoint_number = cur.fetchone()
-            self.connection.commit()
+            cur.close()
+            self._connection.commit()
             return Commit(bucket_id=commit.bucket_id,
                           stream_id=commit.stream_id,
                           stream_revision=commit.stream_revision,
-                          commit_id=commit_id,
-                          commit_sequence=commit.commit_sequence,
+                          commit_id=commit.commit_id,
+                          commit_sequence=commit_sequence + 1,
                           commit_stamp=commit.commit_stamp,
                           headers=commit.headers,
                           events=commit.events,
                           checkpoint_token=checkpoint_number)
-        except Exception as e:
-            if e.__class__.__name__ == 'ConditionalCheckFailedException':
-                if self.detect_duplicate(commit_id, event_stream.bucket_id, event_stream.stream_id):
-                    raise Exception(
-                        f"Commit {commit_id} already exists in stream {event_stream.stream_id}")
-                else:
-                    event_stream.__update__(self)
-                    return self.commit(event_stream, commit_id)
+        except psycopg.errors.UniqueViolation as e:
+            if self._detect_duplicate(commit.commit_id, commit.bucket_id, commit.stream_id):
+                raise DuplicateCommitException(
+                    f"Commit {commit.commit_id} already exists in stream {commit.stream_id}")
             else:
-                raise Exception(
-                    f"Failed to commit event to stream {event_stream.stream_id} with error {e}")
+                conflicts, revision = self._detect_conflicts(commit=commit)
+                if conflicts:
+                    raise ConflictingCommitException(
+                        f"Conflict detected in stream {commit.stream_id} with revision {commit.stream_revision}")
+                else:
+                    raise NonConflictingCommitException(
+                        f'Non-conflicting version conflict detected in stream {commit.stream_id} with revision {commit.stream_revision}')
+        except Exception as e:
+            raise Exception(f"Failed to commit {commit.commit_id} with error {e}")
 
-    def detect_duplicate(self, commit_id: UUID, bucket_id: str, stream_id: str) -> bool:
-        cur = self.connection.cursor()
-        cur.execute(f"""SELECT COUNT(*)
+    def _detect_duplicate(self, commit_id: UUID, bucket_id: str, stream_id: str) -> bool:
+        try:
+            cur: psycopg.Cursor = self._connection.cursor()
+            cur.execute(f"""SELECT COUNT(*)
   FROM {self._table_name}
  WHERE BucketId = %s
    AND StreamId = %s
-   AND CommitId = %s;""", (bucket_id, stream_id, commit_id))
-        return cur.fetchone() > 0
+   AND CommitId = %s;""", (bucket_id, stream_id, str(commit_id)))
+            result = cur.fetchone()
+            cur.close()
+            return result[0] > 0
+        except Exception as e:
+            raise Exception(f"Failed to detect duplicate commit {commit_id} with error {e}")
+
+    def _detect_conflicts(self, commit: Commit) -> (bool, int):
+        cur = self._connection.cursor()
+        cur.execute(f"""SELECT StreamRevision, Payload
+                  FROM {self._table_name}
+                 WHERE BucketId = %s
+                   AND StreamId = %s
+                   AND StreamRevision <= %s
+                 ORDER BY CommitSequence;""", (commit.bucket_id, commit.stream_id, commit.stream_revision))
+        fetchall = cur.fetchall()
+        latest_revision = 0
+        for doc in fetchall:
+            events = [EventMessage.from_json(e, self._topic_map) for e in jsonpickle.decode(doc[1])]
+            if self._conflict_detector.conflicts_with(list(map(self._get_body, commit.events)),
+                                                      list(map(self._get_body, events))):
+                return True, -1
+            if doc[0] > latest_revision:
+                latest_revision = int(doc[0])
+        return False, latest_revision
+
+    @staticmethod
+    def _get_body(e):
+        return e.body
 
 
 class SnapshotStore(IAccessSnapshots):

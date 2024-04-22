@@ -1,5 +1,3 @@
-import uuid
-
 from aett.eventstore import *
 
 T = typing.TypeVar('T', bound=Memento)
@@ -205,15 +203,23 @@ class DefaultAggregateRepository(AggregateRepository):
             headers = {}
         if len(aggregate.uncommitted) == 0:
             return
-        stream = EventStream.load(bucket_id=self._bucket_id,
-                                  stream_id=aggregate.id,
-                                  client=self._store,
-                                  max_version=2 ** 32)
-        for event in aggregate.uncommitted:
-            stream.add(event)
-        for key, value in headers.items():
-            stream.set_header(key=key, value=value)
-        self._store.commit(stream, uuid.uuid4())
+        start_version = aggregate.version - len(aggregate.uncommitted)
+        persisted = list(self._store.get(self._bucket_id, aggregate.id, start_version))
+        persisted.sort(key=lambda c: c.stream_revision)
+        if len(persisted) == 0 and start_version != 0:
+            raise ValueError('Invalid version')
+        if len(persisted) > 0 and persisted[-1].stream_revision != start_version:
+            raise ValueError('Invalid version')
+        commit = Commit(bucket_id=self._bucket_id,
+                        stream_id=aggregate.id,
+                        stream_revision=aggregate.version,
+                        commit_id=uuid.uuid4(),
+                        commit_sequence=0,
+                        commit_stamp=datetime.datetime.now(datetime.UTC),
+                        headers=dict(headers),
+                        events=list(aggregate.uncommitted),
+                        checkpoint_token=0)
+        self._store.commit(commit)
         aggregate.uncommitted.clear()
 
     def snapshot(self, cls: typing.Type[TAggregate], stream_id: str, version: int = MAX_INT,
@@ -255,7 +261,7 @@ class DefaultSagaRepository(SagaRepository):
         stream = EventStream.load(bucket_id=self._bucket_id, stream_id=saga.id, client=self._store)
         for event in saga.uncommitted:
             stream.add(event)
-        self._store.commit(stream, uuid.uuid4())
+        self._store.commit(stream.to_commit())
         saga.uncommitted.clear()
 
 
@@ -264,6 +270,7 @@ TCommitted = typing.TypeVar('TCommitted', bound=BaseEvent)
 
 
 class ConflictDelegate(ABC, typing.Generic[TUncommitted, TCommitted]):
+    @abstractmethod
     def detect(self, uncommitted: TUncommitted, committed: TCommitted) -> bool:
         pass
 
@@ -284,9 +291,26 @@ class ConflictDetector:
     def conflicts_with(self,
                        uncommitted_events: typing.Iterable[BaseEvent],
                        committed_events: typing.Iterable[BaseEvent]) -> bool:
+        if len(self.delegates) == 0:
+            return False
         for uncommitted in uncommitted_events:
             for committed in committed_events:
                 if type(uncommitted) in self.delegates and type(committed) in self.delegates[type(uncommitted)]:
                     if self.delegates[type(uncommitted)][type(committed)](uncommitted, committed):
                         return True
         return False
+
+
+class DuplicateCommitException(Exception):
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+class ConflictingCommitException(Exception):
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+class NonConflictingCommitException(Exception):
+    def __init__(self, message: str):
+        super().__init__(message)

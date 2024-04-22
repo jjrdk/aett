@@ -1,16 +1,17 @@
 import datetime
+import time
 import uuid
 
 import jsonpickle
 
-import features
+import Types
 import pymongo.database
 from behave import *
 
 from aett.domain import DefaultAggregateRepository
 from aett.eventstore import TopicMap, EventMessage
 from aett.mongodb import PersistenceManagement, CommitStore, SnapshotStore
-from features.steps.Types import TestAggregate, TestEvent
+from Types import TestAggregate, TestEvent
 
 use_step_matcher("re")
 
@@ -24,8 +25,9 @@ def step_impl(context):
 
 @step("a persistent aggregate repository")
 def step_impl(context):
+    context.stream_id = str(uuid.uuid4())
     tm = TopicMap()
-    tm.register_module(features.steps.Types)
+    tm.register_module(Types)
     context.bucket_id = str(uuid.uuid4())
     context.repository = DefaultAggregateRepository(context.bucket_id, CommitStore(context.db, topic_map=tm),
                                                     SnapshotStore(context.db))
@@ -33,13 +35,13 @@ def step_impl(context):
 
 @then("a specific aggregate type can be loaded from the repository")
 def step_impl(context):
-    aggregate = context.repository.get(TestAggregate, "test")
+    aggregate = context.repository.get(TestAggregate, context.stream_id)
     assert isinstance(aggregate, TestAggregate)
 
 
 @step("an aggregate is loaded from the repository and modified")
 def step_impl(context):
-    aggregate: TestAggregate = context.repository.get(TestAggregate, "test")
+    aggregate: TestAggregate = context.repository.get(TestAggregate, context.stream_id)
     aggregate.set_value(10)
     context.aggregate = aggregate
 
@@ -51,13 +53,13 @@ def step_impl(context):
 
 @then("the modified is saved to storage")
 def step_impl(context):
-    m = context.repository.get(TestAggregate, "test")
+    m = context.repository.get(TestAggregate, context.stream_id)
     assert m.value == 10
 
 
 @step("loaded again")
 def step_impl(context):
-    a = context.repository.get(TestAggregate, "test")
+    a = context.repository.get(TestAggregate, context.stream_id)
     context.aggregate = a
 
 
@@ -96,7 +98,23 @@ def step_impl(context):
     context.aggregate = repo.get_to(TestAggregate, "time_test", date_to_load)
 
 
-@then("the aggregate is loaded at the correct state")
-def step_impl(context):
+@then('the aggregate is loaded at version (\\d+)')
+def step_impl(context, version):
     agg: TestAggregate = context.aggregate
-    assert agg.version == 5
+    print(agg.version)
+    assert agg.version == int(version)
+
+
+@when('(\\d+) events are persisted to an aggregate')
+def step_impl(context, count):
+    context.stream_id = str(uuid.uuid4())
+    start_time = time.time()
+    for i in range(0, int(count)):
+        agg: TestAggregate = context.repository.get(TestAggregate, context.stream_id)
+        agg.raise_event(
+            TestEvent(source=context.stream_id, timestamp=datetime.datetime.now(datetime.UTC), version=i + 1, value=i))
+        context.repository.save(agg)
+        time.sleep(0.1)
+    end_time = time.time()
+    elapsed = end_time - start_time
+    print(elapsed)

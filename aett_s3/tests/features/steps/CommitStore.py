@@ -27,7 +27,7 @@ def step_impl(context):
                                            timestamp=datetime.datetime.now(),
                                            version=1,
                                            value=0)))
-    context.store.commit(stream, uuid.uuid4())
+    context.store.commit(stream.to_commit())
 
 
 @then("the event is persisted to the store")

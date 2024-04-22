@@ -1,7 +1,7 @@
 import datetime
 from dataclasses import dataclass
 
-from aett.domain import Aggregate, Saga
+from aett.domain import Aggregate, Saga, ConflictDelegate
 from aett.eventstore import DomainEvent, Memento
 
 
@@ -13,6 +13,12 @@ class TestEvent(DomainEvent):
 @dataclass(frozen=True)
 class TestMemento(Memento):
     value: int = 0
+
+
+class TestEventConflictDelegate(ConflictDelegate[TestEvent, TestEvent]):
+
+    def detect(self, uncommitted: TestEvent, committed: TestEvent) -> bool:
+        return uncommitted.value == committed.value
 
 
 class TestAggregate(Aggregate[TestMemento]):

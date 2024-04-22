@@ -7,7 +7,7 @@ from behave import *
 from aett.domain import DefaultSagaRepository
 from aett.eventstore import TopicMap
 from aett.inmemory import CommitStore
-from features.steps.Types import TestSaga, TestEvent
+from Types import TestSaga, TestEvent
 
 use_step_matcher("re")
 

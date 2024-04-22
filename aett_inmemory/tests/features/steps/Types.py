@@ -1,7 +1,7 @@
 import datetime
 from dataclasses import dataclass
 
-from aett.domain import Aggregate, Saga
+from aett.domain import Aggregate, Saga, ConflictDelegate
 from aett.eventstore import DomainEvent, Memento, EventStream
 
 
@@ -15,10 +15,15 @@ class TestMemento(Memento):
     value: int = 0
 
 
+class TestEventConflictDelegate(ConflictDelegate[TestEvent, TestEvent]):
+    def detect(self, uncommitted: TestEvent, committed: TestEvent) -> bool:
+        return uncommitted.value == committed.value
+
+
 class TestAggregate(Aggregate[TestMemento]):
-    def __init__(self, event_stream: EventStream, memento: TestMemento = None):
+    def __init__(self, stream_id):
         self.value = 0
-        super().__init__(event_stream, memento)
+        super().__init__(stream_id)
 
     def apply_memento(self, memento: TestMemento) -> None:
         if self.id != memento.id:

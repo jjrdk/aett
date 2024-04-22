@@ -1,11 +1,11 @@
 import datetime
 import uuid
-import features
+import Types
 from behave import *
 
 from aett.eventstore import EventStream, EventMessage, TopicMap
 from aett.mongodb import CommitStore
-from features.steps.Types import TestEvent
+from Types import TestEvent
 
 use_step_matcher("re")
 
@@ -13,7 +13,7 @@ use_step_matcher("re")
 @step("I have a commit store")
 def step_impl(context):
     tm = TopicMap()
-    tm.register_module(features.steps.Types)
+    tm.register_module(Types)
     context.store = CommitStore(context.db, tm)
 
 
@@ -26,7 +26,7 @@ def step_impl(context):
                                            timestamp=datetime.datetime.now(),
                                            version=1,
                                            value=0)))
-    context.store.commit(stream, uuid.uuid4())
+    context.store.commit(stream.to_commit())
 
 
 @then("the event is persisted to the store")

@@ -1,15 +1,16 @@
 import datetime
 import typing
-import uuid
 from typing import Iterable
-from uuid import UUID
 
-from aett.eventstore import ICommitEvents, EventStream, IAccessSnapshots, Snapshot, Commit, MAX_INT
+from aett.domain import ConflictingCommitException, NonConflictingCommitException, DuplicateCommitException, \
+    ConflictDetector
+from aett.eventstore import ICommitEvents, IAccessSnapshots, Snapshot, Commit, MAX_INT, EventMessage
 
 
 class CommitStore(ICommitEvents):
-    def __init__(self):
+    def __init__(self, conflict_detector: ConflictDetector = None):
         self._buckets: typing.Dict[str, typing.Dict[str, typing.List[Commit]]] = {}
+        self._conflict_detector: ConflictDetector = conflict_detector if conflict_detector is not None else ConflictDetector()
 
     def get(self, bucket_id: str, stream_id: str, min_revision: int = 0,
             max_revision: int = MAX_INT) -> typing.Iterable[Commit]:
@@ -27,22 +28,33 @@ class CommitStore(ICommitEvents):
         commits: typing.List[Commit] = self._buckets[bucket_id][stream_id]
         return (commit for commit in commits if commit.commit_stamp <= max_time)
 
-    def commit(self, event_stream: EventStream, commit_id: UUID):
-        self._ensure_stream(event_stream.bucket_id, event_stream.stream_id)
-        existing = self._buckets[event_stream.bucket_id][event_stream.stream_id]
-        if len(existing) > 0 and existing[-1].stream_revision >= event_stream.version:
-            raise ValueError('Conflicting commit')
+    def get_all_to(self, bucket_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+            Iterable[Commit]:
+        commits: typing.List[Commit] = []
+        for bucket in self._buckets:
+            for stream in self._buckets[bucket]:
+                commits.extend(self.get_to(bucket, stream, max_time))
+        commits.sort(key=lambda c: c.commit_stamp)
+        return commits
 
-        existing.append(
-            Commit(bucket_id=event_stream.bucket_id,
-                   stream_id=event_stream.stream_id,
-                   stream_revision=event_stream.version,
-                   commit_id=uuid.uuid4(),
-                   commit_sequence=len(existing) + 1,
-                   commit_stamp=datetime.datetime.now(datetime.UTC),
-                   headers=event_stream.uncommitted_headers,
-                   events=event_stream.uncommitted,
-                   checkpoint_token=len(existing)))
+    def commit(self, commit: Commit):
+        self._ensure_stream(commit.bucket_id, commit.stream_id)
+        existing = self._buckets[commit.bucket_id][commit.stream_id]
+        if len(existing) > 0 and existing[-1].stream_revision >= commit.stream_revision:
+            if existing[-1].commit_id == commit.commit_id:
+                raise DuplicateCommitException('Duplicate commit')
+            commits = [e for c in (c.events for c in existing if c.stream_revision >= commit.stream_revision) for e in
+                       c]
+            if self._conflict_detector.conflicts_with(list(map(self._get_body, commit.events)),
+                                                      list(map(self._get_body, commits))):
+                raise ConflictingCommitException('Conflicting commit')
+            else:
+                raise NonConflictingCommitException('Non-conflicting commit')
+        existing.append(commit)
+
+    @staticmethod
+    def _get_body(em: EventMessage):
+        return em.body
 
     def _ensure_stream(self, bucket_id: str, stream_id: str) -> bool:
         if bucket_id not in self._buckets:

@@ -5,7 +5,7 @@ from behave import *
 
 from aett.dynamodb import CommitStore
 from aett.eventstore import EventStream, EventMessage, TopicMap
-from features.steps.Types import TestEvent
+from Types import TestEvent
 
 use_step_matcher("re")
 
@@ -23,7 +23,8 @@ def step_impl(context):
     context.stream_id = str(uuid.uuid4())
     stream: EventStream = EventStream.create(context.bucket_id, context.stream_id)
     stream.add(EventMessage(body=TestEvent(source='test', timestamp=datetime.datetime.now(), version=1, value=0)))
-    context.store.commit(stream, uuid.uuid4())
+    commit = stream.to_commit()
+    context.store.commit(commit)
 
 
 @then("the event is persisted to the store")

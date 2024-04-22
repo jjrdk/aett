@@ -7,7 +7,9 @@ import boto3
 import jsonpickle
 from boto3.dynamodb.conditions import Key, Attr
 
-from aett.eventstore import ICommitEvents, EventStream, IAccessSnapshots, Snapshot, Commit, MAX_INT, EventMessage, \
+from aett.domain import ConflictDetector, ConflictingCommitException, NonConflictingCommitException, \
+    DuplicateCommitException
+from aett.eventstore import ICommitEvents, IAccessSnapshots, Snapshot, Commit, MAX_INT, EventMessage, \
     TopicMap
 
 
@@ -18,19 +20,22 @@ def _get_resource(region: str):
 
 
 class CommitStore(ICommitEvents):
-    def __init__(self, topic_map: TopicMap, table_name: str = 'commits', region: str = 'eu-central-1'):
-        self.topic_map = topic_map
-        self.table_name = table_name
-        self.region = region
-        self.dynamodb = _get_resource(region)
-        self.table = self.dynamodb.Table(table_name)
+    def __init__(self, topic_map: TopicMap, conflict_detector: ConflictDetector = None, table_name: str = 'commits',
+                 region: str = 'eu-central-1'):
+        self._topic_map = topic_map
+        self._table_name = table_name
+        self._region = region
+        self._dynamodb = _get_resource(region)
+        self.table = self._dynamodb.Table(table_name)
+        self._conflict_detector: ConflictDetector = conflict_detector if conflict_detector is not None \
+            else ConflictDetector()
 
     def get(self, bucket_id: str, stream_id: str, min_revision: int = 0,
             max_revision: int = MAX_INT) -> typing.Iterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
         query_response = self.table.query(
-            TableName=self.table_name,
+            TableName=self._table_name,
             IndexName="RevisionIndex",
             ConsistentRead=True,
             ProjectionExpression='BucketId,StreamId,StreamRevision,CommitId,CommitSequence,CommitStamp,Headers,Events',
@@ -55,6 +60,20 @@ class CommitStore(ICommitEvents):
                 break
             yield self._item_to_commit(item)
 
+    def get_all_to(self, bucket_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+            Iterable[Commit]:
+        query_response = self.table.scan(IndexName="CommitStampIndex",
+                                         ConsistentRead=True,
+                                         Select='ALL_ATTRIBUTES',
+                                         FilterExpression=(
+                                                 Key("BucketAndStream").begins_with(f'{bucket_id}')
+                                                 & Attr('CommitStamp').lte(int(max_time.timestamp()))))
+        items = query_response['Items']
+        for item in items:
+            if item['CommitStamp'] > max_time.timestamp():
+                break
+            yield self._item_to_commit(item)
+
     def _item_to_commit(self, item: dict) -> Commit:
         return Commit(
             bucket_id=item['BucketId'],
@@ -64,25 +83,24 @@ class CommitStore(ICommitEvents):
             commit_sequence=int(item['CommitSequence']),
             commit_stamp=datetime.datetime.fromtimestamp(int(item['CommitStamp']), datetime.UTC),
             headers=jsonpickle.decode(item['Headers']),
-            events=[EventMessage.from_json(e, self.topic_map) for e in jsonpickle.decode(item['Events'])],
+            events=[EventMessage.from_json(e, self._topic_map) for e in jsonpickle.decode(item['Events'])],
             checkpoint_token=0)
 
-    def commit(self, event_stream: EventStream, commit_id: UUID):
+    def commit(self, commit: Commit):
         try:
-            commit = event_stream.to_commit(commit_id)
             item = {
-                'BucketAndStream': f'{event_stream.bucket_id}{event_stream.stream_id}',
-                'BucketId': event_stream.bucket_id,
-                'StreamId': event_stream.stream_id,
+                'BucketAndStream': f'{commit.bucket_id}{commit.stream_id}',
+                'BucketId': commit.bucket_id,
+                'StreamId': commit.stream_id,
                 'StreamRevision': commit.stream_revision,
-                'CommitId': str(commit_id),
+                'CommitId': str(commit.commit_id),
                 'CommitSequence': commit.commit_sequence,
                 'CommitStamp': int(commit.commit_stamp.timestamp()),
                 'Headers': jsonpickle.encode(commit.headers, unpicklable=False),
                 'Events': jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False)
             }
             response = self.table.put_item(
-                TableName=self.table_name,
+                TableName=self._table_name,
                 Item=item,
                 ReturnValues='NONE',
                 ReturnValuesOnConditionCheckFailure='NONE',
@@ -90,30 +108,47 @@ class CommitStore(ICommitEvents):
             print(response)
         except Exception as e:
             if e.__class__.__name__ == 'ConditionalCheckFailedException':
-                if self.detect_duplicate(commit_id, event_stream.bucket_id, event_stream.stream_id,
-                                         event_stream.commit_sequence):
-                    raise Exception(
-                        f"Commit {commit_id} already exists in stream {event_stream.stream_id}")
+                if self._detect_duplicate(commit.commit_id, commit.bucket_id, commit.stream_id,
+                                          commit.commit_sequence):
+                    raise DuplicateCommitException('Duplicate commit detected')
                 else:
-                    event_stream.__update__(self)
+                    if self._detect_conflicts(commit=commit):
+                        raise ConflictingCommitException(
+                            f"Conflict detected in stream {commit.stream_id} with revision {commit.stream_revision}")
+                    else:
+                        raise NonConflictingCommitException(
+                            f'Non-conflicting version conflict detected in stream {commit.stream_id} with revision {commit.stream_revision}')
             else:
                 raise Exception(
-                    f"Failed to commit event to stream {event_stream.stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}")
+                    f"Failed to commit event to stream {commit.stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}")
 
-    def detect_duplicate(self, commit_id: UUID, bucket_id: str, stream_id: str, commit_sequence: int) -> bool:
-        duplicate_check = self.dynamodb.query(
-            TableName=self.table_name,
+    def _detect_duplicate(self, commit_id: UUID, bucket_id: str, stream_id: str, commit_sequence: int) -> bool:
+        duplicate_check = self.table.query(
+            TableName=self._table_name,
             ConsistentRead=True,
             ScanIndexForward=False,
             Limit=1,
             Select='SPECIFIC_ATTRIBUTES',
             ProjectionExpression='CommitId',
-            KeyConditionExpression="BucketAndStream = :v_BucketAndStream AND CommitSequence = :v_CommitSequence",
-            ExpressionAttributeValues={
-                {":v_BucketAndStream", {'S': f"{bucket_id}{stream_id}"}},
-                {":v_CommitSequence", {'N': str(commit_sequence)}}
-            })
-        return duplicate_check.Items[0]['CommitId'].S == str(commit_id)
+            KeyConditionExpression=(Key("BucketAndStream").eq(f'{bucket_id}{stream_id}')
+                                    & Key("CommitSequence").eq(commit_sequence)),)
+        items = duplicate_check['Items']
+        return items[0]['CommitId'] == str(commit_id)
+
+    def _detect_conflicts(self, commit: Commit) -> bool:
+        if commit.commit_sequence == 0:
+            return False
+        previous_commits = self.get(commit.bucket_id, commit.stream_id, commit.commit_sequence - 1,
+                                    commit.commit_sequence)
+        for previous_commit in previous_commits:
+            if self._conflict_detector.conflicts_with(list(map(self._get_body, commit.events)),
+                                                      list(map(self._get_body, previous_commit.events))):
+                return True
+        return False
+
+    @staticmethod
+    def _get_body(em: EventMessage):
+        return em.body
 
 
 class SnapshotStore(IAccessSnapshots):

@@ -6,12 +6,6 @@ Feature: Aggregate repository behavior
   Scenario: Loading an aggregate from the repository
     Then a specific aggregate type can be loaded from the repository
 
-  Scenario: Loading a modified aggregate from the repository
-    When an aggregate is loaded from the repository and modified
-    And an aggregate is saved to the repository
-    And loaded again
-    Then the modified aggregate is loaded from storage
-
   Scenario: Saving an aggregate to the repository
     When an aggregate is loaded from the repository and modified
     And an aggregate is saved to the repository
@@ -20,4 +14,9 @@ Feature: Aggregate repository behavior
   Scenario: Retrieving based on time
     When a series of commits is persisted
     And a specific aggregate is loaded at a specific time
-    Then the aggregate is loaded at the correct state
+    Then the aggregate is loaded at version 5
+
+  Scenario: Thousand event aggregate
+    When 10000 events are persisted to an aggregate
+    And loaded again
+    Then the aggregate is loaded at version 10000

@@ -1,6 +1,7 @@
 import datetime
 import inspect
 import typing
+import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterable, Dict, List, Optional, Any
@@ -301,12 +302,26 @@ class ICommitEvents(ABC):
         pass
 
     @abstractmethod
-    def commit(self, event_stream: 'EventStream', commit_id: UUID):
+    def get_all_to(self, bucket_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+            Iterable[Commit]:
+        """
+        Gets the corresponding commits from the stream indicated starting at the revision specified until the
+        end of the stream sorted in ascending order--from oldest to newest.
+
+        :param bucket_id: The value which uniquely identifies bucket the stream belongs to.
+        :param max_time: The max timestamp to return.
+        :return: A series of committed events from the stream specified sorted in ascending order.
+        :raises StorageException:
+        :raises StorageUnavailableException:
+        """
+        pass
+
+    @abstractmethod
+    def commit(self, commit: Commit):
         """
         Writes the to-be-committed events stream provided to the underlying persistence mechanism.
 
-        :param commit_id: The identifier of the commit.
-        :param event_stream: The series of events and associated metadata to be committed.
+        :param commit: The series of events and associated metadata to be committed.
         :raises ConcurrencyException:
         :raises StorageException:
         :raises StorageUnavailableException:
@@ -401,7 +416,9 @@ class EventStream:
         self.uncommitted.clear()
         self.uncommitted_headers.clear()
 
-    def to_commit(self, commit_id: UUID) -> Commit:
+    def to_commit(self, commit_id: UUID = None) -> Commit:
+        if commit_id is None:
+            commit_id = uuid.uuid4()
         commit = Commit(bucket_id=self.bucket_id,
                         stream_id=self.stream_id,
                         stream_revision=self.version,

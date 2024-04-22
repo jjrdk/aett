@@ -7,16 +7,19 @@ import jsonpickle
 import pymongo
 from pymongo import database, results, errors
 
-from aett.eventstore import ICommitEvents, EventStream, IAccessSnapshots, Snapshot, Commit, MAX_INT, EventMessage, \
+from aett.domain import ConflictingCommitException, NonConflictingCommitException, ConflictDetector
+from aett.eventstore import ICommitEvents, IAccessSnapshots, Snapshot, Commit, MAX_INT, EventMessage, \
     TopicMap
 
 
 # noinspection DuplicatedCode
 class CommitStore(ICommitEvents):
-    def __init__(self, db: database.Database, topic_map: TopicMap, table_name='commits'):
-        self.topic_map = topic_map
-        self.collection: database.Collection = db.get_collection(table_name)
-        self.counters_collection: database.Collection = db.get_collection('counters')
+    def __init__(self, db: database.Database, topic_map: TopicMap, conflict_detector: ConflictDetector = None,
+                 table_name='commits'):
+        self._topic_map = topic_map
+        self._collection: database.Collection = db.get_collection(table_name)
+        self._counters_collection: database.Collection = db.get_collection('counters')
+        self._conflict_detector = conflict_detector if conflict_detector is not None else ConflictDetector()
 
     def get(self, bucket_id: str, stream_id: str, min_revision: int = 0,
             max_revision: int = MAX_INT) -> typing.Iterable[Commit]:
@@ -28,7 +31,7 @@ class CommitStore(ICommitEvents):
         if max_revision < MAX_INT:
             filters['StreamRevision']: {'$lte': max_revision}
 
-        query_response: pymongo.cursor.Cursor = self.collection.find({'$and': [filters]})
+        query_response: pymongo.cursor.Cursor = self._collection.find({'$and': [filters]})
         for doc in query_response.sort('CheckpointToken', direction=pymongo.ASCENDING):
             yield self._doc_to_commit(doc)
 
@@ -36,56 +39,90 @@ class CommitStore(ICommitEvents):
             Iterable[Commit]:
         filters = {"BucketId": bucket_id, "StreamId": stream_id, "CommitStamp": {'$lte': int(max_time.timestamp())}}
 
-        query_response: pymongo.cursor.Cursor = self.collection.find({'$and': [filters]})
+        query_response: pymongo.cursor.Cursor = self._collection.find({'$and': [filters]})
+        for doc in query_response.sort('CheckpointToken', direction=pymongo.ASCENDING):
+            yield self._doc_to_commit(doc)
+
+    def get_all_to(self, bucket_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
+            Iterable[Commit]:
+        filters = {"BucketId": bucket_id, "CommitStamp": {'$lte': int(max_time.timestamp())}}
+
+        query_response: pymongo.cursor.Cursor = self._collection.find({'$and': [filters]})
         for doc in query_response.sort('CheckpointToken', direction=pymongo.ASCENDING):
             yield self._doc_to_commit(doc)
 
     def _doc_to_commit(self, doc: dict) -> Commit:
         return Commit(bucket_id=doc['BucketId'],
                       stream_id=doc['StreamId'],
-                      stream_revision=doc['StreamRevision'],
+                      stream_revision=int(doc['StreamRevision']),
                       commit_id=UUID(doc['CommitId']),
-                      commit_sequence=doc['CommitSequence'],
+                      commit_sequence=0,
                       commit_stamp=datetime.datetime.fromtimestamp(int(doc['CommitStamp']), datetime.UTC),
                       headers=jsonpickle.decode(doc['Headers']),
-                      events=[EventMessage.from_json(e, self.topic_map) for e in jsonpickle.decode(doc['Events'])],
+                      events=[EventMessage.from_json(e, self._topic_map) for e in jsonpickle.decode(doc['Events'])],
                       checkpoint_token=doc['CheckpointToken'])
 
-    def commit(self, event_stream: EventStream, commit_id: UUID):
+    def commit(self, commit: Commit):
         try:
-            ret = self.counters_collection.find_one_and_update(
+            ret = self._counters_collection.find_one_and_update(
                 filter={'_id': 'CheckpointToken'},
                 update={'$inc': {'seq': 1}}).get('seq')
-            commit = event_stream.to_commit(commit_id)
             doc = {
-                'BucketId': event_stream.bucket_id,
-                'StreamId': event_stream.stream_id,
+                'BucketId': commit.bucket_id,
+                'StreamId': commit.stream_id,
                 'StreamRevision': commit.stream_revision,
-                'CommitId': str(commit_id),
-                'CommitSequence': commit.commit_sequence,
+                'CommitId': str(commit.commit_id),
                 'CommitStamp': int(datetime.datetime.now(datetime.UTC).timestamp()),
                 'Headers': jsonpickle.encode(commit.headers, unpicklable=False),
                 'Events': jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False),
                 'CheckpointToken': int(ret)
             }
-            _: pymongo.results.InsertOneResult = self.collection.insert_one(doc)
+            _: pymongo.results.InsertOneResult = self._collection.insert_one(doc)
         except Exception as e:
-            if e.__class__.__name__ == 'ConditionalCheckFailedException':
-                if self.detect_duplicate(commit_id, event_stream.bucket_id, event_stream.stream_id,
-                                         event_stream.commit_sequence):
+            if isinstance(e, pymongo.errors.DuplicateKeyError):
+                if self._detect_duplicate(commit.commit_id, commit.bucket_id, commit.stream_id,
+                                          commit.stream_revision):
                     raise Exception(
-                        f"Commit {commit_id} already exists in stream {event_stream.stream_id}")
+                        f"Commit {commit.commit_id} already exists in stream {commit.stream_id}")
                 else:
-                    event_stream.__update__(self)
-                    return self.commit(event_stream, commit_id)
+                    conflicts, revision = self._detect_conflicts(commit=commit)
+                    if conflicts:
+                        raise ConflictingCommitException(
+                            f"Conflict detected in stream {commit.stream_id} with revision {commit.stream_revision}")
+                    else:
+                        raise NonConflictingCommitException(
+                            f'Non-conflicting version conflict detected in stream {commit.stream_id} with revision {commit.stream_revision}')
             else:
                 raise Exception(
-                    f"Failed to commit event to stream {event_stream.stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}")
+                    f"Failed to commit event to stream {commit.stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}")
 
-    def detect_duplicate(self, commit_id: UUID, bucket_id: str, stream_id: str, commit_sequence: int) -> bool:
-        duplicate_check = self.collection.find_one(
-            {'BucketId': bucket_id, 'StreamId': stream_id, 'CommitSequence': commit_sequence})
-        return str(duplicate_check.get('CommitId')) == str(commit_id)
+    def _detect_duplicate(self, commit_id: UUID, bucket_id: str, stream_id: str, stream_revision: int) -> bool:
+        duplicate_check = self._collection.find_one(
+            {'BucketId': bucket_id, 'StreamId': stream_id, 'StreamRevision': stream_revision})
+        s = str(duplicate_check.get('CommitId'))
+        return s == str(commit_id)
+
+    def _detect_conflicts(self, commit: Commit) -> (bool, int):
+        filters = {"BucketId": commit.bucket_id, "StreamId": commit.stream_id,
+                   "StreamRevision": {'$lte': commit.stream_revision}}
+        query_response: pymongo.cursor.Cursor = \
+            self._collection.find({'$and': [filters]}).sort('CheckpointToken',
+                                                            direction=pymongo.ASCENDING)
+
+        latest_revision = 0
+        for doc in query_response:
+            c = self._doc_to_commit(doc)
+            if self._conflict_detector.conflicts_with(list(map(self._get_body, commit.events)),
+                                                      list(map(self._get_body, c.events))):
+                return True, -1
+            i = int(doc['StreamRevision'])
+            if i > latest_revision:
+                latest_revision = i
+        return False, latest_revision
+
+    @staticmethod
+    def _get_body(e):
+        return e.body
 
 
 class SnapshotStore(IAccessSnapshots):
@@ -149,7 +186,7 @@ class PersistenceManagement:
             commits_collection.create_index([("BucketId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
                                              ("StreamRevision", pymongo.ASCENDING)], comment="GetFrom", unique=True)
             commits_collection.create_index([("BucketId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
-                                             ("CommitSequence", pymongo.ASCENDING)], comment="LogicalKey", unique=True)
+                                             ("StreamRevision", pymongo.ASCENDING)], comment="LogicalKey", unique=True)
             commits_collection.create_index([("CommitStamp", pymongo.ASCENDING)], comment="CommitStamp", unique=False)
             commits_collection.create_index([("BucketId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
                                              ("CommitId", pymongo.ASCENDING)], comment="CommitId", unique=True)

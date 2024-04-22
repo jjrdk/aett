@@ -20,4 +20,9 @@ Feature: Aggregate repository behavior
   Scenario: Retrieving based on time
     When a series of commits is persisted
     And a specific aggregate is loaded at a specific time
-    Then the aggregate is loaded at the correct state
+    Then the aggregate is loaded at version 5
+
+  Scenario: Thousand event aggregate
+    When 200 events are persisted to an aggregate
+    And loaded again
+    Then the aggregate is loaded at version 200
