@@ -1,7 +1,7 @@
 # pyproject.toml
 
 [build-system]
-requires = ["setuptools>=69.1.1", "wheel"]
+requires = ["setuptools>=69.5.1", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
@@ -23,7 +23,7 @@ classifiers = [
 keywords = ["events", "event store", "mongo", "mongodb"]
 dependencies = [
     'aett-domain >= 0.9.0',
-    'pymongo~=4.6.2'
+    'pymongo~=4.6.3'
 ]
 requires-python = ">=3.10"
 
