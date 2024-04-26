@@ -3,8 +3,12 @@ from unittest import TestCase
 
 import jsonpickle.handlers
 
-from aett.eventstore import EventMessage, TopicMap
-from test_EventStream import TestEvent
+from aett.eventstore import EventMessage, TopicMap, Topic, DomainEvent
+
+
+@Topic('MyTestTopic')
+class TestEvent(DomainEvent):
+    pass
 
 
 class TestSerialization(TestCase):

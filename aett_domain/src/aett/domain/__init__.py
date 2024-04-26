@@ -75,14 +75,12 @@ class Aggregate(ABC, typing.Generic[T]):
 
 
 class Saga(ABC):
-    def __init__(self, event_stream: EventStream):
-        self._id = event_stream.stream_id
+    def __init__(self, saga_id: str, commit_sequence: int):
+        self._id = saga_id
+        self._commit_sequence = commit_sequence
         self._version = 0
         self.uncommitted: typing.List[EventMessage] = []
         self._headers: typing.Dict[str, typing.Any] = {}
-        for event in event_stream.committed:
-            self.transition(event.body)
-        self.uncommitted.clear()
 
     @property
     def id(self) -> str:
@@ -91,6 +89,10 @@ class Saga(ABC):
     @property
     def version(self) -> int:
         return self._version
+
+    @property
+    def commit_sequence(self):
+        return self._commit_sequence
 
     @property
     def headers(self):
@@ -258,23 +260,34 @@ class DefaultAggregateRepository(AggregateRepository):
 
 
 class DefaultSagaRepository(SagaRepository):
-    TSaga = typing.TypeVar('TSaga', bound=Saga)
 
     def __init__(self, tenant_id: str, store: ICommitEvents):
         self._tenant_id = tenant_id
         self._store = store
 
-    def get(self, cls: typing.Type[TSaga], stream_id: str) -> TSaga:
-        stream = EventStream.load(tenant_id=self._tenant_id, stream_id=stream_id, client=self._store)
-        saga = cls(stream)
+    def get(self, cls: typing.Type[SagaRepository.TSaga], stream_id: str) -> SagaRepository.TSaga:
+        commits = list(self._store.get(self._tenant_id, stream_id))
+        commit_sequence = commits[-1].commit_sequence if len(commits) > 0 else 0
+        saga = cls(stream_id, commit_sequence)
+        for commit in commits:
+            for event in commit.events:
+                saga.transition(event.body)
+        saga.uncommitted.clear()
         return saga
 
-    def save(self, saga: TSaga) -> None:
-        stream = EventStream.load(tenant_id=self._tenant_id, stream_id=saga.id, client=self._store)
-        for event in saga.uncommitted:
-            stream.add(event)
-        self._store.commit(stream.to_commit())
+    def save(self, saga: Saga) -> None:
+        commit = Commit(tenant_id=self._tenant_id,
+                        stream_id=saga.id,
+                        stream_revision=saga.version,
+                        commit_id=uuid.uuid4(),
+                        commit_sequence=saga.commit_sequence + 1,
+                        commit_stamp=datetime.datetime.now(datetime.UTC),
+                        headers=dict(saga.headers),
+                        events=list(saga.uncommitted),
+                        checkpoint_token=0)
+        self._store.commit(commit=commit)
         saga.uncommitted.clear()
+        saga.headers.clear()
 
 
 TUncommitted = typing.TypeVar('TUncommitted', bound=BaseEvent)

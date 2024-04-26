@@ -1,9 +1,11 @@
 import datetime
+import uuid
+
 from Types import TestEvent, TestEventConflictDelegate
 from behave import *
 from aett.domain import ConflictDetector, ConflictingCommitException, NonConflictingCommitException
 from aett.mongodb import CommitStore
-from aett.eventstore import TopicMap, EventStream, EventMessage
+from aett.eventstore import TopicMap, EventMessage, Commit
 
 use_step_matcher("re")
 
@@ -18,22 +20,30 @@ def step_impl(context):
 
 @step("I commit a conflicting event to the stream")
 def step_impl(context):
-    stream: EventStream = EventStream.create(context.tenant_id, context.stream_id)
-    stream.add(EventMessage(body=TestEvent(source='test', timestamp=datetime.datetime.now(), version=1, value=0)))
-    commit = stream.to_commit()
     try:
-        context.store.commit(commit)
+        context.store.commit(Commit(tenant_id=context.tenant_id, stream_id=context.stream_id, commit_id=uuid.uuid4(),
+                                    commit_sequence=1, commit_stamp=datetime.datetime.now(datetime.UTC),
+                                    stream_revision=1,
+                                    events=[
+                                        EventMessage(
+                                            body=TestEvent(source='test', timestamp=datetime.datetime.now(), version=1,
+                                                           value=0))],
+                                    checkpoint_token=1, headers={}))
     except Exception as e:
         context.exception = e
 
 
 @step("I commit a non-conflicting event to the stream")
 def step_impl(context):
-    stream: EventStream = EventStream.create(context.tenant_id, context.stream_id)
-    stream.add(EventMessage(body=TestEvent(source='test', timestamp=datetime.datetime.now(), version=1, value=1)))
-    commit = stream.to_commit()
     try:
-        context.store.commit(commit)
+        context.store.commit(Commit(tenant_id=context.tenant_id, stream_id=context.stream_id, commit_id=uuid.uuid4(),
+                                    commit_sequence=1, commit_stamp=datetime.datetime.now(datetime.UTC),
+                                    stream_revision=1,
+                                    events=[
+                                        EventMessage(
+                                            body=TestEvent(source='test', timestamp=datetime.datetime.now(), version=1,
+                                                           value=1))],
+                                    checkpoint_token=1, headers={}))
     except Exception as e:
         context.exception = e
 

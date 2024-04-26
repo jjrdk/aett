@@ -3,15 +3,14 @@ import datetime
 from behave import *
 
 from aett.domain import Saga
-from aett.eventstore import EventStream
 from aett_domain.tests.features.steps.Types import TestEvent
 
 use_step_matcher("re")
 
 
 class TestSaga(Saga):
-    def __init__(self, stream: EventStream):
-        super().__init__(stream)
+    def __init__(self, saga_id: str, commit_sequence: int):
+        super().__init__(saga_id=saga_id, commit_sequence=commit_sequence)
 
     def _apply(self, event: TestEvent):
         pass
@@ -19,7 +18,7 @@ class TestSaga(Saga):
 
 @given("a new saga")
 def step_impl(context):
-    context.saga = TestSaga(EventStream.create('tenant_id', 'saga_id'))
+    context.saga = TestSaga('saga_id', 0)
 
 
 @when("an event is applied to the saga")

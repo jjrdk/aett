@@ -1,36 +1,41 @@
 import datetime
 import typing
+import uuid
 
 from behave import *
 
 from aett.domain import SagaRepository, Saga
-from aett.eventstore import EventStream
+from aett.eventstore import Commit
 from aett_domain.tests.features.steps.Types import TestSaga, TestEvent
 
 use_step_matcher("re")
 
 
 class TestSagaRepository(SagaRepository):
-    TSaga = typing.TypeVar('TSaga', bound=Saga)
 
     def __init__(self):
-        self.storage = {}
+        self._storage: typing.Dict[str, typing.List[Commit]] = {}
 
-    def get(self, cls: typing.Type[TSaga], id: str) -> TSaga:
-        stream = self.storage.get(id)
+    def get(self, cls: typing.Type[SagaRepository.TSaga], saga_id: str) -> SagaRepository.TSaga:
+        stream = self._storage.get(saga_id, None)
         if stream is None:
-            stream = EventStream.create('test', id)
-            self.storage[stream.stream_id] = stream
-        return cls(stream)
+            stream = []
+            self._storage[saga_id] = stream
+        saga: SagaRepository.TSaga = cls(saga_id, 0 if len(stream) == 0 else stream[-1].commit_sequence)
+        for commit in stream:
+            saga.transition(commit.events)
+        saga.uncommitted.clear()
+        return saga
 
     def save(self, saga: Saga) -> None:
-        stream = self.storage.get(saga.id)
+        stream = self._storage.get(saga.id)
         if stream is None:
-            stream = EventStream.create('test', saga.id)
-        for event in saga.uncommitted:
-            stream.add(event)
-        stream.set_persisted(stream.commit_sequence + 1)
-        self.storage[stream.stream_id] = stream
+            stream = []
+        stream.append(Commit(tenant_id='test', stream_id=saga.id, stream_revision=0, commit_id=uuid.uuid4(),
+                             commit_sequence=saga.commit_sequence + 1,
+                             commit_stamp=datetime.datetime.now(datetime.UTC), headers={}, events=saga.uncommitted,
+                             checkpoint_token=0))
+        self._storage[saga.id] = stream
 
 
 @given("a saga repository")
@@ -40,7 +45,7 @@ def step_impl(context):
 
 @then("a specific saga type can be loaded from the repository")
 def step_impl(context):
-    saga = context.repository.get(TestSaga, EventStream.create('test', 'test'))
+    saga = context.repository.get(TestSaga, 'test')
     assert isinstance(saga, TestSaga)
 
 

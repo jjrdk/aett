@@ -2,7 +2,7 @@ import datetime
 from dataclasses import dataclass
 
 from aett.domain import Aggregate, Saga, ConflictDelegate
-from aett.eventstore import DomainEvent, Memento, EventStream
+from aett.eventstore import DomainEvent, Memento
 
 
 @dataclass(frozen=True, kw_only=True)

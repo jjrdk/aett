@@ -6,7 +6,7 @@ from typing import Dict
 from behave import *
 
 from aett.domain import AggregateRepository, Aggregate
-from aett.eventstore import EventStream, MAX_INT
+from aett.eventstore import MAX_INT
 from aett_domain.tests.features.steps.Types import TestAggregate
 
 use_step_matcher("re")
