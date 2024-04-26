@@ -192,6 +192,13 @@ class AggregateRepository(ABC):
         """
         Save the aggregate to the repository.
 
+        The call to save should be wrapped in a try-except block as concurrent modifications can cause a conflict with
+        events committed from a different source. A ConflictingCommitException will be thrown by the storage layer if
+        an attempt is made to save an aggregate with a version that is lower than the current version in the store and
+        the uncommitted events conflict with the committed events.A NonConflictingCommitException will be thrown if the
+        uncommitted events do not conflict with the committed events. In this case it should be safe to retry the
+        operation.
+
         :param aggregate: The aggregate to save.
         :param headers: The headers to assign to the commit.
         """
@@ -391,7 +398,11 @@ class ConflictDelegate(ABC, typing.Generic[TUncommitted, TCommitted]):
     @abstractmethod
     def detect(self, uncommitted: TUncommitted, committed: TCommitted) -> bool:
         """
-        Detects if the uncommitted event conflicts with the committed event.
+        Detects if the uncommitted event conflicts with the committed event. The delegate should return True if an event
+        is incompatible with a previously persisted event.
+
+        If the delegate returns False then it is assumed that the later event is compatible with the previously
+        persisted.
         """
         pass
 
