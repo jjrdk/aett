@@ -1,7 +1,6 @@
 import datetime
 import inspect
 import typing
-import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterable, Dict, List, Optional, Any
@@ -38,12 +37,6 @@ class TopicMap:
 
     def __init__(self):
         self.__topics = {}
-
-    #
-    # def __new__(cls):
-    #     if not hasattr(cls, '__singleton_instance'):
-    #         cls.__singleton_instance = super(TopicMap, cls).__new__(cls)
-    #     return cls.__singleton_instance
 
     def add(self, topic: str, cls: type):
         """
