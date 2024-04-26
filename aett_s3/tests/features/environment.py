@@ -1,4 +1,3 @@
-import datetime
 import subprocess
 import time
 
@@ -16,7 +15,8 @@ def before_scenario(context, _):
                                  endpoint_url='http://localhost:9000',
                                  use_tls=False,
                                  aws_access_key_id='minioadmin',
-                                 aws_secret_access_key='minioadmin')
+                                 aws_secret_access_key='minioadmin',
+                                 profile_name='')
     mgmt = PersistenceManagement(context.s3_config)
     mgmt.initialize()
 

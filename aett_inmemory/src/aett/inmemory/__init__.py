@@ -10,7 +10,8 @@ from aett.eventstore import ICommitEvents, IAccessSnapshots, Snapshot, Commit, M
 class CommitStore(ICommitEvents):
     def __init__(self, conflict_detector: ConflictDetector = None):
         self._buckets: typing.Dict[str, typing.Dict[str, typing.List[Commit]]] = {}
-        self._conflict_detector: ConflictDetector = conflict_detector if conflict_detector is not None else ConflictDetector()
+        self._conflict_detector: ConflictDetector = \
+            conflict_detector if conflict_detector is not None else ConflictDetector()
 
     def get(self, tenant_id: str, stream_id: str, min_revision: int = 0,
             max_revision: int = MAX_INT) -> typing.Iterable[Commit]:

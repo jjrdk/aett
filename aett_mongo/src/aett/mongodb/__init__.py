@@ -9,13 +9,13 @@ from pymongo import database, results, errors
 
 from aett.domain import ConflictingCommitException, NonConflictingCommitException, ConflictDetector
 from aett.eventstore import ICommitEvents, IAccessSnapshots, Snapshot, Commit, MAX_INT, EventMessage, \
-    TopicMap
+    TopicMap, COMMITS, SNAPSHOTS
 
 
 # noinspection DuplicatedCode
 class CommitStore(ICommitEvents):
     def __init__(self, db: database.Database, topic_map: TopicMap, conflict_detector: ConflictDetector = None,
-                 table_name='commits'):
+                 table_name=COMMITS):
         self._topic_map = topic_map
         self._collection: database.Collection = db.get_collection(table_name)
         self._counters_collection: database.Collection = db.get_collection('counters')
@@ -127,7 +127,7 @@ class CommitStore(ICommitEvents):
 
 
 class SnapshotStore(IAccessSnapshots):
-    def __init__(self, db: database.Database, table_name: str = 'snapshots'):
+    def __init__(self, db: database.Database, table_name: str = SNAPSHOTS):
         self.collection: database.Collection = db.get_collection(table_name)
 
     def get(self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT) -> Snapshot | None:
@@ -166,8 +166,8 @@ class SnapshotStore(IAccessSnapshots):
 class PersistenceManagement:
     def __init__(self,
                  db: database.Database,
-                 commits_table_name: str = 'commits',
-                 snapshots_table_name: str = 'snapshots'):
+                 commits_table_name: str = COMMITS,
+                 snapshots_table_name: str = SNAPSHOTS):
         self.db: database.Database = db
         self.commits_table_name = commits_table_name
         self.snapshots_table_name = snapshots_table_name

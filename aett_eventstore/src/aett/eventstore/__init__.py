@@ -10,6 +10,8 @@ import jsonpickle
 
 T = typing.TypeVar('T')
 MAX_INT = 2 ** 32 - 1
+COMMITS = 'commits'
+SNAPSHOTS = 'snapshots'
 
 
 class Topic(object):

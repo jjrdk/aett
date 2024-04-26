@@ -9,13 +9,13 @@ import psycopg
 from aett.domain import ConflictDetector, ConflictingCommitException, NonConflictingCommitException, \
     DuplicateCommitException
 from aett.eventstore import ICommitEvents, IAccessSnapshots, Snapshot, Commit, MAX_INT, TopicMap, \
-    EventMessage
+    EventMessage, COMMITS, SNAPSHOTS
 
 
 # noinspection DuplicatedCode
 class CommitStore(ICommitEvents):
     def __init__(self, db: psycopg.connect, topic_map: TopicMap, conflict_detector: ConflictDetector = None,
-                 table_name='commits'):
+                 table_name=COMMITS):
         self._topic_map = topic_map
         self._connection: psycopg.connect = db
         self._conflict_detector = conflict_detector if conflict_detector is not None else ConflictDetector()
@@ -153,7 +153,7 @@ RETURNING CheckpointNumber;""", (commit.tenant_id, commit.stream_id, commit.stre
 
 
 class SnapshotStore(IAccessSnapshots):
-    def __init__(self, db: psycopg.connect, table_name: str = 'snapshots'):
+    def __init__(self, db: psycopg.connect, table_name: str = SNAPSHOTS):
         self.connection: psycopg.connect = db
         self._table_name = table_name
 
@@ -202,8 +202,8 @@ class SnapshotStore(IAccessSnapshots):
 class PersistenceManagement:
     def __init__(self,
                  db: psycopg.connect,
-                 commits_table_name: str = 'commits',
-                 snapshots_table_name: str = 'snapshots'):
+                 commits_table_name: str = COMMITS,
+                 snapshots_table_name: str = SNAPSHOTS):
         self.db: psycopg.connect = db
         self.commits_table_name = commits_table_name
         self.snapshots_table_name = snapshots_table_name
@@ -241,7 +241,7 @@ CREATE TABLE {self.snapshots_table_name}
     CONSTRAINT PK_Snapshots PRIMARY KEY (TenantId, StreamId, StreamRevision)
 );""")
             c.commit()
-        except Exception as e:
+        except Exception:
             pass
 
     def drop(self):

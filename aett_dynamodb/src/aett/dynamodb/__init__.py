@@ -10,22 +10,23 @@ from boto3.dynamodb.conditions import Key, Attr
 from aett.domain import ConflictDetector, ConflictingCommitException, NonConflictingCommitException, \
     DuplicateCommitException
 from aett.eventstore import ICommitEvents, IAccessSnapshots, Snapshot, Commit, MAX_INT, EventMessage, \
-    TopicMap
+    TopicMap, COMMITS, SNAPSHOTS
 
 
-def _get_resource(region: str):
-    return boto3.resource('dynamodb',
-                          region_name=region,
-                          endpoint_url='http://localhost:8000' if region == 'localhost' else None)
+def _get_resource(profile_name: str, region: str):
+    session = boto3.Session(profile_name=profile_name)
+    return session.resource('dynamodb',
+                            region_name=region,
+                            endpoint_url='http://localhost:8000' if region == 'localhost' else None)
 
 
 class CommitStore(ICommitEvents):
-    def __init__(self, topic_map: TopicMap, conflict_detector: ConflictDetector = None, table_name: str = 'commits',
-                 region: str = 'eu-central-1'):
+    def __init__(self, topic_map: TopicMap, conflict_detector: ConflictDetector = None, table_name: str = COMMITS,
+                 region: str = 'eu-central-1', profile_name: str = 'default'):
         self._topic_map = topic_map
         self._table_name = table_name
         self._region = region
-        self._dynamodb = _get_resource(region)
+        self._dynamodb = _get_resource(profile_name=profile_name, region=region)
         self.table = self._dynamodb.Table(table_name)
         self._conflict_detector: ConflictDetector = conflict_detector if conflict_detector is not None \
             else ConflictDetector()
@@ -155,8 +156,8 @@ class CommitStore(ICommitEvents):
 
 
 class SnapshotStore(IAccessSnapshots):
-    def __init__(self, table_name: str = 'snapshots', region: str = 'eu-central-1'):
-        self.dynamodb = _get_resource(region)
+    def __init__(self, table_name: str = SNAPSHOTS, region: str = 'eu-central-1', profile_name: str = 'default'):
+        self.dynamodb = _get_resource(profile_name=profile_name, region=region)
         self.table = self.dynamodb.Table(table_name)
         self.table_name = table_name
 
@@ -208,10 +209,11 @@ class SnapshotStore(IAccessSnapshots):
 
 class PersistenceManagement:
     def __init__(self,
-                 commits_table_name: str = 'commits',
-                 snapshots_table_name: str = 'snapshots',
-                 region: str = 'eu-central-1'):
-        self.dynamodb = _get_resource(region)
+                 commits_table_name: str = COMMITS,
+                 snapshots_table_name: str = SNAPSHOTS,
+                 region: str = 'eu-central-1',
+                 profile_name='default'):
+        self.dynamodb = _get_resource(profile_name, region)
         self.commits_table_name = commits_table_name
         self.snapshots_table_name = snapshots_table_name
 
