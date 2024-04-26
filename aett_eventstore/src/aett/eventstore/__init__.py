@@ -157,8 +157,10 @@ class EventMessage:
     def from_json(json_dict: dict, topic_map: TopicMap) -> 'EventMessage':
         headers = jsonpickle.decode(json_dict['headers']) if 'headers' in json_dict else None
         decoded_body = jsonpickle.decode(json_dict['body'])
-        decoded_body.pop('$type', None)
-        body = None if not headers else topic_map.get(headers['topic'])(**decoded_body)
+        topic = decoded_body.pop('$type', None)
+        if topic is None and 'topic' in headers:
+            topic = headers['topic']
+        body = None if not headers else topic_map.get(topic=topic)(**decoded_body)
         return EventMessage(body=body, headers=headers)
 
 

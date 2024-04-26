@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from aett.eventstore import *
@@ -93,6 +94,7 @@ class Saga(ABC):
     In addition to this, the aggregate base class provides a method to raise events, but the concrete application
     of the event relies on multiple dispatch to call the correct apply method in the subclass.
     """
+
     def __init__(self, saga_id: str, commit_sequence: int):
         """
         Initialize the saga
@@ -245,8 +247,23 @@ class SagaRepository(ABC):
 
 
 class DefaultAggregateRepository(AggregateRepository):
+    def __init__(self, tenant_id: str, store: ICommitEvents, snapshot_store: IAccessSnapshots,
+                 logger: logging.Logger = None):
+        """
+        Initialize the default aggregate repository.
 
-    def get(self, cls: typing.Type[AggregateRepository.TAggregate], stream_id: str, max_version: int = 2 ** 32) -> AggregateRepository.TAggregate:
+        param tenant_id: The tenant id of the repository instance
+        param store: The event store to use
+        param snapshot_store: The snapshot store to use
+        """
+        self._tenant_id = tenant_id
+        self._store = store
+        self._snapshot_store = snapshot_store
+        self._logger = logger if logger is not None else logging.getLogger(DefaultAggregateRepository.__name__)
+
+    def get(self, cls: typing.Type[AggregateRepository.TAggregate], stream_id: str, max_version: int = 2 ** 32) -> \
+            AggregateRepository.TAggregate:
+        self._logger.info(f'Getting aggregate {cls.__name__} with id {stream_id} at version {max_version}')
         memento_type = inspect.signature(cls.apply_memento).parameters['memento'].annotation
         snapshot = self._snapshot_store.get(tenant_id=self._tenant_id, stream_id=stream_id, max_revision=max_version)
         min_version = 0
@@ -268,6 +285,8 @@ class DefaultAggregateRepository(AggregateRepository):
 
     def get_to(self, cls: typing.Type[AggregateRepository.TAggregate], stream_id: str,
                max_time: datetime = datetime.datetime.max) -> AggregateRepository.TAggregate:
+        self._logger.info(
+            f'Getting aggregate {cls.__name__} with id {stream_id} at time point {max_time:%Y%m%d-%H%M%S%z}')
         commits = list(self._store.get_to(tenant_id=self._tenant_id,
                                           stream_id=stream_id,
                                           max_time=max_time))
@@ -280,17 +299,11 @@ class DefaultAggregateRepository(AggregateRepository):
         return aggregate
 
     def save(self, aggregate: AggregateRepository.TAggregate, headers: Dict[str, str] = None) -> None:
+        self._logger.info(f'Saving aggregate {aggregate.id} at version {aggregate.version}')
         if headers is None:
             headers = {}
         if len(aggregate.uncommitted) == 0:
             return
-        start_version = aggregate.version - len(aggregate.uncommitted)
-        persisted = list(self._store.get(self._tenant_id, aggregate.id, start_version))
-        persisted.sort(key=lambda c: c.stream_revision)
-        if len(persisted) == 0 and start_version != 0:
-            raise ValueError('Invalid version')
-        if len(persisted) > 0 and persisted[-1].stream_revision != start_version:
-            raise ValueError('Invalid version')
         commit = Commit(tenant_id=self._tenant_id,
                         stream_id=aggregate.id,
                         stream_revision=aggregate.version,
@@ -301,15 +314,19 @@ class DefaultAggregateRepository(AggregateRepository):
                         events=list(aggregate.uncommitted),
                         checkpoint_token=0)
         self._store.commit(commit)
+        self._logger.info(f'Saved aggregate {aggregate.id}')
         aggregate.uncommitted.clear()
 
     def snapshot(self, cls: typing.Type[AggregateRepository.TAggregate], stream_id: str, version: int = MAX_INT,
                  headers: Dict[str, str] = None) -> None:
+        self._logger.info(f'Snapshotting aggregate {cls.__name__} with id {stream_id} at version {version}')
         agg = self.get(cls, stream_id, version)
         self._snapshot_aggregate(agg, headers)
 
     def snapshot_at(self, cls: typing.Type[AggregateRepository.TAggregate], stream_id: str, cut_off: datetime.datetime,
                     headers: Dict[str, str] = None) -> None:
+        self._logger.info(
+            f'Snapshotting aggregate {cls.__name__} with id {stream_id} at time point {cut_off:%Y%m%d-%H%M%S%z}')
         agg = self.get_to(cls, stream_id, cut_off)
         self._snapshot_aggregate(agg, headers)
 
@@ -320,22 +337,10 @@ class DefaultAggregateRepository(AggregateRepository):
                             stream_revision=memento.version, headers={})
         self._snapshot_store.add(snapshot=snapshot, headers=headers)
 
-    def __init__(self, tenant_id: str, store: ICommitEvents, snapshot_store: IAccessSnapshots):
-        """
-        Initialize the default aggregate repository.
-
-        param tenant_id: The tenant id of the repository instance
-        param store: The event store to use
-        param snapshot_store: The snapshot store to use
-        """
-        self._tenant_id = tenant_id
-        self._store = store
-        self._snapshot_store = snapshot_store
-
 
 class DefaultSagaRepository(SagaRepository):
 
-    def __init__(self, tenant_id: str, store: ICommitEvents):
+    def __init__(self, tenant_id: str, store: ICommitEvents, logger: logging.Logger = None):
         """
         Initialize the default saga repository.
 
@@ -344,8 +349,10 @@ class DefaultSagaRepository(SagaRepository):
         """
         self._tenant_id = tenant_id
         self._store = store
+        self._logger = logger if logger is not None else logging.getLogger(DefaultSagaRepository.__name__)
 
     def get(self, cls: typing.Type[SagaRepository.TSaga], stream_id: str) -> SagaRepository.TSaga:
+        self._logger.info(f'Getting saga {cls.__name__} with id {stream_id}')
         commits = list(self._store.get(self._tenant_id, stream_id))
         commit_sequence = commits[-1].commit_sequence if len(commits) > 0 else 0
         saga = cls(stream_id, commit_sequence)
@@ -356,6 +363,7 @@ class DefaultSagaRepository(SagaRepository):
         return saga
 
     def save(self, saga: Saga) -> None:
+        self._logger.info(f'Saving saga {saga.id} at version {saga.version}')
         commit = Commit(tenant_id=self._tenant_id,
                         stream_id=saga.id,
                         stream_revision=saga.version,
@@ -366,6 +374,7 @@ class DefaultSagaRepository(SagaRepository):
                         events=list(saga.uncommitted),
                         checkpoint_token=0)
         self._store.commit(commit=commit)
+        self._logger.info(f'Saved saga {saga.id}')
         saga.uncommitted.clear()
         saga.headers.clear()
 
@@ -378,6 +387,7 @@ class ConflictDelegate(ABC, typing.Generic[TUncommitted, TCommitted]):
     """
     A conflict delegate is a class that can detect conflicts between two events.
     """
+
     @abstractmethod
     def detect(self, uncommitted: TUncommitted, committed: TCommitted) -> bool:
         """
@@ -387,7 +397,11 @@ class ConflictDelegate(ABC, typing.Generic[TUncommitted, TCommitted]):
 
 
 class ConflictDetector:
-    def __init__(self, delegates: typing.List[ConflictDelegate] = None):
+    @staticmethod
+    def empty() -> 'ConflictDetector':
+        return ConflictDetector()
+
+    def __init__(self, delegates: typing.List[ConflictDelegate] = None, logger: logging.Logger = None):
         """
         Initialize the conflict detector with the specified delegates.
 
@@ -395,6 +409,7 @@ class ConflictDetector:
         """
         self.delegates: typing.Dict[
             typing.Type, typing.Dict[typing.Type, typing.Callable[[BaseEvent, BaseEvent], bool]]] = {}
+        self._logger = logger if logger is not None and delegates is not None else logging.getLogger(ConflictDetector.__name__)
         if delegates is not None:
             for delegate in delegates:
                 args = inspect.getfullargspec(delegate.detect)
@@ -419,6 +434,12 @@ class ConflictDetector:
             for committed in committed_events:
                 if type(uncommitted) in self.delegates and type(committed) in self.delegates[type(uncommitted)]:
                     if self.delegates[type(uncommitted)][type(committed)](uncommitted, committed):
+                        if isinstance(uncommitted, DomainEvent):
+                            self._logger.warning(
+                                f'Detected conflict between uncommitted event {type(uncommitted).__name__} from {uncommitted.source} with version {uncommitted.version}')
+                        else:
+                            self._logger.warning(
+                                f'Detected conflict between uncommitted event {type(uncommitted).__name__} from {uncommitted.source} with timestamp {uncommitted.timestamp:%Y%m%d-%H%M%S%z}')
                         return True
         return False
 
@@ -427,6 +448,7 @@ class DuplicateCommitException(Exception):
     """
     Exception raised when a duplicate commit is detected.
     """
+
     def __init__(self, message: str):
         super().__init__(message)
 
@@ -435,6 +457,7 @@ class ConflictingCommitException(Exception):
     """
     Exception raised when a conflicting commit is detected.
     """
+
     def __init__(self, message: str):
         super().__init__(message)
 
@@ -443,5 +466,6 @@ class NonConflictingCommitException(Exception):
     """
     Exception raised when a non-conflicting commit is detected.
     """
+
     def __init__(self, message: str):
         super().__init__(message)
