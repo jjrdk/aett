@@ -184,7 +184,7 @@ class PersistenceManagement:
             counters_collection: database.Collection = self.db.create_collection('counters', check_exists=True)
             if counters_collection.count_documents({'_id': 'CheckpointToken'}) == 0:
                 counters_collection.insert_one({'_id': 'CheckpointToken', 'seq': 0})
-        except pymongo.errors.CollectionInvalid as e:
+        except pymongo.errors.CollectionInvalid:
             pass
         try:
             commits_collection: database.Collection = self.db.create_collection(self.commits_table_name,
@@ -198,7 +198,7 @@ class PersistenceManagement:
             commits_collection.create_index([("CommitStamp", pymongo.ASCENDING)], comment="CommitStamp", unique=False)
             commits_collection.create_index([("TenantId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
                                              ("CommitId", pymongo.ASCENDING)], comment="CommitId", unique=True)
-        except pymongo.errors.CollectionInvalid as e:
+        except pymongo.errors.CollectionInvalid:
             pass
 
         try:
@@ -207,7 +207,7 @@ class PersistenceManagement:
             snapshots_collection.create_index([("TenantId", pymongo.ASCENDING), ("StreamId", pymongo.ASCENDING),
                                                ("StreamRevision", pymongo.ASCENDING)], comment="LogicalKey",
                                               unique=True)
-        except pymongo.errors.CollectionInvalid as e:
+        except pymongo.errors.CollectionInvalid:
             pass
 
     def drop(self):

@@ -251,16 +251,17 @@ class Snapshot:
     headers: Dict[str, str]
 
     @staticmethod
-    def from_memento(tenant_id: str, memento: Memento, headers: Dict[str, str]) -> 'Snapshot':
+    def from_memento(tenant_id: str, memento: Memento, commit_sequence: int, headers: Dict[str, str]) -> 'Snapshot':
         """
         Converts the memento to a snapshot which can be persisted.
         :param tenant_id: The value which uniquely identifies the bucket to which the stream belongs.
         :param memento:  The memento to be converted.
+        :param commit_sequence: The commit sequence at which the snapshot applies.
         :param headers: The headers to assign to the snapshot
         :return:
         """
         return Snapshot(tenant_id=tenant_id, stream_id=memento.id, stream_revision=memento.version,
-                        payload=jsonpickle.encode(memento.payload), headers=headers)
+                        payload=jsonpickle.encode(memento.payload), headers=headers, commit_sequence=commit_sequence)
 
 
 class ICommitEvents(ABC):

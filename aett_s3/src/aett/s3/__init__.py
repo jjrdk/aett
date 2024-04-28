@@ -188,8 +188,8 @@ class SnapshotStore(IAccessSnapshots):
                         headers=d.get('headers'))
 
     def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] = None):
-        if headers is None:
-            headers = {}
+        if headers is not None:
+            snapshot.headers.update(headers)
         key = f'{self._folder_name}/{snapshot.tenant_id}/{snapshot.stream_id}/{snapshot.stream_revision}.json'
         self._resource.put_object(Bucket=self._s3_bucket, Key=key,
                                   Body=jsonpickle.encode(snapshot, unpicklable=False).encode('utf-8'))
@@ -202,7 +202,7 @@ class PersistenceManagement:
 
     def initialize(self):
         try:
-            bucket = self._resource.create_bucket(Bucket=self._s3_bucket)
+            self._resource.create_bucket(Bucket=self._s3_bucket)
         except:
             pass
 

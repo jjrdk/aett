@@ -99,7 +99,7 @@ RETURNING CheckpointNumber;""", (commit.tenant_id, commit.stream_id, commit.stre
                           headers=commit.headers,
                           events=commit.events,
                           checkpoint_token=checkpoint_number)
-        except psycopg.errors.UniqueViolation as e:
+        except psycopg.errors.UniqueViolation:
             if self._detect_duplicate(commit.commit_id, commit.tenant_id, commit.stream_id):
                 raise DuplicateCommitException(
                     f"Commit {commit.commit_id} already exists in stream {commit.stream_id}")

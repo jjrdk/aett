@@ -1,10 +1,8 @@
 import inspect
 from unittest import TestCase
 
-from typing import Type
 import aett.eventstore
-
-from aett.eventstore import Topic, TopicMap, BaseEvent
+from aett.eventstore import Topic, TopicMap
 
 
 @Topic('test')

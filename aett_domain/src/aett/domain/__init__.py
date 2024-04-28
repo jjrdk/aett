@@ -19,8 +19,8 @@ class Aggregate(ABC, typing.Generic[T]):
         """
         Initialize the aggregate
 
-        param stream_id: The id of the stream
-        param commit_sequence: The commit sequence number which the aggregate was built from
+        :param stream_id: The id of the stream
+        :param commit_sequence: The commit sequence number which the aggregate was built from
         """
         self.uncommitted: typing.List[EventMessage] = []
         self._id = stream_id
@@ -101,8 +101,8 @@ class Saga(ABC):
         """
         Initialize the saga
 
-        param saga_id: The id of the saga
-        param commit_sequence: The commit sequence number which the saga was built from
+        :param saga_id: The id of the saga
+        :param commit_sequence: The commit sequence number which the saga was built from
         """
         self._id = saga_id
         self._commit_sequence = commit_sequence
@@ -211,10 +211,10 @@ class AggregateRepository(ABC):
         """
         Generates a snapshot of the aggregate at the specified version.
 
-        param cls: The type of the aggregate
-        param stream_id: The id of the aggregate to snapshot
-        param version: The version of the aggregate to snapshot
-        param headers: The headers to assign to the snapshot
+        :param cls: The type of the aggregate
+        :param stream_id: The id of the aggregate to snapshot
+        :param version: The version of the aggregate to snapshot
+        :param headers: The headers to assign to the snapshot
         """
         pass
 
@@ -224,10 +224,10 @@ class AggregateRepository(ABC):
         """
         Generates a snapshot of the aggregate at the specified time point.
 
-        param cls: The type of the aggregate
-        param stream_id: The id of the aggregate to snapshot
-        param cut_off: The time point of the aggregate to snapshot
-        param headers: The headers to assign to the snapshot
+        :param cls: The type of the aggregate
+        :param stream_id: The id of the aggregate to snapshot
+        :param cut_off: The time point of the aggregate to snapshot
+        :param headers: The headers to assign to the snapshot
         """
         pass
 
@@ -261,9 +261,9 @@ class DefaultAggregateRepository(AggregateRepository):
         """
         Initialize the default aggregate repository.
 
-        param tenant_id: The tenant id of the repository instance
-        param store: The event store to use
-        param snapshot_store: The snapshot store to use
+        :param tenant_id: The tenant id of the repository instance
+        :param store: The event store to use
+        :param snapshot_store: The snapshot store to use
         """
         self._tenant_id = tenant_id
         self._store = store
@@ -358,8 +358,8 @@ class DefaultSagaRepository(SagaRepository):
         """
         Initialize the default saga repository.
 
-        param tenant_id: The tenant id of the repository instance
-        param store: The event store to use
+        :param tenant_id: The tenant id of the repository instance
+        :param store: The event store to use
         """
         self._tenant_id = tenant_id
         self._store = store
@@ -423,8 +423,8 @@ class ConflictDetector:
         """
         Initialize the conflict detector with the specified delegates.
 
-        param delegates: The delegates to use for conflict detection
-        param logger: The optional logger to use for logging.
+        :param delegates: The delegates to use for conflict detection
+        :param logger: The optional logger to use for logging.
         """
         self.delegates: typing.Dict[
             typing.Type, typing.Dict[typing.Type, typing.Callable[[BaseEvent, BaseEvent], bool]]] = {}
@@ -445,8 +445,8 @@ class ConflictDetector:
         """
         Detects if the uncommitted events conflict with the committed events.
 
-        param uncommitted_events: The uncommitted events to analyze
-        param committed_events: The committed events to compare against.
+        :param uncommitted_events: The uncommitted events to analyze
+        :param committed_events: The committed events to compare against.
         """
         if len(self.delegates) == 0:
             return False
