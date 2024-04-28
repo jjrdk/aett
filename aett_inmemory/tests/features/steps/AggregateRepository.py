@@ -94,3 +94,37 @@ def step_impl(context, count):
     end_time = time.time()
     elapsed = end_time - start_time
     print(elapsed)
+
+
+@when("an aggregated is created from multiple events")
+def step_impl(context):
+    agg: TestAggregate = TestAggregate(context.stream_id, 0, None)
+    for i in range(0, 10):
+        agg.add_value(1)
+    repo: DefaultAggregateRepository = context.repository
+    repo.save(agg)
+
+
+@step("the aggregate is snapshotted")
+def step_impl(context):
+    repo: DefaultAggregateRepository = context.repository
+    repo.snapshot(TestAggregate,context.stream_id)
+
+
+@step("additional events are added")
+def step_impl(context):
+    repo: DefaultAggregateRepository = context.repository
+    agg: TestAggregate = repo.get(TestAggregate, context.stream_id)
+    agg.add_value(1)
+    repo.save(agg)
+
+
+@step("the latest version is loaded")
+def step_impl(context):
+    context.aggregate = context.repository.get(TestAggregate, context.stream_id)
+
+
+@then("the aggregate is loaded from the snapshot and later events")
+def step_impl(context):
+    assert context.aggregate.version == 11
+    assert context.aggregate.value == 1011

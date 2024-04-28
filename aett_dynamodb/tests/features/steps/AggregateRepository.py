@@ -9,7 +9,7 @@ import Types
 from aett.domain import DefaultAggregateRepository
 from aett.dynamodb import PersistenceManagement, CommitStore, SnapshotStore
 from aett.eventstore import TopicMap, EventMessage
-from Types import TestAggregate, TestEvent
+from Types import TestAggregate, TestEvent, TestMemento
 
 use_step_matcher("re")
 
@@ -62,8 +62,8 @@ def step_impl(context):
 
 @then("the modified aggregate is loaded from storage")
 def step_impl(context):
-    m = context.aggregate.get_memento()
-    assert m.value == 10
+    m: TestMemento = context.aggregate.get_memento()
+    assert m.payload['key'] == 1010
 
 
 @when("a series of commits is persisted")
@@ -122,3 +122,37 @@ def step_impl(context, count):
     end_time = time.time()
     elapsed = end_time - start_time
     print(elapsed)
+
+
+@when("an aggregated is created from multiple events")
+def step_impl(context):
+    agg: TestAggregate = TestAggregate(context.stream_id, 0, None)
+    for i in range(0, 10):
+        agg.add_value(1)
+    repo: DefaultAggregateRepository = context.repository
+    repo.save(agg)
+
+
+@step("the aggregate is snapshotted")
+def step_impl(context):
+    repo: DefaultAggregateRepository = context.repository
+    repo.snapshot(TestAggregate,context.stream_id)
+
+
+@step("additional events are added")
+def step_impl(context):
+    repo: DefaultAggregateRepository = context.repository
+    agg: TestAggregate = repo.get(TestAggregate, context.stream_id)
+    agg.add_value(1)
+    repo.save(agg)
+
+
+@step("the latest version is loaded")
+def step_impl(context):
+    context.aggregate = context.repository.get(TestAggregate, context.stream_id)
+
+
+@then("the aggregate is loaded from the snapshot and later events")
+def step_impl(context):
+    assert context.aggregate.version == 11
+    assert context.aggregate.value == 1011

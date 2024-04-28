@@ -27,9 +27,12 @@ class CommitStore(ICommitEvents):
         min_revision = 0 if min_revision < 0 else min_revision
         filters = {"TenantId": tenant_id, "StreamId": stream_id}
         if min_revision > 0:
-            filters['StreamRevision']: {'$gte': min_revision}
+            filters['StreamRevision'] = {'$gte': min_revision}
         if max_revision < MAX_INT:
-            filters['StreamRevision']: {'$lte': max_revision}
+            if 'StreamRevision' in filters:
+                filters['StreamRevision']['$lte'] = max_revision
+            else:
+                filters['StreamRevision'] = {'$lte': max_revision}
 
         query_response: pymongo.cursor.Cursor = self._collection.find({'$and': [filters]})
         for doc in query_response.sort('CheckpointToken', direction=pymongo.ASCENDING):
@@ -132,16 +135,19 @@ class SnapshotStore(IAccessSnapshots):
 
     def get(self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT) -> Snapshot | None:
         try:
-            item = self.collection.find_one(
-                {'TenantId': tenant_id, 'StreamId': stream_id, 'StreamRevision': max_revision})
+            filters = {'TenantId': tenant_id, 'StreamId': stream_id, 'StreamRevision': {'$lte': max_revision}}
+            cursor = self.collection.find({'$and': [filters]}).sort('StreamRevision',
+                                                                    direction=pymongo.DESCENDING).limit(1)
+            item = next(cursor, None)
             if item is None:
                 return None
 
-            return Snapshot(tenant_id=item.get('TenantId'),
-                            stream_id=item.get('StreamId'),
-                            stream_revision=int(item.get('StreamRevision')),
-                            payload=jsonpickle.decode(item.get('Payload')),
-                            headers=jsonpickle.decode(item.get('Headers')))
+            return Snapshot(tenant_id=item['TenantId'],
+                            stream_id=item['StreamId'],
+                            stream_revision=int(item['StreamRevision']),
+                            commit_sequence=int(item['CommitSequence']),
+                            payload=jsonpickle.decode(item['Payload']),
+                            headers=jsonpickle.decode(item['Headers']))
         except Exception as e:
             raise Exception(
                 f"Failed to get snapshot for stream {stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}")
@@ -154,6 +160,7 @@ class SnapshotStore(IAccessSnapshots):
                 'TenantId': snapshot.tenant_id,
                 'StreamId': snapshot.stream_id,
                 'StreamRevision': snapshot.stream_revision,
+                'CommitSequence': snapshot.commit_sequence,
                 'Payload': jsonpickle.encode(snapshot.payload, unpicklable=False),
                 'Headers': jsonpickle.encode(headers, unpicklable=False)
             }

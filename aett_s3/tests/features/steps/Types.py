@@ -12,7 +12,7 @@ class TestEvent(DomainEvent):
 
 @dataclass(frozen=True)
 class TestMemento(Memento):
-    value: int = 0
+    pass
 
 
 class TestEventConflictDelegate(ConflictDelegate[TestEvent, TestEvent]):
@@ -21,21 +21,26 @@ class TestEventConflictDelegate(ConflictDelegate[TestEvent, TestEvent]):
 
 
 class TestAggregate(Aggregate[TestMemento]):
-    def __init__(self, stream_id, commit_sequence):
+    def __init__(self, stream_id: str, commit_sequence: int, memento: TestMemento = None):
         self.value = 0
-        super().__init__(stream_id=stream_id, commit_sequence=commit_sequence)
+        super().__init__(stream_id=stream_id, commit_sequence=commit_sequence, memento=memento)
 
     def apply_memento(self, memento: TestMemento) -> None:
         if self.id != memento.id:
             raise ValueError("Memento id does not match aggregate id")
-        self.value = memento.value
+        self.value = int(memento.payload['key'])
 
     def get_memento(self) -> TestMemento:
-        return TestMemento(id=self.id, version=self.version, value=self.value, payload={'key': self.value})
+        return TestMemento(id=self.id, version=self.version, payload={'key': self.value + 1000})
 
     def set_value(self, value: int) -> None:
         self.raise_event(
             TestEvent(value=value, source=self.id, version=self.version, timestamp=datetime.datetime.now(datetime.UTC)))
+
+    def add_value(self, value: int) -> None:
+        self.raise_event(
+            TestEvent(value=self.value + value, source=self.id, version=self.version,
+                      timestamp=datetime.datetime.now(datetime.UTC)))
 
     def _apply(self, event: TestEvent) -> None:
         self.value = event.value

@@ -18,7 +18,7 @@ def step_impl(context):
     context.tenant_id = str(uuid.uuid4())
     context.stream_id = str(uuid.uuid4())
     snapshot = Snapshot(tenant_id=context.tenant_id, stream_id=context.stream_id, stream_revision=1,
-                        payload='{"key": "test"}', headers={})
+                        payload='{"key": "test"}', headers={}, commit_sequence=1)
     context.store.add(snapshot)
 
 

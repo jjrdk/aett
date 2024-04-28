@@ -15,7 +15,7 @@ class Aggregate(ABC, typing.Generic[T]):
     of the event relies on multiple dispatch to call the correct apply method in the subclass.
     """
 
-    def __init__(self, stream_id: str, commit_sequence: int):
+    def __init__(self, stream_id: str, commit_sequence: int, memento: Memento[T] = None):
         """
         Initialize the aggregate
 
@@ -26,7 +26,9 @@ class Aggregate(ABC, typing.Generic[T]):
         self._id = stream_id
         self._version = 0
         self._commit_sequence = commit_sequence
-        self.uncommitted.clear()
+        if memento is not None:
+            self._version = memento.version
+            self.apply_memento(memento)
 
     @property
     def id(self) -> str:
@@ -271,19 +273,21 @@ class DefaultAggregateRepository(AggregateRepository):
     def get(self, cls: typing.Type[AggregateRepository.TAggregate], stream_id: str, max_version: int = 2 ** 32) -> \
             AggregateRepository.TAggregate:
         self._logger.info(f'Getting aggregate {cls.__name__} with id {stream_id} at version {max_version}')
-        memento_type = inspect.signature(cls.apply_memento).parameters['memento'].annotation
         snapshot = self._snapshot_store.get(tenant_id=self._tenant_id, stream_id=stream_id, max_revision=max_version)
         min_version = 0
+        commit_sequence = 0
         if snapshot is not None:
-            min_version = snapshot.stream_revision
+            min_version = snapshot.stream_revision + 1
+            commit_sequence = snapshot.commit_sequence
         commits = list(self._store.get(tenant_id=self._tenant_id,
                                        stream_id=stream_id,
                                        min_revision=min_version,
                                        max_revision=max_version))
-        commit_sequence = commits[-1].commit_sequence if len(commits) > 0 else 0
-        aggregate = cls(stream_id, commit_sequence)
-        if snapshot is not None:
-            aggregate.apply_memento(memento_type(**jsonpickle.decode(snapshot.payload)))
+        if len(commits) > 0:
+            commit_sequence = commits[-1].commit_sequence
+        memento_type = inspect.signature(cls.apply_memento).parameters['memento'].annotation
+        aggregate = cls(stream_id, commit_sequence,
+                        memento_type(**jsonpickle.decode(snapshot.payload)) if snapshot is not None else None)
         for commit in commits:
             for event in commit.events:
                 aggregate.raise_event(event.body)
@@ -298,7 +302,7 @@ class DefaultAggregateRepository(AggregateRepository):
                                           stream_id=stream_id,
                                           max_time=max_time))
         commit_sequence = commits[-1].commit_sequence if len(commits) > 0 else 0
-        aggregate = cls(stream_id, commit_sequence)
+        aggregate = cls(stream_id, commit_sequence, None)
         for commit in commits:
             for event in commit.events:
                 aggregate.raise_event(event.body)
@@ -339,9 +343,12 @@ class DefaultAggregateRepository(AggregateRepository):
 
     def _snapshot_aggregate(self, aggregate: Aggregate, headers: Dict[str, str] = None) -> None:
         memento = aggregate.get_memento()
-        snapshot = Snapshot(tenant_id=self._tenant_id, stream_id=aggregate.id,
-                            payload=jsonpickle.encode(memento.payload, unpicklable=False),
-                            stream_revision=memento.version, headers={})
+        snapshot = Snapshot(tenant_id=self._tenant_id,
+                            stream_id=aggregate.id,
+                            commit_sequence=aggregate.commit_sequence,
+                            payload=jsonpickle.encode(memento, unpicklable=False),
+                            stream_revision=memento.version,
+                            headers=headers or {})
         self._snapshot_store.add(snapshot=snapshot, headers=headers)
 
 
@@ -417,10 +424,12 @@ class ConflictDetector:
         Initialize the conflict detector with the specified delegates.
 
         param delegates: The delegates to use for conflict detection
+        param logger: The optional logger to use for logging.
         """
         self.delegates: typing.Dict[
             typing.Type, typing.Dict[typing.Type, typing.Callable[[BaseEvent, BaseEvent], bool]]] = {}
-        self._logger = logger if logger is not None and delegates is not None else logging.getLogger(ConflictDetector.__name__)
+        self._logger = logger if logger is not None and delegates is not None else logging.getLogger(
+            ConflictDetector.__name__)
         if delegates is not None:
             for delegate in delegates:
                 args = inspect.getfullargspec(delegate.detect)

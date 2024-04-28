@@ -238,6 +238,11 @@ class Snapshot:
     Gets the position at which the snapshot applies.
     """
 
+    commit_sequence: int
+    """
+    Gets the commit sequence at which the snapshot applies.
+    """
+
     payload: str
     """
     Gets the snapshot or materialized view of the stream at the revision indicated.

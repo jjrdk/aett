@@ -183,6 +183,7 @@ class SnapshotStore(IAccessSnapshots):
         return Snapshot(tenant_id=d.get('tenant_id'),
                         stream_id=d.get('stream_id'),
                         stream_revision=int(d.get('stream_revision')),
+                        commit_sequence=int(d.get('commit_sequence')),
                         payload=d.get('payload'),
                         headers=d.get('headers'))
 

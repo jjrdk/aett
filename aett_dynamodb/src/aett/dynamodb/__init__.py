@@ -178,6 +178,7 @@ class SnapshotStore(IAccessSnapshots):
                             stream_id=item['StreamId'],
                             stream_revision=int(item['StreamRevision']),
                             payload=item['Payload'],
+                            commit_sequence=item['CommitSequence'],
                             headers=dict(jsonpickle.decode(item['Headers'])))
         except Exception as e:
             raise Exception(
@@ -193,6 +194,7 @@ class SnapshotStore(IAccessSnapshots):
                 'StreamId': snapshot.stream_id,
                 'StreamRevision': snapshot.stream_revision,
                 'Payload': snapshot.payload,
+                'CommitSequence': snapshot.commit_sequence,
                 'Headers': jsonpickle.encode(headers, unpicklable=False)
             }
             _ = self.table.put_item(

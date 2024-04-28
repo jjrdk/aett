@@ -11,6 +11,13 @@ Feature: Aggregate repository behavior
     And an aggregate is saved to the repository
     Then the modified is saved to storage
 
+  Scenario: Load snapshots before events
+    When an aggregated is created from multiple events
+    And the aggregate is snapshotted
+    And additional events are added
+    And the latest version is loaded
+    Then the aggregate is loaded from the snapshot and later events
+
   Scenario: Retrieving based on time
     When a series of commits is persisted
     And a specific aggregate is loaded at a specific time

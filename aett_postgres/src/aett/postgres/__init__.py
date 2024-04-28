@@ -174,8 +174,9 @@ class SnapshotStore(IAccessSnapshots):
             return Snapshot(tenant_id=item[0],
                             stream_id=item[1],
                             stream_revision=int(item[2]),
-                            payload=jsonpickle.decode(item[3].decode('utf-8')),
-                            headers=dict(jsonpickle.decode(item[4].decode('utf-8'))))
+                            commit_sequence=int(item[3]),
+                            payload=jsonpickle.decode(item[4].decode('utf-8')),
+                            headers=dict(jsonpickle.decode(item[5].decode('utf-8'))))
         except Exception as e:
             raise Exception(
                 f"Failed to get snapshot for stream {stream_id} with error {e}")
@@ -187,10 +188,11 @@ class SnapshotStore(IAccessSnapshots):
             cur = self.connection.cursor()
             j = jsonpickle.encode(snapshot.payload, unpicklable=False)
             cur.execute(
-                f"""INSERT INTO {self._table_name} ( TenantId, StreamId, StreamRevision, Payload, Headers) VALUES (%s, %s, %s, %s, %s);""",
+                f"""INSERT INTO {self._table_name} ( TenantId, StreamId, StreamRevision, CommitSequence, Payload, Headers) VALUES (%s, %s, %s, %s, %s, %s);""",
                 (snapshot.tenant_id,
                  snapshot.stream_id,
                  snapshot.stream_revision,
+                 snapshot.commit_sequence,
                  j.encode('utf-8'),
                  jsonpickle.encode(headers, unpicklable=False).encode('utf-8')))
             self.connection.commit()
@@ -236,6 +238,7 @@ CREATE TABLE {self.snapshots_table_name}
     TenantId varchar(40) NOT NULL,
     StreamId char(40) NOT NULL,
     StreamRevision int NOT NULL CHECK (StreamRevision > 0),
+    CommitSequence int NOT NULL CHECK (CommitSequence > 0),
     Payload bytea NOT NULL,
     Headers bytea NOT NULL,
     CONSTRAINT PK_Snapshots PRIMARY KEY (TenantId, StreamId, StreamRevision)
