@@ -22,7 +22,7 @@ def step_impl(context):
 def step_impl(context):
     try:
         context.store.commit(Commit(tenant_id=context.tenant_id, stream_id=context.stream_id, commit_id=uuid.uuid4(),
-                                    commit_sequence=1, commit_stamp=datetime.datetime.now(datetime.UTC),
+                                    commit_sequence=1, commit_stamp=datetime.datetime.now(datetime.timezone.utc),
                                     stream_revision=1,
                                     events=[
                                         EventMessage(
@@ -37,7 +37,7 @@ def step_impl(context):
 def step_impl(context):
     try:
         context.store.commit(Commit(tenant_id=context.tenant_id, stream_id=context.stream_id, commit_id=uuid.uuid4(),
-                                    commit_sequence=1, commit_stamp=datetime.datetime.now(datetime.UTC),
+                                    commit_sequence=1, commit_stamp=datetime.datetime.now(datetime.timezone.utc),
                                     stream_revision=1,
                                     events=[
                                         EventMessage(

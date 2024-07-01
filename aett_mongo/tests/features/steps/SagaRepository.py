@@ -27,7 +27,7 @@ def step_impl(context):
 @when("a saga is loaded from the repository and modified")
 def step_impl(context):
     saga = context.repository.get(TestSaga, 'test')
-    saga.transition(TestEvent(value=1, source='test', version=0, timestamp=datetime.datetime.now(datetime.UTC)))
+    saga.transition(TestEvent(value=1, source='test', version=0, timestamp=datetime.datetime.now(datetime.timezone.utc)))
     context.saga = saga
 
 

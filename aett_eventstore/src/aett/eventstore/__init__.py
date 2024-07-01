@@ -14,6 +14,14 @@ COMMITS = 'commits'
 SNAPSHOTS = 'snapshots'
 
 
+@dataclass(frozen=True, kw_only=True)
+class StreamHead:
+    tenant_id: str
+    stream_id: str
+    head_revision: int
+    snapshot_revision: int
+
+
 class Topic(object):
     """
     Represents the topic of an event message.
@@ -361,5 +369,39 @@ class IAccessSnapshots(ABC):
         :param headers: The metadata to assign to the snapshot.
         :raises StorageException:
         :raises StorageUnavailableException:
+        """
+        pass
+
+
+class IManagePersistence(ABC):
+    @abstractmethod
+    def initialize(self):
+        """
+        Initializes the persistence mechanism.
+        """
+        pass
+
+    @abstractmethod
+    def drop(self):
+        """
+        Drops the persistence mechanism.
+        """
+        pass
+
+    @abstractmethod
+    def purge(self, tenant_id: str):
+        """
+        Purges the persistence mechanism.
+
+        :param tenant_id: The value which uniquely identifies the tenant to be purged.
+        """
+        pass
+
+    @abstractmethod
+    def get_from(self, checkpoint: int) -> Iterable[Commit]:
+        """
+        Gets the commits from the checkpoint.
+        :param checkpoint: The checkpoint to start from.
+        :return: The commits from the checkpoint.
         """
         pass

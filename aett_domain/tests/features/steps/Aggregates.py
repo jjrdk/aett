@@ -12,7 +12,7 @@ use_step_matcher("re")
 @when("an event is applied to the aggregate")
 def step_impl(context):
     a: TestAggregate = context.aggregate
-    a.raise_event(TestEvent(source='test', timestamp=datetime.datetime.now(datetime.UTC), version=1, value=1))
+    a.raise_event(TestEvent(source='test', timestamp=datetime.datetime.now(datetime.timezone.utc), version=1, value=1))
 
 
 @then("the aggregate version is (\\d+)")
@@ -25,8 +25,8 @@ def step_impl(context, version: str):
 def step_impl(context):
     tm = TopicMap()
     tm.register(TestEvent)
-    event1: TestEvent = TestEvent(source='test', timestamp=datetime.datetime.now(datetime.UTC), version=1, value=1)
-    event2: TestEvent = TestEvent(source='test', timestamp=datetime.datetime.now(datetime.UTC), version=2, value=1)
+    event1: TestEvent = TestEvent(source='test', timestamp=datetime.datetime.now(datetime.timezone.utc), version=1, value=1)
+    event2: TestEvent = TestEvent(source='test', timestamp=datetime.datetime.now(datetime.timezone.utc), version=2, value=1)
     msgs = [EventMessage(body=event1, headers=None),
             EventMessage(body=event2, headers=None)]
     j = jsonpickle.encode([e.to_json() for e in msgs])

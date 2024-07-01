@@ -9,7 +9,19 @@ import psycopg
 from aett.domain import ConflictDetector, ConflictingCommitException, NonConflictingCommitException, \
     DuplicateCommitException
 from aett.eventstore import ICommitEvents, IAccessSnapshots, Snapshot, Commit, MAX_INT, TopicMap, \
-    EventMessage, COMMITS, SNAPSHOTS
+    EventMessage, COMMITS, SNAPSHOTS, IManagePersistence
+
+
+def _item_to_commit(item, topic_map: TopicMap):
+    return Commit(tenant_id=item[0],
+                  stream_id=item[1],
+                  stream_revision=item[3],
+                  commit_id=item[4],
+                  commit_sequence=item[5],
+                  commit_stamp=item[6],
+                  headers=jsonpickle.decode(item[8]),
+                  events=[EventMessage.from_json(e, topic_map) for e in jsonpickle.decode(item[9])],
+                  checkpoint_token=item[7])
 
 
 # noinspection DuplicatedCode
@@ -36,7 +48,7 @@ class CommitStore(ICommitEvents):
  ORDER BY CommitSequence;""", (tenant_id, stream_id, min_revision, max_revision, 0))
         fetchall = cur.fetchall()
         for doc in fetchall:
-            yield self._item_to_commit(doc)
+            yield _item_to_commit(doc, self._topic_map)
 
     def get_to(self, tenant_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
@@ -49,7 +61,7 @@ class CommitStore(ICommitEvents):
          ORDER BY CommitSequence;""", (tenant_id, stream_id, max_time))
         fetchall = cur.fetchall()
         for doc in fetchall:
-            yield self._item_to_commit(doc)
+            yield _item_to_commit(doc, self._topic_map)
 
     def get_all_to(self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
@@ -61,18 +73,7 @@ class CommitStore(ICommitEvents):
                  ORDER BY CheckpointNumber;""", (tenant_id, max_time))
         fetchall = cur.fetchall()
         for doc in fetchall:
-            yield self._item_to_commit(doc)
-
-    def _item_to_commit(self, item):
-        return Commit(tenant_id=item[0],
-                      stream_id=item[1],
-                      stream_revision=item[3],
-                      commit_id=item[4],
-                      commit_sequence=item[5],
-                      commit_stamp=item[6],
-                      headers=jsonpickle.decode(item[8]),
-                      events=[EventMessage.from_json(e, self._topic_map) for e in jsonpickle.decode(item[9])],
-                      checkpoint_token=item[7])
+            yield _item_to_commit(doc, self._topic_map)
 
     def commit(self, commit: Commit):
         try:
@@ -201,19 +202,21 @@ class SnapshotStore(IAccessSnapshots):
                 f"Failed to add snapshot for stream {snapshot.stream_id} with error {e}")
 
 
-class PersistenceManagement:
+class PersistenceManagement(IManagePersistence):
     def __init__(self,
                  db: psycopg.connect,
+                 topic_map: TopicMap,
                  commits_table_name: str = COMMITS,
                  snapshots_table_name: str = SNAPSHOTS):
         self.db: psycopg.connect = db
-        self.commits_table_name = commits_table_name
-        self.snapshots_table_name = snapshots_table_name
+        self._topic_map = topic_map
+        self._commits_table_name = commits_table_name
+        self._snapshots_table_name = snapshots_table_name
 
     def initialize(self):
         try:
             c = self.db.cursor()
-            c.execute(f"""CREATE TABLE {self.commits_table_name}
+            c.execute(f"""CREATE TABLE {self._commits_table_name}
 (
     TenantId varchar(64) NOT NULL,
     StreamId char(64) NOT NULL,
@@ -228,12 +231,12 @@ class PersistenceManagement:
     Payload bytea NOT NULL,
     CONSTRAINT PK_Commits PRIMARY KEY (CheckpointNumber)
 );
-CREATE UNIQUE INDEX IX_Commits_CommitSequence ON {self.commits_table_name} (TenantId, StreamId, CommitSequence);
-CREATE UNIQUE INDEX IX_Commits_CommitId ON {self.commits_table_name} (TenantId, StreamId, CommitId);
-CREATE UNIQUE INDEX IX_Commits_Revisions ON {self.commits_table_name} (TenantId, StreamId, StreamRevision, Items);
-CREATE INDEX IX_Commits_Stamp ON {self.commits_table_name} (CommitStamp);
+CREATE UNIQUE INDEX IX_Commits_CommitSequence ON {self._commits_table_name} (TenantId, StreamId, CommitSequence);
+CREATE UNIQUE INDEX IX_Commits_CommitId ON {self._commits_table_name} (TenantId, StreamId, CommitId);
+CREATE UNIQUE INDEX IX_Commits_Revisions ON {self._commits_table_name} (TenantId, StreamId, StreamRevision, Items);
+CREATE INDEX IX_Commits_Stamp ON {self._commits_table_name} (CommitStamp);
 
-CREATE TABLE {self.snapshots_table_name}
+CREATE TABLE {self._snapshots_table_name}
 (
     TenantId varchar(40) NOT NULL,
     StreamId char(40) NOT NULL,
@@ -248,4 +251,19 @@ CREATE TABLE {self.snapshots_table_name}
             pass
 
     def drop(self):
-        self.db.cursor().execute(f"""DROP TABLE {self.snapshots_table_name};DROP TABLE {self.commits_table_name};""")
+        self.db.cursor().execute(f"""DROP TABLE {self._snapshots_table_name};DROP TABLE {self._commits_table_name};""")
+
+    def purge(self, tenant_id: str):
+        c = self.db.cursor()
+        c.execute(f"""DELETE FROM {self._commits_table_name} WHERE TenantId = %s;""", tenant_id)
+        c.execute(f"""DELETE FROM {self._snapshots_table_name} WHERE TenantId = %s;""", tenant_id)
+
+    def get_from(self, checkpoint: int) -> Iterable[Commit]:
+        cur = self.db.cursor()
+        cur.execute(f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+                          FROM {self._commits_table_name}
+                         WHERE CommitStamp >= %s
+                         ORDER BY CheckpointNumber;""", (checkpoint,))
+        fetchall = cur.fetchall()
+        for doc in fetchall:
+            yield _item_to_commit(doc, self._topic_map)

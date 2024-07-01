@@ -101,7 +101,7 @@ def step_impl(context, count):
     for i in range(0, int(count)):
         agg: TestAggregate = context.repository.get(TestAggregate, context.stream_id)
         agg.raise_event(
-            TestEvent(source=context.stream_id, timestamp=datetime.datetime.now(datetime.UTC), version=i + 1, value=i))
+            TestEvent(source=context.stream_id, timestamp=datetime.datetime.now(datetime.timezone.utc), version=i + 1, value=i))
         context.repository.save(agg)
     end_time = time.time()
     elapsed = end_time - start_time

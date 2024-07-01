@@ -19,7 +19,9 @@ use_step_matcher("re")
 @step("I run the setup script")
 def step_impl(context):
     context.db = pymongo.database.Database(pymongo.MongoClient('mongodb://localhost:27017'), 'test')
-    context.mgmt = PersistenceManagement(context.db)
+    tm = TopicMap()
+    tm.register_module(Types)
+    context.mgmt = PersistenceManagement(context.db, tm)
     context.mgmt.initialize()
 
 
@@ -112,7 +114,7 @@ def step_impl(context, count):
     for i in range(0, int(count)):
         agg: TestAggregate = context.repository.get(TestAggregate, context.stream_id)
         agg.raise_event(
-            TestEvent(source=context.stream_id, timestamp=datetime.datetime.now(datetime.UTC), version=i + 1, value=i))
+            TestEvent(source=context.stream_id, timestamp=datetime.datetime.now(datetime.timezone.utc), version=i + 1, value=i))
         context.repository.save(agg)
         time.sleep(0.1)
     end_time = time.time()

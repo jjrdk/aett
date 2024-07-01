@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69.5.1", "wheel"]
+requires = ["setuptools>=70.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
@@ -21,8 +21,8 @@ classifiers = [
 keywords = ["events", "event store", "postgres"]
 dependencies = [
     'aett-domain >= 1.1.0',
-    'psycopg~=3.1.18',
-    'psycopg-binary~=3.1.18'
+    'psycopg~=3.1.19',
+    'psycopg-binary~=3.1.19'
 ]
 requires-python = ">=3.10"
 

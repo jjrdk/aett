@@ -33,7 +33,7 @@ class TestSagaRepository(SagaRepository):
             stream = []
         stream.append(Commit(tenant_id='test', stream_id=saga.id, stream_revision=0, commit_id=uuid.uuid4(),
                              commit_sequence=saga.commit_sequence + 1,
-                             commit_stamp=datetime.datetime.now(datetime.UTC), headers={}, events=saga.uncommitted,
+                             commit_stamp=datetime.datetime.now(datetime.timezone.utc), headers={}, events=saga.uncommitted,
                              checkpoint_token=0))
         self._storage[saga.id] = stream
 
@@ -52,7 +52,7 @@ def step_impl(context):
 @when("a saga is loaded from the repository and modified")
 def step_impl(context):
     saga = context.repository.get(TestSaga, 'test')
-    saga.transition(TestEvent(value=1, source='test', version=0, timestamp=datetime.datetime.now(datetime.UTC)))
+    saga.transition(TestEvent(value=1, source='test', version=0, timestamp=datetime.datetime.now(datetime.timezone.utc)))
     context.saga = saga
 
 

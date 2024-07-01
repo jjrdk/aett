@@ -9,8 +9,9 @@ from boto3.dynamodb.conditions import Key, Attr
 
 from aett.domain import ConflictDetector, ConflictingCommitException, NonConflictingCommitException, \
     DuplicateCommitException
-from aett.eventstore import ICommitEvents, IAccessSnapshots, Snapshot, Commit, MAX_INT, EventMessage, \
-    TopicMap, COMMITS, SNAPSHOTS
+from aett.eventstore import ICommitEvents, IAccessSnapshots, IManagePersistence, Snapshot, Commit, MAX_INT, \
+    EventMessage, \
+    TopicMap, COMMITS, SNAPSHOTS, StreamHead
 
 
 def _get_resource(profile_name: str, region: str):
@@ -209,7 +210,7 @@ class SnapshotStore(IAccessSnapshots):
                 f"Failed to add snapshot for stream {snapshot.stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}")
 
 
-class PersistenceManagement:
+class PersistenceManagement(IManagePersistence):
     def __init__(self,
                  commits_table_name: str = COMMITS,
                  snapshots_table_name: str = SNAPSHOTS,
@@ -275,3 +276,18 @@ class PersistenceManagement:
         for table in tables:
             if table.name in [self.commits_table_name, self.snapshots_table_name]:
                 table.delete()
+
+    def purge(self, tenant_id: str):
+        table = self.dynamodb.Table(self.commits_table_name)
+        query_response = table.scan(IndexName="CommitStampIndex",
+                                    ConsistentRead=True,
+                                    Select='ALL_ATTRIBUTES',
+                                    ProjectionExpression='Tenant,CommitSequence',
+                                    FilterExpression=(Key("Tenant").eq(f'{tenant_id}')))
+        with table.batch_writer() as batch:
+            for each in query_response['Items']:
+                batch.delete_item(
+                    Key={'Tenant': each['Tenant'], 'CommitSequence': each['CommitSequence']})
+
+    def get_from(self, checkpoint: int) -> Iterable[Commit]:
+        raise NotImplementedError()

@@ -36,12 +36,12 @@ class TestAggregate(Aggregate[TestMemento]):
 
     def set_value(self, value: int) -> None:
         self.raise_event(
-            TestEvent(value=value, source=self.id, version=self.version, timestamp=datetime.datetime.now(datetime.UTC)))
+            TestEvent(value=value, source=self.id, version=self.version, timestamp=datetime.datetime.now(datetime.timezone.utc)))
 
     def add_value(self, value: int) -> None:
         self.raise_event(
             TestEvent(value=self.value + value, source=self.id, version=self.version,
-                      timestamp=datetime.datetime.now(datetime.UTC)))
+                      timestamp=datetime.datetime.now(datetime.timezone.utc)))
 
     def _apply(self, event: TestEvent) -> None:
         self.value = event.value

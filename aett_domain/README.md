@@ -42,7 +42,7 @@ class ExampleAggregate(Aggregate[Memento]):
     def set_value(self, value: int) -> None:
         self.raise_event(
             SampleEvent(value=value, id=self.id, version=self.version,
-                      timestamp=datetime.datetime.now(datetime.UTC)))
+                      timestamp=datetime.datetime.now(datetime.timezone.utc)))
 
     def _apply(self, event: SampleEvent) -> None:
         """

@@ -23,7 +23,7 @@ def step_impl(context):
 
 @when("an event is applied to the saga")
 def step_impl(context):
-    context.saga.transition(TestEvent(source='test', version=1, timestamp=datetime.datetime.now(datetime.UTC), value=1))
+    context.saga.transition(TestEvent(source='test', version=1, timestamp=datetime.datetime.now(datetime.timezone.utc), value=1))
 
 
 @then("the saga transitions to the next state")

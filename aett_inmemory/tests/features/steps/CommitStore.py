@@ -24,7 +24,7 @@ def step_impl(context):
                     stream_revision=1,
                     commit_id=uuid.uuid4(),
                     commit_sequence=1,
-                    commit_stamp=datetime.datetime.now(datetime.UTC),
+                    commit_stamp=datetime.datetime.now(datetime.timezone.utc),
                     headers={},
                     events=[EventMessage(body=TestEvent(source='test',
                                                         timestamp=datetime.datetime.now(),

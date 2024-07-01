@@ -9,7 +9,19 @@ from pymongo import database, results, errors
 
 from aett.domain import ConflictingCommitException, NonConflictingCommitException, ConflictDetector
 from aett.eventstore import ICommitEvents, IAccessSnapshots, Snapshot, Commit, MAX_INT, EventMessage, \
-    TopicMap, COMMITS, SNAPSHOTS
+    TopicMap, COMMITS, SNAPSHOTS, IManagePersistence
+
+
+def _doc_to_commit(doc: dict, topic_map: TopicMap) -> Commit:
+    return Commit(tenant_id=doc['TenantId'],
+                  stream_id=doc['StreamId'],
+                  stream_revision=int(doc['StreamRevision']),
+                  commit_id=UUID(doc['CommitId']),
+                  commit_sequence=int(doc['CommitSequence']),
+                  commit_stamp=datetime.datetime.fromtimestamp(int(doc['CommitStamp']), datetime.UTC),
+                  headers=jsonpickle.decode(doc['Headers']),
+                  events=[EventMessage.from_json(e, topic_map) for e in jsonpickle.decode(doc['Events'])],
+                  checkpoint_token=doc['CheckpointToken'])
 
 
 # noinspection DuplicatedCode
@@ -36,7 +48,7 @@ class CommitStore(ICommitEvents):
 
         query_response: pymongo.cursor.Cursor = self._collection.find({'$and': [filters]})
         for doc in query_response.sort('CheckpointToken', direction=pymongo.ASCENDING):
-            yield self._doc_to_commit(doc)
+            yield _doc_to_commit(doc, self._topic_map)
 
     def get_to(self, tenant_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
@@ -44,7 +56,7 @@ class CommitStore(ICommitEvents):
 
         query_response: pymongo.cursor.Cursor = self._collection.find({'$and': [filters]})
         for doc in query_response.sort('CheckpointToken', direction=pymongo.ASCENDING):
-            yield self._doc_to_commit(doc)
+            yield _doc_to_commit(doc, self._topic_map)
 
     def get_all_to(self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
@@ -52,18 +64,7 @@ class CommitStore(ICommitEvents):
 
         query_response: pymongo.cursor.Cursor = self._collection.find({'$and': [filters]})
         for doc in query_response.sort('CheckpointToken', direction=pymongo.ASCENDING):
-            yield self._doc_to_commit(doc)
-
-    def _doc_to_commit(self, doc: dict) -> Commit:
-        return Commit(tenant_id=doc['TenantId'],
-                      stream_id=doc['StreamId'],
-                      stream_revision=int(doc['StreamRevision']),
-                      commit_id=UUID(doc['CommitId']),
-                      commit_sequence=int(doc['CommitSequence']),
-                      commit_stamp=datetime.datetime.fromtimestamp(int(doc['CommitStamp']), datetime.UTC),
-                      headers=jsonpickle.decode(doc['Headers']),
-                      events=[EventMessage.from_json(e, self._topic_map) for e in jsonpickle.decode(doc['Events'])],
-                      checkpoint_token=doc['CheckpointToken'])
+            yield _doc_to_commit(doc, self._topic_map)
 
     def commit(self, commit: Commit):
         try:
@@ -76,7 +77,7 @@ class CommitStore(ICommitEvents):
                 'StreamRevision': commit.stream_revision,
                 'CommitId': str(commit.commit_id),
                 'CommitSequence': commit.commit_sequence,
-                'CommitStamp': int(datetime.datetime.now(datetime.UTC).timestamp()),
+                'CommitStamp': int(datetime.datetime.now(datetime.timezone.utc).timestamp()),
                 'Headers': jsonpickle.encode(commit.headers, unpicklable=False),
                 'Events': jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False),
                 'CheckpointToken': int(ret)
@@ -115,7 +116,7 @@ class CommitStore(ICommitEvents):
 
         latest_revision = 0
         for doc in query_response:
-            c = self._doc_to_commit(doc)
+            c = _doc_to_commit(doc, self._topic_map)
             if self._conflict_detector.conflicts_with(list(map(self._get_body, commit.events)),
                                                       list(map(self._get_body, c.events))):
                 return True, -1
@@ -170,11 +171,13 @@ class SnapshotStore(IAccessSnapshots):
                 f"Failed to add snapshot for stream {snapshot.stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}")
 
 
-class PersistenceManagement:
+class PersistenceManagement(IManagePersistence):
     def __init__(self,
                  db: database.Database,
+                 topic_map: TopicMap,
                  commits_table_name: str = COMMITS,
                  snapshots_table_name: str = SNAPSHOTS):
+        self._topic_map = topic_map
         self.db: database.Database = db
         self.commits_table_name = commits_table_name
         self.snapshots_table_name = snapshots_table_name
@@ -213,3 +216,14 @@ class PersistenceManagement:
     def drop(self):
         self.db.drop_collection(self.commits_table_name)
         self.db.drop_collection(self.snapshots_table_name)
+
+    def purge(self, tenant_id: str):
+        collection = (self.db.get_collection(self.commits_table_name))
+        collection.delete_many({'TenantId': tenant_id})
+
+    def get_from(self, checkpoint: int) -> Iterable[Commit]:
+        collection = (self.db.get_collection(self.commits_table_name))
+        filters = {"CommitSequence": {'$gte': checkpoint}}
+        query_response: pymongo.cursor.Cursor = collection.find({'$and': [filters]})
+        for doc in query_response.sort('CheckpointToken', direction=pymongo.ASCENDING):
+            yield _doc_to_commit(doc, self._topic_map)
