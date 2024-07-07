@@ -1,7 +1,21 @@
 import datetime
 
+from pydantic import BaseModel
+
 from aett.domain import Aggregate, Saga, ConflictDelegate
 from aett.eventstore import DomainEvent, Memento, Topic
+
+class DeepNestedValue(BaseModel):
+    value: int
+
+
+class NestedValue(BaseModel):
+    value: DeepNestedValue
+
+
+@Topic("Nested")
+class NestedEvent(DomainEvent):
+    value: NestedValue
 
 
 @Topic("Test")
