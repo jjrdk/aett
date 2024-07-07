@@ -77,6 +77,7 @@ class CommitStore(ICommitEvents):
     def commit(self, commit: Commit):
         try:
             cur = self._connection.cursor()
+            json = to_json([e.to_json() for e in commit.events])
             cur.execute(f"""INSERT
   INTO {self._table_name}
      ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
@@ -85,7 +86,7 @@ RETURNING CheckpointNumber;""", (commit.tenant_id, commit.stream_id, commit.stre
                                  commit.commit_id, commit.commit_sequence, commit.stream_revision, len(commit.events),
                                  commit.commit_stamp,
                                  to_json(commit.headers),
-                                 to_json([e.to_json() for e in commit.events])))
+                                 json))
             checkpoint_number = cur.fetchone()
             cur.close()
             self._connection.commit()

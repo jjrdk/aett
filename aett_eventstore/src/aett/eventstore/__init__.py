@@ -146,20 +146,17 @@ class EventMessage(BaseModel):
         """
         Converts the event message to a dictionary which can be serialized to JSON.
         """
-        data = {}
-        headers = self.headers if self.headers is not None else {}
-        topic = Topic.get(type(self.body))
-        headers['topic'] = topic
-        data['headers'] = to_json(headers)
-        body = to_json(self.body)
-        data['body'] = body
-        return to_json(data)
+        if self.headers is None:
+            self.headers = {}
+        if 'topic' not in self.headers:
+            self.headers['topic'] = Topic.get(type(self.body))
+        return to_json(self)
 
     @staticmethod
     def from_json(j: bytes|str, topic_map: TopicMap) -> 'EventMessage':
         json_dict = from_json(j)
-        headers = from_json(json_dict['headers']) if 'headers' in json_dict and json_dict['headers'] is not None else None
-        decoded_body = from_json(json_dict['body'])
+        headers = json_dict['headers'] if 'headers' in json_dict and json_dict['headers'] is not None else None
+        decoded_body = json_dict['body']
         topic = decoded_body.pop('$type', None)
         if topic is None and headers is not None and 'topic' in headers:
             topic = headers['topic']
