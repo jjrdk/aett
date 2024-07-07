@@ -7,8 +7,7 @@ import psycopg
 
 from aett.eventstore import TopicMap
 from aett.postgres import PersistenceManagement
-from features.steps.Types import TestEvent
-
+from aett_postgres.tests.features.steps.Types import TestEvent
 
 def before_scenario(context, _):
     context.tenant_id = str(uuid.uuid4())
@@ -22,6 +21,7 @@ def before_scenario(context, _):
     context.db = psycopg.connect("host=localhost port=5432 dbname=aett user=aett password=aett", autocommit=True)
     tm = TopicMap()
     tm.register_module(inspect.getmodule(TestEvent))
+    context.topic_map = tm
     mgmt = PersistenceManagement(context.db, tm)
     mgmt.initialize()
     context.mgmt = mgmt

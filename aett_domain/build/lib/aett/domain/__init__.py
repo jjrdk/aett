@@ -346,7 +346,7 @@ class DefaultAggregateRepository(AggregateRepository):
         snapshot = Snapshot(tenant_id=self._tenant_id,
                             stream_id=aggregate.id,
                             commit_sequence=aggregate.commit_sequence,
-                            payload=jsonpickle.encode(memento, unpicklable=False),
+                            payload=memento.model_dump_json(serialize_as_any=True),
                             stream_revision=memento.version,
                             headers=headers or {})
         self._snapshot_store.add(snapshot=snapshot, headers=headers)

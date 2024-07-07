@@ -2,11 +2,10 @@ import datetime
 import inspect
 import typing
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import Iterable, Dict, List, Optional, Any
 from uuid import UUID
-
-import jsonpickle
+from pydantic import BaseModel
+from pydantic_core import to_json, from_json
 
 T = typing.TypeVar('T')
 MAX_INT = 2 ** 32 - 1
@@ -14,8 +13,7 @@ COMMITS = 'commits'
 SNAPSHOTS = 'snapshots'
 
 
-@dataclass(frozen=True, kw_only=True)
-class StreamHead:
+class StreamHead(BaseModel):
     tenant_id: str
     stream_id: str
     head_revision: int
@@ -69,13 +67,13 @@ class TopicMap:
         for c in inspect.getmembers(module, inspect.isclass):
             self.register(c[1])
 
-    def get(self, topic: str) -> type:
+    def get(self, topic: str) -> type | None:
         """
         Gets the class of the event given the topic.
         :param topic: The topic of the event.
         :return: The class of the event.
         """
-        return self.__topics[topic]
+        return self.__topics.get(topic, None)
 
     def get_all_types(self) -> List[type]:
         """
@@ -85,8 +83,7 @@ class TopicMap:
         return list(self.__topics.values())
 
 
-@dataclass(frozen=True, kw_only=True)
-class BaseEvent(ABC):
+class BaseEvent(ABC, BaseModel):
     """
     Represents a single event which has occurred.
     """
@@ -102,7 +99,6 @@ class BaseEvent(ABC):
     """
 
 
-@dataclass(frozen=True, kw_only=True)
 class DomainEvent(BaseEvent):
     """
     Represents a single event which has occurred within the domain.
@@ -114,8 +110,7 @@ class DomainEvent(BaseEvent):
     """
 
 
-@dataclass(frozen=True, kw_only=True)
-class Memento(ABC, typing.Generic[T]):
+class Memento(ABC, BaseModel, typing.Generic[T]):
     id: str
     """
     Gets the id of the aggregate which generated the memento.
@@ -132,13 +127,12 @@ class Memento(ABC, typing.Generic[T]):
     """
 
 
-@dataclass(frozen=True, kw_only=True)
-class EventMessage:
+class EventMessage(BaseModel):
     """
     Represents a single event message within a commit.
     """
 
-    body: BaseEvent
+    body: object
     """
     Gets the body of the event message.
     """
@@ -148,32 +142,38 @@ class EventMessage:
     Gets the metadata which provides additional, unstructured information about this event message.
     """
 
-    def to_json(self) -> dict:
+    def to_json(self) -> bytes:
         """
         Converts the event message to a dictionary which can be serialized to JSON.
         """
         data = {}
         headers = self.headers if self.headers is not None else {}
-        headers['topic'] = Topic.get(type(self.body))
-        data['headers'] = jsonpickle.encode(headers, unpicklable=False)
-        value = {'$type': headers['topic']}
-        value.update(self.body.__dict__)
-        data['body'] = jsonpickle.encode(value, unpicklable=False)
-        return data
+        topic = Topic.get(type(self.body))
+        headers['topic'] = topic
+        data['headers'] = to_json(headers)
+        body = to_json(self.body)
+        data['body'] = body
+        return to_json(data)
 
     @staticmethod
-    def from_json(json_dict: dict, topic_map: TopicMap) -> 'EventMessage':
-        headers = jsonpickle.decode(json_dict['headers']) if 'headers' in json_dict else None
-        decoded_body = jsonpickle.decode(json_dict['body'])
+    def from_json(j: bytes|str, topic_map: TopicMap) -> 'EventMessage':
+        json_dict = from_json(j)
+        headers = from_json(json_dict['headers']) if 'headers' in json_dict and json_dict['headers'] is not None else None
+        decoded_body = from_json(json_dict['body'])
         topic = decoded_body.pop('$type', None)
-        if topic is None and 'topic' in headers:
+        if topic is None and headers is not None and 'topic' in headers:
             topic = headers['topic']
-        body = None if not headers else topic_map.get(topic=topic)(**decoded_body)
-        return EventMessage(body=body, headers=headers)
+        if headers is not None and topic is None and 'topic' in headers:
+            topic = headers['topic']
+        if topic is None:
+            return EventMessage(body=BaseEvent(**decoded_body), headers=headers)
+        else:
+            t = topic_map.get(topic=topic)
+            body = t(**decoded_body)
+            return EventMessage(body=body, headers=headers)
 
 
-@dataclass(frozen=True, kw_only=True)
-class Commit:
+class Commit(BaseModel):
     """
     Represents a series of events which have been fully committed as a single unit
     and which apply to the stream indicated.
@@ -225,8 +225,7 @@ class Commit:
     """
 
 
-@dataclass(frozen=True, kw_only=True)
-class Snapshot:
+class Snapshot(BaseModel):
     """
     Represents a materialized view of a stream at specific revision.
     """
@@ -269,7 +268,8 @@ class Snapshot:
         :return:
         """
         return Snapshot(tenant_id=tenant_id, stream_id=memento.id, stream_revision=memento.version,
-                        payload=jsonpickle.encode(memento.payload), headers=headers, commit_sequence=commit_sequence)
+                        payload=memento.payload.model_dump_json(serialize_as_any=True), headers=headers,
+                        commit_sequence=commit_sequence)
 
 
 class ICommitEvents(ABC):

@@ -1,16 +1,13 @@
 import datetime
 import time
 import uuid
-
-import jsonpickle
-
-import features
+from aett_s3.tests.features.steps import Types
 from behave import *
-
+from pydantic_core import to_json
 from aett.domain import DefaultAggregateRepository
 from aett.eventstore import TopicMap, Commit, EventMessage
 from aett.s3 import CommitStore, SnapshotStore
-from Types import TestAggregate, TestEvent, TestMemento
+from aett_s3.tests.features.steps.Types import TestAggregate, TestEvent, TestMemento
 
 use_step_matcher("re")
 
@@ -18,7 +15,7 @@ use_step_matcher("re")
 @given("I have a persistent aggregate repository")
 def step_impl(context):
     tm = TopicMap()
-    tm.register_module(features.steps.Types)
+    tm.register_module(module=Types)
     context.tenant_id = str(uuid.uuid4())
     context.stream_id = str(uuid.uuid4())
     context.repository = DefaultAggregateRepository(context.tenant_id,
@@ -80,14 +77,14 @@ def step_impl(context):
         commit_key = f'commits/{commit.tenant_id}/{commit.stream_id}/{int(commit.commit_stamp.timestamp())}_{commit.commit_sequence}_{commit.stream_revision}.json'
         d = commit.__dict__
         d['events'] = [e.to_json() for e in commit.events]
-        d['headers'] = {k: jsonpickle.encode(v, unpicklable=False) for k, v in commit.headers.items()}
-        body = jsonpickle.encode(d, unpicklable=False).encode('utf-8')
+        d['headers'] = {k: to_json(v) for k, v in commit.headers.items()}
+        body = to_json(d)
         client = context.s3_config.to_client()
         client.put_object(Bucket=context.s3_config.bucket,
                           Key=commit_key,
                           Body=body,
                           ContentLength=len(body),
-                          Metadata={k: jsonpickle.encode(v, unpicklable=False) for k, v in
+                          Metadata={k: to_json(v) for k, v in
                                     commit.headers.items()})
 
 
@@ -110,7 +107,8 @@ def step_impl(context, count):
     for i in range(0, int(count)):
         agg: TestAggregate = context.repository.get(TestAggregate, context.stream_id)
         agg.raise_event(
-            TestEvent(source=context.stream_id, timestamp=datetime.datetime.now(datetime.timezone.utc), version=i + 1, value=i))
+            TestEvent(source=context.stream_id, timestamp=datetime.datetime.now(datetime.timezone.utc), version=i + 1,
+                      value=i))
         context.repository.save(agg)
     end_time = time.time()
     elapsed = end_time - start_time

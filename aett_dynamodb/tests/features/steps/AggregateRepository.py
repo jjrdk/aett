@@ -1,9 +1,9 @@
 import datetime
+import json
 import time
 import uuid
-
+from pydantic_core import to_json
 import boto3
-import jsonpickle
 from behave import *
 import Types
 from aett.domain import DefaultAggregateRepository
@@ -83,10 +83,9 @@ def step_impl(context):
             'CommitId': str(uuid.uuid4()),
             'CommitSequence': x,
             'CommitStamp': int(time_stamp.timestamp()),
-            'Headers': jsonpickle.encode({}, unpicklable=False),
-            'Events': jsonpickle.encode([e.to_json() for e in [
-                EventMessage(body=TestEvent(source=context.stream_id, timestamp=time_stamp, version=x - 1, value=x))]],
-                                        unpicklable=False)
+            'Headers': to_json({}),
+            'Events': to_json([e.to_json() for e in [
+                EventMessage(body=TestEvent(source=context.stream_id, timestamp=time_stamp, version=x - 1, value=x))]])
         }
         response = table.put_item(
             TableName='commits',

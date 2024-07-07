@@ -84,8 +84,8 @@ VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 RETURNING CheckpointNumber;""", (commit.tenant_id, commit.stream_id, commit.stream_id,
                                  commit.commit_id, commit.commit_sequence, commit.stream_revision, len(commit.events),
                                  commit.commit_stamp,
-                                 jsonpickle.encode(commit.headers, unpicklable=False).encode('utf-8'),
-                                 jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False).encode(
+                                 json.dumps(commit.headers).encode('utf-8'),
+                                 json.dumps([e.to_json() for e in commit.events]).encode(
                                      'utf-8')))
             checkpoint_number = cur.fetchone()
             cur.close()
@@ -186,7 +186,7 @@ class SnapshotStore(IAccessSnapshots):
             headers = {}
         try:
             cur = self.connection.cursor()
-            j = jsonpickle.encode(snapshot.payload, unpicklable=False)
+            j = json.dumps(snapshot.payload)
             cur.execute(
                 f"""INSERT INTO {self._table_name} ( TenantId, StreamId, StreamRevision, CommitSequence, Payload, Headers) VALUES (%s, %s, %s, %s, %s, %s);""",
                 (snapshot.tenant_id,
@@ -194,7 +194,7 @@ class SnapshotStore(IAccessSnapshots):
                  snapshot.stream_revision,
                  snapshot.commit_sequence,
                  j.encode('utf-8'),
-                 jsonpickle.encode(headers, unpicklable=False).encode('utf-8')))
+                 json.dumps(headers).encode('utf-8')))
             self.connection.commit()
         except Exception as e:
             raise Exception(

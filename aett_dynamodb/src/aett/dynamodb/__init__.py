@@ -2,9 +2,8 @@ import datetime
 import typing
 from typing import Iterable
 from uuid import UUID
-
+from pydantic_core import to_json, from_json
 import boto3
-import jsonpickle
 from boto3.dynamodb.conditions import Key, Attr
 
 from aett.domain import ConflictDetector, ConflictingCommitException, NonConflictingCommitException, \
@@ -85,8 +84,8 @@ class CommitStore(ICommitEvents):
             commit_id=UUID(item['CommitId']),
             commit_sequence=int(item['CommitSequence']),
             commit_stamp=datetime.datetime.fromtimestamp(int(item['CommitStamp']), datetime.UTC),
-            headers=jsonpickle.decode(item['Headers']),
-            events=[EventMessage.from_json(e, self._topic_map) for e in jsonpickle.decode(item['Events'])],
+            headers=from_json(bytes(item['Headers'])),
+            events=[EventMessage.from_json(e, self._topic_map) for e in from_json(bytes(item['Events']))],
             checkpoint_token=0)
 
     def commit(self, commit: Commit):
@@ -99,8 +98,8 @@ class CommitStore(ICommitEvents):
                 'CommitId': str(commit.commit_id),
                 'CommitSequence': commit.commit_sequence,
                 'CommitStamp': int(commit.commit_stamp.timestamp()),
-                'Headers': jsonpickle.encode(commit.headers, unpicklable=False),
-                'Events': jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False)
+                'Headers': to_json(commit.headers),
+                'Events': to_json([e.to_json() for e in commit.events])
             }
             response = self.table.put_item(
                 TableName=self._table_name,
@@ -180,7 +179,7 @@ class SnapshotStore(IAccessSnapshots):
                             stream_revision=int(item['StreamRevision']),
                             payload=item['Payload'],
                             commit_sequence=item['CommitSequence'],
-                            headers=dict(jsonpickle.decode(item['Headers'])))
+                            headers=dict(from_json(item['Headers'])))
         except Exception as e:
             raise Exception(
                 f"Failed to get snapshot for stream {stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}")
@@ -196,7 +195,7 @@ class SnapshotStore(IAccessSnapshots):
                 'StreamRevision': snapshot.stream_revision,
                 'Payload': snapshot.payload,
                 'CommitSequence': snapshot.commit_sequence,
-                'Headers': jsonpickle.encode(headers, unpicklable=False)
+                'Headers': to_json(headers).decode('utf-8')
             }
             _ = self.table.put_item(
                 TableName=self.table_name,

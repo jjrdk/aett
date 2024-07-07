@@ -118,13 +118,13 @@ class CommitStore(ICommitEvents):
         commit_key = f'{self._folder_name}/{commit.tenant_id}/{commit.stream_id}/{int(commit.commit_stamp.timestamp())}_{commit.commit_id}_{commit.commit_sequence}_{commit.stream_revision}.json'
         d = commit.__dict__
         d['events'] = [e.to_json() for e in commit.events]
-        d['headers'] = {k: jsonpickle.encode(v, unpicklable=False) for k, v in commit.headers.items()}
-        body = jsonpickle.encode(d, unpicklable=False).encode('utf-8')
+        d['headers'] = {k: json.dumps(v) for k, v in commit.headers.items()}
+        body = json.dumps(d).encode('utf-8')
         self._resource.put_object(Bucket=self._s3_bucket,
                                   Key=commit_key,
                                   Body=body,
                                   ContentLength=len(body),
-                                  Metadata={k: jsonpickle.encode(v, unpicklable=False) for k, v in
+                                  Metadata={k: json.dumps(v) for k, v in
                                             commit.headers.items()})
 
     def check_exists(self, commit_sequence: int, commit: Commit):
@@ -192,7 +192,7 @@ class SnapshotStore(IAccessSnapshots):
             snapshot.headers.update(headers)
         key = f'{self._folder_name}/{snapshot.tenant_id}/{snapshot.stream_id}/{snapshot.stream_revision}.json'
         self._resource.put_object(Bucket=self._s3_bucket, Key=key,
-                                  Body=jsonpickle.encode(snapshot, unpicklable=False).encode('utf-8'))
+                                  Body=json.dumps(snapshot).encode('utf-8'))
 
 
 class PersistenceManagement(IManagePersistence):

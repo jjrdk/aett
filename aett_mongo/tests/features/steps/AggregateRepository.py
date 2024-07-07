@@ -1,13 +1,10 @@
 import datetime
 import time
 import uuid
-
-import jsonpickle
-
 import Types
 import pymongo.database
 from behave import *
-
+from pydantic_core import to_json
 from aett.domain import DefaultAggregateRepository
 from aett.eventstore import TopicMap, EventMessage
 from aett.mongodb import PersistenceManagement, CommitStore, SnapshotStore
@@ -84,10 +81,9 @@ def step_impl(context):
             'CommitId': str(uuid.uuid4()),
             'CommitSequence': x,
             'CommitStamp': int(time_stamp.timestamp()),
-            'Headers': jsonpickle.encode({}, unpicklable=False),
-            'Events': jsonpickle.encode([e.to_json() for e in [
-                EventMessage(body=TestEvent(source='time_test', timestamp=time_stamp, version=x - 1, value=x))]],
-                                        unpicklable=False),
+            'Headers': to_json({}),
+            'Events': to_json([e.to_json() for e in [
+                EventMessage(body=TestEvent(source='time_test', timestamp=time_stamp, version=x - 1, value=x))]]),
             'CheckpointToken': x
         }
         _: pymongo.results.InsertOneResult = collection.insert_one(doc)

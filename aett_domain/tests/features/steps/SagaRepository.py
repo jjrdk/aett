@@ -23,7 +23,8 @@ class TestSagaRepository(SagaRepository):
             self._storage[saga_id] = stream
         saga: SagaRepository.TSaga = cls(saga_id, 0 if len(stream) == 0 else stream[-1].commit_sequence)
         for commit in stream:
-            saga.transition(commit.events)
+            for event in commit.events:
+                saga.transition(event.body)
         saga.uncommitted.clear()
         return saga
 

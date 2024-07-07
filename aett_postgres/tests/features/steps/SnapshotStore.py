@@ -1,9 +1,7 @@
-import uuid
-
 from behave import *
 
-from aett.postgres import SnapshotStore
 from aett.eventstore import Snapshot
+from aett.postgres import SnapshotStore
 
 use_step_matcher("re")
 

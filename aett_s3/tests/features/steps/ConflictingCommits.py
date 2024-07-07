@@ -1,11 +1,12 @@
 import datetime
 import uuid
 
-from Types import TestEvent, TestEventConflictDelegate
 from behave import *
+
 from aett.domain import ConflictDetector, ConflictingCommitException, NonConflictingCommitException
-from aett.s3 import CommitStore
 from aett.eventstore import TopicMap, EventMessage, Commit
+from aett.s3 import CommitStore
+from aett_s3.tests.features.steps.Types import TestEvent, TestEventConflictDelegate
 
 use_step_matcher("re")
 

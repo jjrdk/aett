@@ -2,25 +2,25 @@ import datetime
 import typing
 from typing import Iterable
 from uuid import UUID
-
-import jsonpickle
 import pymongo
 from pymongo import database, results, errors
-
+from pydantic_core import from_json, to_json
 from aett.domain import ConflictingCommitException, NonConflictingCommitException, ConflictDetector
 from aett.eventstore import ICommitEvents, IAccessSnapshots, Snapshot, Commit, MAX_INT, EventMessage, \
     TopicMap, COMMITS, SNAPSHOTS, IManagePersistence
 
 
 def _doc_to_commit(doc: dict, topic_map: TopicMap) -> Commit:
+    loads = from_json(doc['Events'])
+    events_ = [EventMessage.from_json(e, topic_map) for e in loads]
     return Commit(tenant_id=doc['TenantId'],
                   stream_id=doc['StreamId'],
                   stream_revision=int(doc['StreamRevision']),
                   commit_id=UUID(doc['CommitId']),
                   commit_sequence=int(doc['CommitSequence']),
                   commit_stamp=datetime.datetime.fromtimestamp(int(doc['CommitStamp']), datetime.UTC),
-                  headers=jsonpickle.decode(doc['Headers']),
-                  events=[EventMessage.from_json(e, topic_map) for e in jsonpickle.decode(doc['Events'])],
+                  headers=from_json(doc['Headers']),
+                  events=events_,
                   checkpoint_token=doc['CheckpointToken'])
 
 
@@ -78,8 +78,8 @@ class CommitStore(ICommitEvents):
                 'CommitId': str(commit.commit_id),
                 'CommitSequence': commit.commit_sequence,
                 'CommitStamp': int(datetime.datetime.now(datetime.timezone.utc).timestamp()),
-                'Headers': jsonpickle.encode(commit.headers, unpicklable=False),
-                'Events': jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False),
+                'Headers': to_json(commit.headers),
+                'Events': to_json([e.to_json() for e in commit.events]),
                 'CheckpointToken': int(ret)
             }
             _: pymongo.results.InsertOneResult = self._collection.insert_one(doc)
@@ -147,8 +147,8 @@ class SnapshotStore(IAccessSnapshots):
                             stream_id=item['StreamId'],
                             stream_revision=int(item['StreamRevision']),
                             commit_sequence=int(item['CommitSequence']),
-                            payload=jsonpickle.decode(item['Payload']),
-                            headers=jsonpickle.decode(item['Headers']))
+                            payload=from_json(item['Payload']),
+                            headers=from_json(item['Headers']))
         except Exception as e:
             raise Exception(
                 f"Failed to get snapshot for stream {stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}")
@@ -162,8 +162,8 @@ class SnapshotStore(IAccessSnapshots):
                 'StreamId': snapshot.stream_id,
                 'StreamRevision': snapshot.stream_revision,
                 'CommitSequence': snapshot.commit_sequence,
-                'Payload': jsonpickle.encode(snapshot.payload, unpicklable=False),
-                'Headers': jsonpickle.encode(headers, unpicklable=False)
+                'Payload': to_json(snapshot.payload),
+                'Headers': to_json(headers)
             }
             _ = self.collection.insert_one(doc)
         except Exception as e:

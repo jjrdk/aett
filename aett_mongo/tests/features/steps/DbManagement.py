@@ -17,7 +17,7 @@ def i_have_a_clean_db(context):
 @when("I run the setup script")
 def i_run_the_setup_script(context):
     context.db = pymongo.database.Database(pymongo.MongoClient('mongodb://localhost:27017'), 'test')
-    context.mgmt = PersistenceManagement(context.db)
+    context.mgmt = PersistenceManagement(context.db, context.topic_map)
     context.mgmt.initialize()
 
 

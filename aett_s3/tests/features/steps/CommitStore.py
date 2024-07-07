@@ -6,7 +6,7 @@ from behave import *
 
 from aett.eventstore import EventMessage, TopicMap, Commit
 from aett.s3 import CommitStore
-from features.steps.Types import TestEvent
+from aett_s3.tests.features.steps.Types import TestEvent
 
 use_step_matcher("re")
 

@@ -12,7 +12,8 @@ class S3Config:
                  profile_name: str = 'default'):
         """
         Defines the configuration for the S3 client.
-        If a profile name is provided, the access key id and secret access are disregarded and the profile credentials are used.
+        If a profile name is provided, the access key id and secret access are disregarded and the profile credentials
+        are used.
 
         :param bucket: The name of the bucket
         :param aws_access_key_id: The AWS access key id
@@ -102,7 +103,7 @@ class CommitStore(ICommitEvents):
 
     def _file_to_commit(self, key: str):
         file = self._resource.get_object(Bucket=self._s3_bucket, Key=key)
-        doc = jsonpickle.decode(file.get('Body').read().decode('utf-8'))
+        doc = from_json(file.get('Body').read().decode('utf-8'))
         return Commit(tenant_id=doc.get('tenant_id'),
                       stream_id=doc.get('stream_id'),
                       stream_revision=doc.get('stream_revision'),
@@ -118,13 +119,13 @@ class CommitStore(ICommitEvents):
         commit_key = f'{self._folder_name}/{commit.tenant_id}/{commit.stream_id}/{int(commit.commit_stamp.timestamp())}_{commit.commit_id}_{commit.commit_sequence}_{commit.stream_revision}.json'
         d = commit.__dict__
         d['events'] = [e.to_json() for e in commit.events]
-        d['headers'] = {k: jsonpickle.encode(v, unpicklable=False) for k, v in commit.headers.items()}
-        body = jsonpickle.encode(d, unpicklable=False).encode('utf-8')
+        d['headers'] = {k: to_json(v) for k, v in commit.headers.items()}
+        body = to_json(d)
         self._resource.put_object(Bucket=self._s3_bucket,
                                   Key=commit_key,
                                   Body=body,
                                   ContentLength=len(body),
-                                  Metadata={k: jsonpickle.encode(v, unpicklable=False) for k, v in
+                                  Metadata={k: to_json(v) for k, v in
                                             commit.headers.items()})
 
     def check_exists(self, commit_sequence: int, commit: Commit):
@@ -179,7 +180,7 @@ class SnapshotStore(IAccessSnapshots):
 
         key = f'{self._folder_name}/{tenant_id}/{stream_id}/{keys[0]}.json'
         j = self._resource.get_object(Bucket=self._s3_bucket, Key=key)
-        d = jsonpickle.decode(j['Body'].read())
+        d = from_json(j['Body'].read())
         return Snapshot(tenant_id=d.get('tenant_id'),
                         stream_id=d.get('stream_id'),
                         stream_revision=int(d.get('stream_revision')),
@@ -192,7 +193,7 @@ class SnapshotStore(IAccessSnapshots):
             snapshot.headers.update(headers)
         key = f'{self._folder_name}/{snapshot.tenant_id}/{snapshot.stream_id}/{snapshot.stream_revision}.json'
         self._resource.put_object(Bucket=self._s3_bucket, Key=key,
-                                  Body=jsonpickle.encode(snapshot, unpicklable=False).encode('utf-8'))
+                                  Body=to_json(snapshot))
 
 
 class PersistenceManagement(IManagePersistence):

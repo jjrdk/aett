@@ -5,7 +5,7 @@ import pymongo.database
 
 from aett.eventstore import TopicMap
 from aett.mongodb import PersistenceManagement
-from features.steps import Types
+from aett_mongo.tests.features.steps import Types
 
 
 def before_scenario(context, _):
@@ -15,6 +15,7 @@ def before_scenario(context, _):
     context.db = pymongo.database.Database(pymongo.MongoClient('mongodb://localhost:27017'), 'test')
     tm = TopicMap()
     tm.register_module(Types)
+    context.topic_map = tm
     context.mgmt = PersistenceManagement(context.db, tm)
     context.mgmt.initialize()
 

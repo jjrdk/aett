@@ -2,26 +2,22 @@ import datetime
 import time
 import uuid
 
-import jsonpickle
-
-import features
 from behave import *
+from pydantic_core import to_json
 
-from aett.domain import DefaultAggregateRepository
-from aett.eventstore import TopicMap, EventMessage
-from aett.postgres import CommitStore, SnapshotStore
 from Types import TestAggregate, TestEvent, TestMemento
+from aett.domain import DefaultAggregateRepository
+from aett.eventstore import EventMessage
+from aett.postgres import CommitStore, SnapshotStore
 
 use_step_matcher("re")
 
 
 @given("I have a persistent aggregate repository")
 def step_impl(context):
-    tm = TopicMap()
-    tm.register_module(features.steps.Types)
     context.stream_id = str(uuid.uuid4())
     context.tenant_id = str(uuid.uuid4())
-    context.repository = DefaultAggregateRepository(context.tenant_id, CommitStore(context.db, tm),
+    context.repository = DefaultAggregateRepository(context.tenant_id, CommitStore(context.db, context.topic_map),
                                                     SnapshotStore(context.db))
 
 
@@ -74,12 +70,10 @@ def step_impl(context):
         RETURNING CheckpointNumber;""", (context.tenant_id, context.stream_id, context.stream_id,
                                          str(uuid.uuid4()), x, x, 1,
                                          time_stamp,
-                                         jsonpickle.encode({}, unpicklable=False).encode('utf-8'),
-                                         jsonpickle.encode([e.to_json() for e in [EventMessage(
+                                         to_json({}),
+                                         to_json([e.to_json() for e in [EventMessage(
                                              body=TestEvent(source='time_test', timestamp=time_stamp, version=x - 1,
-                                                            value=x))]],
-                                                           unpicklable=False).encode(
-                                             'utf-8')))
+                                                            value=x))]])))
 
 
 @step("a specific aggregate is loaded at a specific time")
@@ -101,7 +95,8 @@ def step_impl(context, count):
     for i in range(0, int(count)):
         agg: TestAggregate = context.repository.get(TestAggregate, context.stream_id)
         agg.raise_event(
-            TestEvent(source=context.stream_id, timestamp=datetime.datetime.now(datetime.timezone.utc), version=i + 1, value=i))
+            TestEvent(source=context.stream_id, timestamp=datetime.datetime.now(datetime.timezone.utc), version=i + 1,
+                      value=i))
         context.repository.save(agg)
     end_time = time.time()
     elapsed = end_time - start_time
@@ -120,7 +115,7 @@ def step_impl(context):
 @step("the aggregate is snapshotted")
 def step_impl(context):
     repo: DefaultAggregateRepository = context.repository
-    repo.snapshot(TestAggregate,context.stream_id)
+    repo.snapshot(TestAggregate, context.stream_id)
 
 
 @step("additional events are added")

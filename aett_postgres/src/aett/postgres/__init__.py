@@ -1,9 +1,8 @@
 import datetime
 import typing
+from pydantic_core import to_json, from_json
 from typing import Iterable
 from uuid import UUID
-
-import jsonpickle
 import psycopg
 
 from aett.domain import ConflictDetector, ConflictingCommitException, NonConflictingCommitException, \
@@ -19,8 +18,8 @@ def _item_to_commit(item, topic_map: TopicMap):
                   commit_id=item[4],
                   commit_sequence=item[5],
                   commit_stamp=item[6],
-                  headers=jsonpickle.decode(item[8]),
-                  events=[EventMessage.from_json(e, topic_map) for e in jsonpickle.decode(item[9])],
+                  headers=from_json(item[8]),
+                  events=[EventMessage.from_json(e, topic_map) for e in from_json(item[9])],
                   checkpoint_token=item[7])
 
 
@@ -85,9 +84,8 @@ VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 RETURNING CheckpointNumber;""", (commit.tenant_id, commit.stream_id, commit.stream_id,
                                  commit.commit_id, commit.commit_sequence, commit.stream_revision, len(commit.events),
                                  commit.commit_stamp,
-                                 jsonpickle.encode(commit.headers, unpicklable=False).encode('utf-8'),
-                                 jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False).encode(
-                                     'utf-8')))
+                                 to_json(commit.headers),
+                                 to_json([e.to_json() for e in commit.events])))
             checkpoint_number = cur.fetchone()
             cur.close()
             self._connection.commit()
@@ -99,7 +97,7 @@ RETURNING CheckpointNumber;""", (commit.tenant_id, commit.stream_id, commit.stre
                           commit_stamp=commit.commit_stamp,
                           headers=commit.headers,
                           events=commit.events,
-                          checkpoint_token=checkpoint_number)
+                          checkpoint_token=checkpoint_number[0])
         except psycopg.errors.UniqueViolation:
             if self._detect_duplicate(commit.commit_id, commit.tenant_id, commit.stream_id):
                 raise DuplicateCommitException(
@@ -140,9 +138,10 @@ RETURNING CheckpointNumber;""", (commit.tenant_id, commit.stream_id, commit.stre
         fetchall = cur.fetchall()
         latest_revision = 0
         for doc in fetchall:
-            events = [EventMessage.from_json(e, self._topic_map) for e in jsonpickle.decode(doc[1])]
-            if self._conflict_detector.conflicts_with(list(map(self._get_body, commit.events)),
-                                                      list(map(self._get_body, events))):
+            events = [EventMessage.from_json(e, self._topic_map) for e in from_json(doc[1])]
+            uncommitted_events = list(map(self._get_body, commit.events))
+            committed_events = list(map(self._get_body, events))
+            if self._conflict_detector.conflicts_with(uncommitted_events, committed_events):
                 return True, -1
             if doc[0] > latest_revision:
                 latest_revision = int(doc[0])
@@ -176,8 +175,8 @@ class SnapshotStore(IAccessSnapshots):
                             stream_id=item[1],
                             stream_revision=int(item[2]),
                             commit_sequence=int(item[3]),
-                            payload=jsonpickle.decode(item[4].decode('utf-8')),
-                            headers=dict(jsonpickle.decode(item[5].decode('utf-8'))))
+                            payload=from_json(item[4]),
+                            headers=dict(from_json(item[5])))
         except Exception as e:
             raise Exception(
                 f"Failed to get snapshot for stream {stream_id} with error {e}")
@@ -187,15 +186,14 @@ class SnapshotStore(IAccessSnapshots):
             headers = {}
         try:
             cur = self.connection.cursor()
-            j = jsonpickle.encode(snapshot.payload, unpicklable=False)
             cur.execute(
                 f"""INSERT INTO {self._table_name} ( TenantId, StreamId, StreamRevision, CommitSequence, Payload, Headers) VALUES (%s, %s, %s, %s, %s, %s);""",
                 (snapshot.tenant_id,
                  snapshot.stream_id,
                  snapshot.stream_revision,
                  snapshot.commit_sequence,
-                 j.encode('utf-8'),
-                 jsonpickle.encode(headers, unpicklable=False).encode('utf-8')))
+                 to_json(snapshot.payload),
+                 to_json(headers)))
             self.connection.commit()
         except Exception as e:
             raise Exception(

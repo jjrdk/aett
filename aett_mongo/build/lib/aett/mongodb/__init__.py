@@ -77,8 +77,8 @@ class CommitStore(ICommitEvents):
                 'CommitId': str(commit.commit_id),
                 'CommitSequence': commit.commit_sequence,
                 'CommitStamp': int(datetime.datetime.now(datetime.timezone.utc).timestamp()),
-                'Headers': jsonpickle.encode(commit.headers, unpicklable=False),
-                'Events': jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False),
+                'Headers': json.dumps(commit.headers),
+                'Events': json.dumps([e.to_json() for e in commit.events]),
                 'CheckpointToken': int(ret)
             }
             _: pymongo.results.InsertOneResult = self._collection.insert_one(doc)
@@ -161,8 +161,8 @@ class SnapshotStore(IAccessSnapshots):
                 'StreamId': snapshot.stream_id,
                 'StreamRevision': snapshot.stream_revision,
                 'CommitSequence': snapshot.commit_sequence,
-                'Payload': jsonpickle.encode(snapshot.payload, unpicklable=False),
-                'Headers': jsonpickle.encode(headers, unpicklable=False)
+                'Payload': json.dumps(snapshot.payload),
+                'Headers': json.dumps(headers)
             }
             _ = self.collection.insert_one(doc)
         except Exception as e:

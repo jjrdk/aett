@@ -1,9 +1,9 @@
 import datetime
-
-import jsonpickle.pickler
+import json
+from pydantic_core import to_json, from_json
 from behave import *
 
-from aett.eventstore import EventMessage, TopicMap
+from aett.eventstore import EventMessage, TopicMap, Topic
 from aett_domain.tests.features.steps.Types import TestEvent, TestAggregate
 
 use_step_matcher("re")
@@ -25,12 +25,14 @@ def step_impl(context, version: str):
 def step_impl(context):
     tm = TopicMap()
     tm.register(TestEvent)
-    event1: TestEvent = TestEvent(source='test', timestamp=datetime.datetime.now(datetime.timezone.utc), version=1, value=1)
-    event2: TestEvent = TestEvent(source='test', timestamp=datetime.datetime.now(datetime.timezone.utc), version=2, value=1)
-    msgs = [EventMessage(body=event1, headers=None),
-            EventMessage(body=event2, headers=None)]
-    j = jsonpickle.encode([e.to_json() for e in msgs])
-    context.events = [EventMessage.from_json(e, tm) for e in jsonpickle.decode(j)]
+    event1: TestEvent = TestEvent(source='test', timestamp=datetime.datetime.now(datetime.timezone.utc), version=1,
+                                  value=1)
+    event2: TestEvent = TestEvent(source='test', timestamp=datetime.datetime.now(datetime.timezone.utc), version=2,
+                                  value=1)
+    msgs = [EventMessage(body=event1, headers={'topic': Topic.get(TestEvent)}),
+            EventMessage(body=event2, headers={'topic': Topic.get(TestEvent)})]
+    j = to_json([e.to_json() for e in msgs])
+    context.events = [EventMessage.from_json(e, tm) for e in from_json(j)]
 
 
 @given("an aggregate")

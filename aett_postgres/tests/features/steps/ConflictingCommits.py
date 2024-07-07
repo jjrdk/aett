@@ -1,21 +1,20 @@
 import datetime
 import uuid
 
-from Types import TestEvent, TestEventConflictDelegate
 from behave import *
+
+from aett_postgres.tests.features.steps.Types import TestEvent, TestEventConflictDelegate
 from aett.domain import ConflictDetector, ConflictingCommitException, NonConflictingCommitException
+from aett.eventstore import EventMessage, Commit
 from aett.postgres import CommitStore
-from aett.eventstore import TopicMap, EventMessage, Commit
 
 use_step_matcher("re")
 
 
 @when("I have a commit store with a conflict detector")
 def step_impl(context):
-    topic_map = TopicMap()
-    topic_map.register(TestEvent)
     conflict_detector = ConflictDetector([TestEventConflictDelegate()])
-    context.store = CommitStore(conflict_detector=conflict_detector, db=context.db, topic_map=topic_map)
+    context.store = CommitStore(conflict_detector=conflict_detector, db=context.db, topic_map=context.topic_map)
 
 
 @step("I commit a conflicting event to the stream")

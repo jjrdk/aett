@@ -1,10 +1,9 @@
 import datetime
-import inspect
 import uuid
 
 from behave import *
 
-from aett.eventstore import EventMessage, TopicMap, Commit
+from aett.eventstore import EventMessage, Commit
 from aett.postgres import CommitStore
 from features.steps.Types import TestEvent
 
@@ -13,9 +12,7 @@ use_step_matcher("re")
 
 @given("I have a commit store")
 def step_impl(context):
-    tm = TopicMap()
-    tm.register_module(inspect.getmodule(TestEvent))
-    context.store = CommitStore(context.db, tm)
+    context.store = CommitStore(context.db, context.topic_map)
 
 
 @when("I commit an event to the stream")

@@ -287,7 +287,7 @@ class DefaultAggregateRepository(AggregateRepository):
             commit_sequence = commits[-1].commit_sequence
         memento_type = inspect.signature(cls.apply_memento).parameters['memento'].annotation
         aggregate = cls(stream_id, commit_sequence,
-                        memento_type(**jsonpickle.decode(snapshot.payload)) if snapshot is not None else None)
+                        memento_type(**from_json(snapshot.payload)) if snapshot is not None else None)
         for commit in commits:
             for event in commit.events:
                 aggregate.raise_event(event.body)
@@ -346,7 +346,7 @@ class DefaultAggregateRepository(AggregateRepository):
         snapshot = Snapshot(tenant_id=self._tenant_id,
                             stream_id=aggregate.id,
                             commit_sequence=aggregate.commit_sequence,
-                            payload=jsonpickle.encode(memento, unpicklable=False),
+                            payload=memento.model_dump_json(serialize_as_any=True),
                             stream_revision=memento.version,
                             headers=headers or {})
         self._snapshot_store.add(snapshot=snapshot, headers=headers)
@@ -452,15 +452,20 @@ class ConflictDetector:
             return False
         for uncommitted in uncommitted_events:
             for committed in committed_events:
-                if type(uncommitted) in self.delegates and type(committed) in self.delegates[type(uncommitted)]:
-                    if self.delegates[type(uncommitted)][type(committed)](uncommitted, committed):
-                        if isinstance(uncommitted, DomainEvent):
-                            self._logger.warning(
-                                f'Detected conflict between uncommitted event {type(uncommitted).__name__} from {uncommitted.source} with version {uncommitted.version}')
-                        else:
-                            self._logger.warning(
-                                f'Detected conflict between uncommitted event {type(uncommitted).__name__} from {uncommitted.source} with timestamp {uncommitted.timestamp:%Y%m%d-%H%M%S%z}')
-                        return True
+                uncommitted_type = type(uncommitted)
+                delegates_keys = self.delegates.keys()
+                committed_type = type(committed)
+                if uncommitted_type in delegates_keys:
+                    committed_keys = self.delegates[uncommitted_type].keys()
+                    if committed_type in committed_keys:
+                        if self.delegates[uncommitted_type][committed_type](uncommitted, committed):
+                            if isinstance(uncommitted, DomainEvent):
+                                self._logger.warning(
+                                    f'Detected conflict between uncommitted event {uncommitted_type.__name__} from {uncommitted.source} with version {uncommitted.version}')
+                            else:
+                                self._logger.warning(
+                                    f'Detected conflict between uncommitted event {uncommitted_type.__name__} from {uncommitted.source} with timestamp {uncommitted.timestamp:%Y%m%d-%H%M%S%z}')
+                            return True
         return False
 
 

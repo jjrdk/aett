@@ -98,8 +98,8 @@ class CommitStore(ICommitEvents):
                 'CommitId': str(commit.commit_id),
                 'CommitSequence': commit.commit_sequence,
                 'CommitStamp': int(commit.commit_stamp.timestamp()),
-                'Headers': jsonpickle.encode(commit.headers, unpicklable=False),
-                'Events': jsonpickle.encode([e.to_json() for e in commit.events], unpicklable=False)
+                'Headers': json.dumps(commit.headers),
+                'Events': json.dumps([e.to_json() for e in commit.events])
             }
             response = self.table.put_item(
                 TableName=self._table_name,
@@ -195,7 +195,7 @@ class SnapshotStore(IAccessSnapshots):
                 'StreamRevision': snapshot.stream_revision,
                 'Payload': snapshot.payload,
                 'CommitSequence': snapshot.commit_sequence,
-                'Headers': jsonpickle.encode(headers, unpicklable=False)
+                'Headers': json.dumps(headers)
             }
             _ = self.table.put_item(
                 TableName=self.table_name,

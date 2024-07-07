@@ -1,16 +1,14 @@
 import datetime
-from dataclasses import dataclass
 
 from aett.domain import Aggregate, Saga, ConflictDelegate
-from aett.eventstore import DomainEvent, Memento
+from aett.eventstore import DomainEvent, Memento, Topic
 
 
-@dataclass(frozen=True, kw_only=True)
+@Topic("Test")
 class TestEvent(DomainEvent):
     value: int
 
 
-@dataclass(frozen=True)
 class TestMemento(Memento):
     pass
 
