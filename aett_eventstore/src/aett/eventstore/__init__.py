@@ -153,7 +153,7 @@ class EventMessage(BaseModel):
         return to_json(self)
 
     @staticmethod
-    def from_json(j: bytes|str, topic_map: TopicMap) -> 'EventMessage':
+    def from_json(j: bytes | str, topic_map: TopicMap) -> 'EventMessage':
         json_dict = from_json(j)
         headers = json_dict['headers'] if 'headers' in json_dict and json_dict['headers'] is not None else None
         decoded_body = json_dict['body']

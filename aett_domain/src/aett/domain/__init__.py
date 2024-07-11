@@ -272,7 +272,7 @@ class DefaultAggregateRepository(AggregateRepository):
 
     def get(self, cls: typing.Type[AggregateRepository.TAggregate], stream_id: str, max_version: int = 2 ** 32) -> \
             AggregateRepository.TAggregate:
-        self._logger.info(f'Getting aggregate {cls.__name__} with id {stream_id} at version {max_version}')
+        self._logger.debug(f'Getting aggregate {cls.__name__} with id {stream_id} at version {max_version}')
         snapshot = self._snapshot_store.get(tenant_id=self._tenant_id, stream_id=stream_id, max_revision=max_version)
         min_version = 0
         commit_sequence = 0
@@ -296,7 +296,7 @@ class DefaultAggregateRepository(AggregateRepository):
 
     def get_to(self, cls: typing.Type[AggregateRepository.TAggregate], stream_id: str,
                max_time: datetime = datetime.datetime.max) -> AggregateRepository.TAggregate:
-        self._logger.info(
+        self._logger.debug(
             f'Getting aggregate {cls.__name__} with id {stream_id} at time point {max_time:%Y%m%d-%H%M%S%z}')
         commits = list(self._store.get_to(tenant_id=self._tenant_id,
                                           stream_id=stream_id,
@@ -310,7 +310,7 @@ class DefaultAggregateRepository(AggregateRepository):
         return aggregate
 
     def save(self, aggregate: AggregateRepository.TAggregate, headers: Dict[str, str] = None) -> None:
-        self._logger.info(f'Saving aggregate {aggregate.id} at version {aggregate.version}')
+        self._logger.debug(f'Saving aggregate {aggregate.id} at version {aggregate.version}')
         if headers is None:
             headers = {}
         if len(aggregate.uncommitted) == 0:
@@ -325,18 +325,18 @@ class DefaultAggregateRepository(AggregateRepository):
                         events=list(aggregate.uncommitted),
                         checkpoint_token=0)
         self._store.commit(commit)
-        self._logger.info(f'Saved aggregate {aggregate.id}')
+        self._logger.debug(f'Saved aggregate {aggregate.id}')
         aggregate.uncommitted.clear()
 
     def snapshot(self, cls: typing.Type[AggregateRepository.TAggregate], stream_id: str, version: int = MAX_INT,
                  headers: Dict[str, str] = None) -> None:
-        self._logger.info(f'Snapshotting aggregate {cls.__name__} with id {stream_id} at version {version}')
+        self._logger.debug(f'Snapshotting aggregate {cls.__name__} with id {stream_id} at version {version}')
         agg = self.get(cls, stream_id, version)
         self._snapshot_aggregate(agg, headers)
 
     def snapshot_at(self, cls: typing.Type[AggregateRepository.TAggregate], stream_id: str, cut_off: datetime.datetime,
                     headers: Dict[str, str] = None) -> None:
-        self._logger.info(
+        self._logger.debug(
             f'Snapshotting aggregate {cls.__name__} with id {stream_id} at time point {cut_off:%Y%m%d-%H%M%S%z}')
         agg = self.get_to(cls, stream_id, cut_off)
         self._snapshot_aggregate(agg, headers)
@@ -366,7 +366,7 @@ class DefaultSagaRepository(SagaRepository):
         self._logger = logger if logger is not None else logging.getLogger(DefaultSagaRepository.__name__)
 
     def get(self, cls: typing.Type[SagaRepository.TSaga], stream_id: str) -> SagaRepository.TSaga:
-        self._logger.info(f'Getting saga {cls.__name__} with id {stream_id}')
+        self._logger.debug(f'Getting saga {cls.__name__} with id {stream_id}')
         commits = list(self._store.get(self._tenant_id, stream_id))
         commit_sequence = commits[-1].commit_sequence if len(commits) > 0 else 0
         saga = cls(stream_id, commit_sequence)
@@ -377,7 +377,7 @@ class DefaultSagaRepository(SagaRepository):
         return saga
 
     def save(self, saga: Saga) -> None:
-        self._logger.info(f'Saving saga {saga.id} at version {saga.version}')
+        self._logger.debug(f'Saving saga {saga.id} at version {saga.version}')
         commit = Commit(tenant_id=self._tenant_id,
                         stream_id=saga.id,
                         stream_revision=saga.version,
@@ -388,7 +388,7 @@ class DefaultSagaRepository(SagaRepository):
                         events=list(saga.uncommitted),
                         checkpoint_token=0)
         self._store.commit(commit=commit)
-        self._logger.info(f'Saved saga {saga.id}')
+        self._logger.debug(f'Saved saga {saga.id}')
         saga.uncommitted.clear()
         saga.headers.clear()
 
