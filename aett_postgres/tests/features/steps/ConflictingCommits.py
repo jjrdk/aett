@@ -14,7 +14,7 @@ use_step_matcher("re")
 @when("I have a commit store with a conflict detector")
 def step_impl(context):
     conflict_detector = ConflictDetector([TestEventConflictDelegate()])
-    context.store = CommitStore(conflict_detector=conflict_detector, db=context.db, topic_map=context.topic_map)
+    context.store = CommitStore(conflict_detector=conflict_detector, connection_string=context.db, topic_map=context.topic_map)
 
 
 @step("I commit a conflicting event to the stream")

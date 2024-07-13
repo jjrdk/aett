@@ -2,6 +2,7 @@ import datetime
 import time
 import uuid
 
+import psycopg
 from behave import *
 from pydantic_core import to_json
 
@@ -62,18 +63,19 @@ def step_impl(context):
     start_time = datetime.datetime.fromtimestamp(0, datetime.timezone.utc)
     for x in range(1, 10):
         time_stamp = (start_time + datetime.timedelta(days=x))
-        cur = context.db.cursor()
-        cur.execute(f"""INSERT
-          INTO commits
-             ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        RETURNING CheckpointNumber;""", (context.tenant_id, context.stream_id, context.stream_id,
-                                         str(uuid.uuid4()), x, x, 1,
-                                         time_stamp,
-                                         to_json({}),
-                                         to_json([e.to_json() for e in [EventMessage(
-                                             body=TestEvent(source='time_test', timestamp=time_stamp, version=x - 1,
-                                                            value=x))]])))
+        with psycopg.connect(context.db) as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"""INSERT
+                  INTO commits
+                     ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING CheckpointNumber;""", (context.tenant_id, context.stream_id, context.stream_id,
+                                                 str(uuid.uuid4()), x, x, 1,
+                                                 time_stamp,
+                                                 to_json({}),
+                                                 to_json([e.to_json() for e in [EventMessage(
+                                                     body=TestEvent(source='time_test', timestamp=time_stamp, version=x - 1,
+                                                                    value=x))]])))
 
 
 @step("a specific aggregate is loaded at a specific time")
