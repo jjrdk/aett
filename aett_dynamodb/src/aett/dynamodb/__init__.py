@@ -27,7 +27,7 @@ class CommitStore(ICommitEvents):
         self._table_name = table_name
         self._region = region
         self._dynamodb = _get_resource(profile_name=profile_name, region=region)
-        self.table = self._dynamodb.Table(table_name)
+        self._table = self._dynamodb.Table(table_name)
         self._conflict_detector: ConflictDetector = conflict_detector if conflict_detector is not None \
             else ConflictDetector()
 
@@ -35,7 +35,7 @@ class CommitStore(ICommitEvents):
             max_revision: int = MAX_INT) -> typing.Iterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
-        query_response = self.table.query(
+        query_response = self._table.query(
             TableName=self._table_name,
             IndexName="RevisionIndex",
             ConsistentRead=True,
@@ -49,10 +49,10 @@ class CommitStore(ICommitEvents):
 
     def get_to(self, tenant_id: str, stream_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
-        query_response = self.table.scan(IndexName="CommitStampIndex",
-                                         ConsistentRead=True,
-                                         Select='ALL_ATTRIBUTES',
-                                         FilterExpression=(
+        query_response = self._table.scan(IndexName="CommitStampIndex",
+                                          ConsistentRead=True,
+                                          Select='ALL_ATTRIBUTES',
+                                          FilterExpression=(
                                                  Key("TenantAndStream").eq(f'{tenant_id}{stream_id}')
                                                  & Attr('CommitStamp').lte(int(max_time.timestamp()))))
         items = query_response['Items']
@@ -63,11 +63,11 @@ class CommitStore(ICommitEvents):
 
     def get_all_to(self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max) -> \
             Iterable[Commit]:
-        query_response = self.table.scan(IndexName="CommitStampIndex",
-                                         ConsistentRead=True,
-                                         Select='ALL_ATTRIBUTES',
-                                         ProjectionExpression='CommitStamp',
-                                         FilterExpression=(
+        query_response = self._table.scan(IndexName="CommitStampIndex",
+                                          ConsistentRead=True,
+                                          Select='ALL_ATTRIBUTES',
+                                          ProjectionExpression='CommitStamp',
+                                          FilterExpression=(
                                                  Key("TenantAndStream").begins_with(f'{tenant_id}')
                                                  & Attr('CommitStamp').lte(int(max_time.timestamp()))))
         items = query_response['Items']
@@ -101,7 +101,7 @@ class CommitStore(ICommitEvents):
                 'Headers': to_json(commit.headers),
                 'Events': to_json([e.to_json() for e in commit.events])
             }
-            response = self.table.put_item(
+            response = self._table.put_item(
                 TableName=self._table_name,
                 Item=item,
                 ReturnValues='NONE',
@@ -127,7 +127,7 @@ class CommitStore(ICommitEvents):
                 f'Non-conflicting version conflict detected in stream {commit.stream_id} with revision {commit.stream_revision}')
 
     def _detect_duplicate(self, commit_id: UUID, tenant_id: str, stream_id: str, commit_sequence: int) -> bool:
-        duplicate_check = self.table.query(
+        duplicate_check = self._table.query(
             TableName=self._table_name,
             ConsistentRead=True,
             ScanIndexForward=False,
