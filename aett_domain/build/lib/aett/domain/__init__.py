@@ -287,7 +287,7 @@ class DefaultAggregateRepository(AggregateRepository):
             commit_sequence = commits[-1].commit_sequence
         memento_type = inspect.signature(cls.apply_memento).parameters['memento'].annotation
         aggregate = cls(stream_id, commit_sequence,
-                        memento_type(**jsonpickle.decode(snapshot.payload)) if snapshot is not None else None)
+                        memento_type(**from_json(snapshot.payload)) if snapshot is not None else None)
         for commit in commits:
             for event in commit.events:
                 aggregate.raise_event(event.body)
