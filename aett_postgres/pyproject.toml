@@ -8,7 +8,7 @@ include = ["aett.postgres"]
 
 [project]
 name = "aett-postgres"
-version = "2.0.1"
+version = "2.0.3"
 description = "Postgres connector for aett event store"
 readme = "README.md"
 authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
@@ -20,7 +20,7 @@ classifiers = [
 ]
 keywords = ["events", "event store", "postgres"]
 dependencies = [
-    'aett-domain >= 2.0.1',
+    'aett-domain >= 2.0.3',
     'psycopg~=3.2.1',
     'psycopg-binary~=3.2.1'
 ]

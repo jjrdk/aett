@@ -8,7 +8,7 @@ include = ["aett.eventstore"]
 
 [project]
 name = "aett-eventstore"
-version = "2.0.1"
+version = "2.0.3"
 description = "Event store for Python"
 readme = "README.md"
 authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
