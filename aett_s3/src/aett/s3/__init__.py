@@ -1,5 +1,10 @@
+import datetime
+
 import boto3
 from boto3 import client
+from typing import Iterable, Dict
+
+from pydantic_core import to_json, from_json
 
 from aett.domain import *
 from aett.eventstore import *
@@ -59,7 +64,7 @@ class CommitStore(ICommitEvents):
         self._folder_name = folder_name
 
     def get(self, tenant_id: str, stream_id: str, min_revision: int = 0,
-            max_revision: int = MAX_INT) -> typing.Iterable[Commit]:
+            max_revision: int = MAX_INT) -> Iterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
         response = self._resource.list_objects(Bucket=self._s3_bucket,
@@ -188,7 +193,7 @@ class SnapshotStore(IAccessSnapshots):
                         payload=d.get('payload'),
                         headers=d.get('headers'))
 
-    def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] = None):
+    def add(self, snapshot: Snapshot, headers: Dict[str, str] = None):
         if headers is not None:
             snapshot.headers.update(headers)
         key = f'{self._folder_name}/{snapshot.tenant_id}/{snapshot.stream_id}/{snapshot.stream_revision}.json'

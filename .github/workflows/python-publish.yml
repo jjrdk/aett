@@ -13,7 +13,6 @@ jobs:
   deploy-eventstore:
 
     runs-on: ubuntu-latest
-    if: ${{ always() }}
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python
@@ -35,7 +34,6 @@ jobs:
   deploy-domain:
 
     runs-on: ubuntu-latest
-    if: ${{ always() }}
 
     steps:
       - uses: actions/checkout@v4
@@ -61,7 +59,6 @@ jobs:
   deploy-dynamodb:
 
     runs-on: ubuntu-latest
-    if: ${{ always() }}
 
     steps:
       - uses: actions/checkout@v4
@@ -84,7 +81,6 @@ jobs:
   deploy-mongo:
 
     runs-on: ubuntu-latest
-    if: ${{ always() }}
 
     steps:
       - uses: actions/checkout@v4
@@ -107,7 +103,6 @@ jobs:
   deploy-postgres:
 
     runs-on: ubuntu-latest
-    if: ${{ always() }}
 
     steps:
       - uses: actions/checkout@v4
@@ -130,7 +125,6 @@ jobs:
   deploy-s3:
 
     runs-on: ubuntu-latest
-    if: ${{ always() }}
 
     steps:
       - uses: actions/checkout@v4
@@ -153,7 +147,6 @@ jobs:
   deploy-inmemory:
 
     runs-on: ubuntu-latest
-    if: ${{ always() }}
 
     steps:
       - uses: actions/checkout@v4

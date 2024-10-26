@@ -1,7 +1,7 @@
 import datetime
-import json
-from pydantic_core import to_json, from_json
+
 from behave import *
+from pydantic_core import to_json, from_json
 
 from aett.eventstore import EventMessage, TopicMap, Topic
 from aett_domain.tests.features.steps.Types import TestEvent, TestAggregate

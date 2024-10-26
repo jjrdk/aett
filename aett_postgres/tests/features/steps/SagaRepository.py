@@ -3,7 +3,7 @@ import uuid
 
 from behave import *
 
-from aett.domain import DefaultSagaRepository
+from aett.domain.default_saga_repository import DefaultSagaRepository
 from aett.postgres import CommitStore
 from features.steps.Types import TestSaga, TestEvent
 
@@ -18,7 +18,7 @@ def step_impl(context):
 @then("a specific saga type can be loaded from the repository")
 def step_impl(context):
     saga = context.repository.get(TestSaga, 'test')
-    assert isinstance(saga, TestSaga)
+    assert isinstance(saga, TestSaga), f"Expected saga to be of type TestSaga, but was {type(saga)}"
 
 
 @when("a saga is loaded from the repository and modified")

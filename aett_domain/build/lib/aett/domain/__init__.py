@@ -2,6 +2,8 @@ import logging
 import uuid
 
 from aett.eventstore import *
+from aett.eventstore import BaseEvent, Memento, EventMessage, Commit, Snapshot, ICommitEvents, IAccessSnapshots
+from aett.eventstore.domain_event import DomainEvent
 
 T = typing.TypeVar('T', bound=Memento)
 

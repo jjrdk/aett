@@ -4,7 +4,7 @@ import uuid
 
 from behave import *
 
-from aett.domain import DefaultSagaRepository
+from aett.domain.default_saga_repository import DefaultSagaRepository
 from aett.eventstore import TopicMap
 from aett.inmemory import CommitStore
 from Types import TestSaga, TestEvent

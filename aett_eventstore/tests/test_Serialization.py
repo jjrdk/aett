@@ -1,6 +1,7 @@
 import datetime
 from unittest import TestCase
-from aett.eventstore import EventMessage, TopicMap, Topic, DomainEvent
+from aett.eventstore import EventMessage, TopicMap, Topic
+from aett.eventstore.domain_event import DomainEvent
 
 
 @Topic('MyTestTopic')

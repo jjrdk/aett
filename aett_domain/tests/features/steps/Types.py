@@ -1,6 +1,7 @@
 import datetime
 from aett.domain import Aggregate, Saga
-from aett.eventstore import DomainEvent, Memento, Topic
+from aett.eventstore import Memento, Topic
+from aett.eventstore.domain_event import DomainEvent
 
 
 @Topic("Test")

@@ -35,7 +35,7 @@ def step_impl(context):
 @then("a specific aggregate type can be loaded from the repository")
 def step_impl(context):
     aggregate = context.repository.get(TestAggregate, context.stream_id)
-    assert isinstance(aggregate, TestAggregate)
+    assert isinstance(aggregate, TestAggregate), f"Expected TestAggregate, got {type(aggregate)}"
 
 
 @step("an aggregate is loaded from the repository and modified")

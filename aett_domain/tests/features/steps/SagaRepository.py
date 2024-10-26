@@ -6,7 +6,7 @@ from behave import *
 
 from aett.domain import SagaRepository, Saga
 from aett.eventstore import Commit
-from aett_domain.tests.features.steps.Types import TestSaga, TestEvent
+from aett_mongo_async.tests.features.steps.Types import TestSaga, TestEvent
 
 use_step_matcher("re")
 
