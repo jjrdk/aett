@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src/"]
-include = ["aett.postgres"]
+include = ["aett.postgresasync"]
 
 [project]
-name = "aett-postgres"
-version = "2.0.3"
+name = "aett-postgres-async"
+version = "2.1.0"
 description = "Postgres connector for aett event store"
 readme = "README.md"
 authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
@@ -20,7 +20,7 @@ classifiers = [
 ]
 keywords = ["events", "event store", "postgres"]
 dependencies = [
-    'aett-domain >= 2.0.3',
+    'aett-domain >= 2.1.0',
     'asyncpg~=0.30.0',
 ]
 requires-python = ">=3.10"

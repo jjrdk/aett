@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src/"]
-include = ["aett.sqlite"]
+include = ["aett.sqliteasync"]
 
 [project]
-name = "aett-sqlite"
-version = "2.0.3"
+name = "aett-sqlite-async"
+version = "2.1.0"
 description = "SqLite connector for aett event store"
 readme = "README.md"
 authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
@@ -20,7 +20,8 @@ classifiers = [
 ]
 keywords = ["events", "event store", "sqlite"]
 dependencies = [
-    'aett-domain >= 2.0.3'
+    'aett-domain >= 2.1.0',
+    'aiosqlite~=0.20'
 ]
 requires-python = ">=3.10"
 

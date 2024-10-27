@@ -8,7 +8,7 @@ include = ["aett.inmemory"]
 
 [project]
 name = "aett-inmemory"
-version = "2.0.3"
+version = "2.1.0"
 description = "In-Memory persistence for aett event store"
 readme = "README.md"
 authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
@@ -20,7 +20,7 @@ classifiers = [
 ]
 keywords = ["events", "event store", "s3"]
 dependencies = [
-    'aett-domain >= 2.0.3'
+    'aett-domain >= 2.1.0'
 ]
 requires-python = ">=3.10"
 
