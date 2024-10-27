@@ -6,3 +6,4 @@ multipledispatch~=1.0
 pymongo~=4.10
 asyncpg~=0.30
 testcontainers~=4.8
+aiosqlite~=0.20
