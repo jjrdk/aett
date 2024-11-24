@@ -5,7 +5,7 @@ import uuid
 from behave import *
 
 from aett.eventstore import EventMessage, TopicMap, Commit
-from aett.s3 import CommitStore
+from aett.s3.commit_store import CommitStore
 from aett_s3.tests.features.steps.Types import TestEvent
 
 use_step_matcher("re")

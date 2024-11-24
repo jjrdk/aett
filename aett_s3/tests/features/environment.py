@@ -1,7 +1,8 @@
 import subprocess
 import time
 
-from aett.s3 import S3Config, PersistenceManagement
+from aett.s3 import S3Config
+from aett.s3.persistence_management import PersistenceManagement
 
 
 def before_scenario(context, _):

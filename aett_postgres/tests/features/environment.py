@@ -7,7 +7,7 @@ import psycopg
 from testcontainers.postgres import PostgresContainer
 
 from aett.eventstore import TopicMap
-from aett.postgres import PersistenceManagement
+from aett.postgres.persistence_management import PersistenceManagement
 from aett_postgres.tests.features.steps.Types import TestEvent
 
 

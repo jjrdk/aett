@@ -2,7 +2,7 @@ import pymongo.database
 from testcontainers.mongodb import MongoDbContainer
 
 from aett.eventstore import TopicMap
-from aett.mongodb import PersistenceManagement
+from aett.mongodb.persistence_management import PersistenceManagement
 from aett_mongo.tests.features.steps import Types
 
 

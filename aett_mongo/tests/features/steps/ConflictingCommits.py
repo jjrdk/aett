@@ -4,7 +4,7 @@ import uuid
 from Types import TestEvent, TestEventConflictDelegate
 from behave import *
 from aett.domain import ConflictDetector, ConflictingCommitException, NonConflictingCommitException
-from aett.mongodb import CommitStore
+from aett.mongodb.commit_store import CommitStore
 from aett.eventstore import TopicMap, EventMessage, Commit
 
 use_step_matcher("re")

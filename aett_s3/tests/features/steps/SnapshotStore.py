@@ -2,7 +2,7 @@ import uuid
 
 from behave import *
 
-from aett.s3 import SnapshotStore
+from aett.s3.snapshot_store import SnapshotStore
 from aett.eventstore import Snapshot
 
 use_step_matcher("re")

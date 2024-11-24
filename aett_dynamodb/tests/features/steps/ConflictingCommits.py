@@ -3,7 +3,7 @@ import uuid
 from Types import TestEvent, TestEventConflictDelegate
 from behave import *
 from aett.domain import ConflictDetector, ConflictingCommitException, NonConflictingCommitException
-from aett.dynamodb import CommitStore
+from aett.dynamodb.commit_store import CommitStore
 from aett.eventstore import TopicMap, EventMessage, Commit
 
 use_step_matcher("re")
@@ -49,7 +49,7 @@ def step_impl(context):
 
 @then("then a conflict exception is thrown")
 def step_impl(context):
-    assert isinstance(context.exception, ConflictingCommitException)
+    assert isinstance(context.exception, ConflictingCommitException), f"Expected a ConflictingCommitException, got {context.exception}"
 
 
 @then("then a non-conflict exception is thrown")

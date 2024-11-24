@@ -4,7 +4,7 @@ import uuid
 from behave import *
 
 from aett.eventstore import EventMessage, Commit
-from aett.postgres import CommitStore
+from aett.postgres.commit_store import CommitStore
 from aett_postgres.tests.features.steps.Types import TestEvent, NestedEvent, NestedValue, DeepNestedValue
 
 use_step_matcher("re")

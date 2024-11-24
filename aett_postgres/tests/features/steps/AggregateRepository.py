@@ -9,7 +9,8 @@ from pydantic_core import to_json
 from Types import TestAggregate, TestEvent, TestMemento
 from aett.domain import DefaultAggregateRepository
 from aett.eventstore import EventMessage
-from aett.postgres import CommitStore, SnapshotStore
+from aett.postgres.snapshot_store import SnapshotStore
+from aett.postgres.commit_store import CommitStore
 
 use_step_matcher("re")
 

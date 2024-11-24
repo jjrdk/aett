@@ -2,7 +2,7 @@ from behave import *
 from behave.api.async_step import async_run_until_complete
 
 from aett.eventstore import Snapshot
-from aett.postgresasync import AsyncSnapshotStore
+from aett.postgresasync.async_snapshot_store import AsyncSnapshotStore
 
 use_step_matcher("re")
 

@@ -11,7 +11,8 @@ from Types import TestAggregate, TestEvent, TestMemento
 from aett.domain import AsyncDefaultAggregateRepository
 from aett.domain.default_aggregate_repository import DefaultAggregateRepository
 from aett.eventstore import EventMessage
-from aett.postgresasync import AsyncCommitStore, AsyncSnapshotStore
+from aett.postgresasync.async_snapshot_store import AsyncSnapshotStore
+from aett.postgresasync.async_commit_store import AsyncCommitStore
 
 use_step_matcher("re")
 

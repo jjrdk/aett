@@ -5,7 +5,7 @@ from behave import *
 from behave.api.async_step import async_run_until_complete
 
 from aett.domain.async_default_saga_repository import AsyncDefaultSagaRepository
-from aett.postgresasync import AsyncCommitStore
+from aett.postgresasync.async_commit_store import AsyncCommitStore
 from features.steps.Types import TestSaga, TestEvent
 
 use_step_matcher("re")

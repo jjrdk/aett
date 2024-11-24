@@ -1,15 +1,18 @@
 import datetime
-import json
 import time
 import uuid
-from pydantic_core import to_json
+
 import boto3
 from behave import *
+from pydantic_core import to_json
+
 import Types
-from aett.domain import DefaultAggregateRepository
-from aett.dynamodb import PersistenceManagement, CommitStore, SnapshotStore
-from aett.eventstore import TopicMap, EventMessage
 from Types import TestAggregate, TestEvent, TestMemento
+from aett.domain import DefaultAggregateRepository
+from aett.dynamodb.commit_store import CommitStore
+from aett.dynamodb.persistence_management import PersistenceManagement
+from aett.dynamodb.snapshot_store import SnapshotStore
+from aett.eventstore import TopicMap, EventMessage
 
 use_step_matcher("re")
 
@@ -87,13 +90,12 @@ def step_impl(context):
             'Events': to_json([e.to_json() for e in [
                 EventMessage(body=TestEvent(source=context.stream_id, timestamp=time_stamp, version=x - 1, value=x))]])
         }
-        response = table.put_item(
+        _ = table.put_item(
             TableName='commits',
             Item=item,
             ReturnValues='NONE',
             ReturnValuesOnConditionCheckFailure='NONE',
             ConditionExpression='attribute_not_exists(TenantAndStream) AND attribute_not_exists(CommitSequence)')
-        print(response)
 
 
 @step("a specific aggregate is loaded at a specific time")

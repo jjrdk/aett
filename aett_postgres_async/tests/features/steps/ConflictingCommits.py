@@ -9,7 +9,7 @@ from aett.domain.non_conflicting_commit_exception import NonConflictingCommitExc
 from aett.domain.conflicting_commit_exception import ConflictingCommitException
 from aett.domain.conflict_detector import ConflictDetector
 from aett.eventstore import EventMessage, Commit
-from aett.postgresasync import AsyncCommitStore
+from aett.postgresasync.async_commit_store import AsyncCommitStore
 
 use_step_matcher("re")
 

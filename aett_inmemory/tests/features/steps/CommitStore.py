@@ -5,7 +5,7 @@ from behave import *
 
 from Types import TestEvent
 from aett.eventstore import EventMessage, Commit
-from aett.inmemory import CommitStore
+from aett.inmemory.commit_store import CommitStore
 
 use_step_matcher("re")
 

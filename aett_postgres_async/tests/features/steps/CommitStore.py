@@ -5,7 +5,7 @@ from behave import *
 from behave.api.async_step import async_run_until_complete
 
 from aett.eventstore import EventMessage, Commit
-from aett.postgresasync import AsyncCommitStore
+from aett.postgresasync.async_commit_store import AsyncCommitStore
 from aett_postgres.tests.features.steps.Types import TestEvent, NestedEvent, NestedValue, DeepNestedValue
 
 use_step_matcher("re")

@@ -13,7 +13,9 @@ The package also provides `CommitStore` and `SnapshotStore` classes that can be 
 can be instantiated by providing a Postgres database connection and specifying the configured table name.
 
 ```python
-from aett.inmemory import CommitStore, SnapshotStore
+
+from aett.inmemory.snapshot_store import SnapshotStore
+from aett.inmemory.commit_store import CommitStore
 
 commit_store = CommitStore()
 snapshot_store = SnapshotStore()

@@ -1,7 +1,7 @@
 from behave import *
 
 from aett.eventstore import Snapshot
-from aett.postgres import SnapshotStore
+from aett.postgres.snapshot_store import SnapshotStore
 
 use_step_matcher("re")
 

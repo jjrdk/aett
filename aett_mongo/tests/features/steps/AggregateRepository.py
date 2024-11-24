@@ -7,7 +7,9 @@ from behave import *
 from pydantic_core import to_json
 from aett.domain import DefaultAggregateRepository
 from aett.eventstore import TopicMap, EventMessage
-from aett.mongodb import PersistenceManagement, CommitStore, SnapshotStore
+from aett.mongodb.persistence_management import PersistenceManagement
+from aett.mongodb.snapshot_store import SnapshotStore
+from aett.mongodb.commit_store import CommitStore
 from Types import TestAggregate, TestEvent, TestMemento
 
 use_step_matcher("re")

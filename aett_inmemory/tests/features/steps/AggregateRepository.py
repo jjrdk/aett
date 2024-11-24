@@ -6,7 +6,8 @@ from behave import *
 
 from aett.domain import DefaultAggregateRepository
 from aett.eventstore import Commit, EventMessage
-from aett.inmemory import CommitStore, SnapshotStore
+from aett.inmemory.snapshot_store import SnapshotStore
+from aett.inmemory.commit_store import CommitStore
 from Types import TestAggregate, TestEvent
 
 use_step_matcher("re")

@@ -6,7 +6,7 @@ from behave.api.async_step import async_run_until_complete
 from testcontainers.postgres import PostgresContainer
 
 from aett.eventstore import TopicMap
-from aett.postgresasync import AsyncPersistenceManagement
+from aett.postgresasync.async_persistence_management import AsyncPersistenceManagement
 from aett_postgres.tests.features.steps.Types import TestEvent
 
 

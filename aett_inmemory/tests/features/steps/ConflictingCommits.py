@@ -6,7 +6,7 @@ from behave import *
 from Types import TestEvent, TestEventConflictDelegate
 from aett.domain import ConflictDetector, ConflictingCommitException, NonConflictingCommitException
 from aett.eventstore import TopicMap, EventMessage, Commit
-from aett.inmemory import CommitStore
+from aett.inmemory.commit_store import CommitStore
 
 use_step_matcher("re")
 

@@ -8,7 +8,7 @@ Feature: Persist commits
     And I commit a conflicting event to the stream
     Then then a conflict exception is thrown
 
-  Scenario: Commit event to stream
+  Scenario: Commit non-conflicting event to stream
     Given I have a clean database
     When I run the setup script
     And I have a commit store with a conflict detector

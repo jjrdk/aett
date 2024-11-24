@@ -6,7 +6,7 @@ from behave import *
 
 from aett.domain.default_saga_repository import DefaultSagaRepository
 from aett.eventstore import TopicMap
-from aett.inmemory import CommitStore
+from aett.inmemory.commit_store import CommitStore
 from Types import TestSaga, TestEvent
 
 use_step_matcher("re")

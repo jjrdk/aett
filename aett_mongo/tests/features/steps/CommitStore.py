@@ -4,7 +4,7 @@ import Types
 from behave import *
 
 from aett.eventstore import EventMessage, TopicMap, Commit
-from aett.mongodb import CommitStore
+from aett.mongodb.commit_store import CommitStore
 from Types import TestEvent
 
 use_step_matcher("re")

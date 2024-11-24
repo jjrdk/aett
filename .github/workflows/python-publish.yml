@@ -34,7 +34,7 @@ jobs:
   deploy-domain:
 
     runs-on: ubuntu-latest
-
+    needs: deploy-eventstore
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -59,7 +59,7 @@ jobs:
   deploy-dynamodb:
 
     runs-on: ubuntu-latest
-
+    needs: deploy-domain
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -81,7 +81,7 @@ jobs:
   deploy-mongo:
 
     runs-on: ubuntu-latest
-
+    needs: deploy-domain
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -103,7 +103,7 @@ jobs:
   deploy-mongo-async:
 
     runs-on: ubuntu-latest
-
+    needs: deploy-domain
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -125,7 +125,7 @@ jobs:
   deploy-postgres:
 
     runs-on: ubuntu-latest
-
+    needs: deploy-domain
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python

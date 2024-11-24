@@ -4,7 +4,7 @@ import uuid
 from behave import *
 
 from Types import TestEvent
-from aett.dynamodb import CommitStore
+from aett.dynamodb.commit_store import CommitStore
 from aett.eventstore import EventMessage, TopicMap, Commit
 
 use_step_matcher("re")

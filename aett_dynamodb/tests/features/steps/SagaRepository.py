@@ -4,7 +4,7 @@ import Types
 from behave import *
 
 from aett.domain.default_saga_repository import DefaultSagaRepository
-from aett.dynamodb import CommitStore
+from aett.dynamodb.commit_store import CommitStore
 from aett.eventstore import TopicMap
 from Types import TestSaga, TestEvent
 
