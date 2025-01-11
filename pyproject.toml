@@ -37,6 +37,7 @@ psycopg-binary = "~3.2.3"
 asyncpg = "~0.30"
 testcontainers = { version = "~4.8", extras = ['minio'] }
 aiosqlite = "~0.20"
+pytest-xdist = "^3.6"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.9"
