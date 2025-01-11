@@ -1,0 +1,51 @@
+[project]
+name = "aett"
+version = "3.0.0"
+description = "Event store for Python"
+readme = "README.md"
+authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["events", "event store", "sqlite", 'postgresql', 'mongodb', 'dynamodb', 's3', 'event sourcing']
+requires-python = ">=3.10,<4.0"
+
+[project.optional-dependencies]
+"sqlite_async" = ["aiosqlite~=0.20"]
+"postgresql" = ['psycopg~=3.2.3', 'psycopg-binary~=3.2.3']
+"postgresql_async" = ["asyncpg~=0.30"]
+"mongodb" = ["pymongo~=4.10"]
+"dynamodb" = ["boto3~=1.35"]
+"s3" = ["boto3~=1.35"]
+
+[tool.poetry]
+packages = [
+    { include = "aett", from = "src" }
+]
+
+[tool.poetry.group.test.dependencies]
+behave = "^1.2"
+boto3 = "~1.35"
+pydantic = "~2.10"
+multipledispatch = "~1.0"
+pymongo = "~4.10"
+psycopg = "~3.2.3"
+psycopg-binary = "~3.2.3"
+asyncpg = "~0.30"
+testcontainers = { version = "~4.8", extras = ['minio'] }
+aiosqlite = "~0.20"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.9"
+
+[project.urls]
+Homepage = "https://github.com/jjrdk/aett"
+
+[project.scripts]
+
+[build-system]
+requires = ["setuptools>=70.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
