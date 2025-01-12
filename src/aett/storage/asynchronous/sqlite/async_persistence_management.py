@@ -3,16 +3,24 @@ import logging
 import aiosqlite
 from typing import Iterable
 
-from aett.eventstore import IManagePersistenceAsync, TopicMap, COMMITS, SNAPSHOTS, Commit
+from aett.eventstore import (
+    IManagePersistenceAsync,
+    TopicMap,
+    COMMITS,
+    SNAPSHOTS,
+    Commit,
+)
 from aett.storage.asynchronous.sqlite.functions import _item_to_commit
 
 
 class AsyncPersistenceManagement(IManagePersistenceAsync):
-    def __init__(self,
-                 connection_string: str,
-                 topic_map: TopicMap,
-                 commits_table_name: str = COMMITS,
-                 snapshots_table_name: str = SNAPSHOTS):
+    def __init__(
+        self,
+        connection_string: str,
+        topic_map: TopicMap,
+        commits_table_name: str = COMMITS,
+        snapshots_table_name: str = SNAPSHOTS,
+    ):
         self._connection_string: str = connection_string
         self._topic_map = topic_map
         self._commits_table_name = commits_table_name
@@ -37,12 +45,17 @@ class AsyncPersistenceManagement(IManagePersistenceAsync):
            Payload blob NOT NULL
     );""")
                 await c.execute(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_CommitSequence ON Commits (TenantId, StreamId, CommitSequence);")
+                    "CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_CommitSequence ON Commits (TenantId, StreamId, CommitSequence);"
+                )
                 await c.execute(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_CommitId ON Commits (TenantId, StreamId, CommitId);")
+                    "CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_CommitId ON Commits (TenantId, StreamId, CommitId);"
+                )
                 await c.execute(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_Revisions ON Commits (TenantId, StreamId, StreamRevision, Items);")
-                await c.execute("CREATE INDEX IF NOT EXISTS IX_Commits_Stamp ON Commits (CommitStamp);")
+                    "CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_Revisions ON Commits (TenantId, StreamId, StreamRevision, Items);"
+                )
+                await c.execute(
+                    "CREATE INDEX IF NOT EXISTS IX_Commits_Stamp ON Commits (CommitStamp);"
+                )
                 await c.execute(f"""CREATE TABLE IF NOT EXISTS {self._snapshots_table_name}
     (
            TenantId varchar(40) NOT NULL,
@@ -54,7 +67,9 @@ class AsyncPersistenceManagement(IManagePersistenceAsync):
     );""")
                 await connection.commit()
         except Exception as e:
-            logging.error(f"Failed to initialize persistence with error {e}", exc_info=True)
+            logging.error(
+                f"Failed to initialize persistence with error {e}", exc_info=True
+            )
             pass
 
     async def drop(self):
@@ -67,17 +82,26 @@ class AsyncPersistenceManagement(IManagePersistenceAsync):
     async def purge(self, tenant_id: str):
         async with aiosqlite.connect(self._connection_string) as connection:
             c: aiosqlite.Cursor = await connection.cursor()
-            await c.execute(f"""DELETE FROM {self._commits_table_name} WHERE TenantId = %s;""", tenant_id)
-            await c.execute(f"""DELETE FROM {self._snapshots_table_name} WHERE TenantId = %s;""", tenant_id)
+            await c.execute(
+                f"""DELETE FROM {self._commits_table_name} WHERE TenantId = %s;""",
+                tenant_id,
+            )
+            await c.execute(
+                f"""DELETE FROM {self._snapshots_table_name} WHERE TenantId = %s;""",
+                tenant_id,
+            )
             await connection.commit()
 
     async def get_from(self, checkpoint: int) -> Iterable[Commit]:
         async with aiosqlite.connect(self._connection_string) as connection:
             cur: aiosqlite.Cursor = await connection.cursor()
-            await cur.execute(f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+            await cur.execute(
+                f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
                                   FROM {self._commits_table_name}
                                  WHERE CommitStamp >= %s
-                                 ORDER BY CheckpointNumber;""", (checkpoint,))
+                                 ORDER BY CheckpointNumber;""",
+                (checkpoint,),
+            )
             fetchall = await cur.fetchall()
             for doc in fetchall:
                 yield _item_to_commit(doc, self._topic_map)

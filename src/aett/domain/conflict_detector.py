@@ -8,10 +8,12 @@ from aett.eventstore import BaseEvent, DomainEvent
 
 class ConflictDetector:
     @staticmethod
-    def empty() -> 'ConflictDetector':
+    def empty() -> "ConflictDetector":
         return ConflictDetector()
 
-    def __init__(self, delegates: List[ConflictDelegate] = None, logger: logging.Logger = None):
+    def __init__(
+        self, delegates: List[ConflictDelegate] = None, logger: logging.Logger = None
+    ):
         """
         Initialize the conflict detector with the specified delegates.
 
@@ -19,9 +21,13 @@ class ConflictDetector:
         :param logger: The optional logger to use for logging.
         """
         self.delegates: Dict[
-            Type, Dict[Type, Callable[[BaseEvent, BaseEvent], bool]]] = {}
-        self._logger = logger if logger is not None and delegates is not None else logging.getLogger(
-            ConflictDetector.__name__)
+            Type, Dict[Type, Callable[[BaseEvent, BaseEvent], bool]]
+        ] = {}
+        self._logger = (
+            logger
+            if logger is not None and delegates is not None
+            else logging.getLogger(ConflictDetector.__name__)
+        )
         if delegates is not None:
             for delegate in delegates:
                 args = inspect.getfullargspec(delegate.detect)
@@ -31,9 +37,11 @@ class ConflictDetector:
                     self.delegates[uncommitted_type] = {}
                 self.delegates[uncommitted_type][committed_type] = delegate.detect
 
-    def conflicts_with(self,
-                       uncommitted_events: Iterable[BaseEvent],
-                       committed_events: Iterable[BaseEvent]) -> bool:
+    def conflicts_with(
+        self,
+        uncommitted_events: Iterable[BaseEvent],
+        committed_events: Iterable[BaseEvent],
+    ) -> bool:
         """
         Detects if the uncommitted events conflict with the committed events.
 
@@ -50,12 +58,16 @@ class ConflictDetector:
                 if uncommitted_type in delegates_keys:
                     committed_keys = self.delegates[uncommitted_type].keys()
                     if committed_type in committed_keys:
-                        if self.delegates[uncommitted_type][committed_type](uncommitted, committed):
+                        if self.delegates[uncommitted_type][committed_type](
+                            uncommitted, committed
+                        ):
                             if isinstance(uncommitted, DomainEvent):
                                 self._logger.warning(
-                                    f'Detected conflict between uncommitted event {uncommitted_type.__name__} from {uncommitted.source} with version {uncommitted.version}')
+                                    f"Detected conflict between uncommitted event {uncommitted_type.__name__} from {uncommitted.source} with version {uncommitted.version}"
+                                )
                             else:
                                 self._logger.warning(
-                                    f'Detected conflict between uncommitted event {uncommitted_type.__name__} from {uncommitted.source} with timestamp {uncommitted.timestamp:%Y%m%d-%H%M%S%z}')
+                                    f"Detected conflict between uncommitted event {uncommitted_type.__name__} from {uncommitted.source} with timestamp {uncommitted.timestamp:%Y%m%d-%H%M%S%z}"
+                                )
                             return True
         return False

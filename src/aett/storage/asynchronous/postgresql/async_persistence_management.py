@@ -3,16 +3,24 @@ from typing import Iterable
 
 import asyncpg
 
-from aett.eventstore import IManagePersistenceAsync, TopicMap, COMMITS, SNAPSHOTS, Commit
+from aett.eventstore import (
+    IManagePersistenceAsync,
+    TopicMap,
+    COMMITS,
+    SNAPSHOTS,
+    Commit,
+)
 from aett.storage.asynchronous.postgresql import _item_to_commit
 
 
 class AsyncPersistenceManagement(IManagePersistenceAsync):
-    def __init__(self,
-                 connection_string: str,
-                 topic_map: TopicMap,
-                 commits_table_name: str = COMMITS,
-                 snapshots_table_name: str = SNAPSHOTS):
+    def __init__(
+        self,
+        connection_string: str,
+        topic_map: TopicMap,
+        commits_table_name: str = COMMITS,
+        snapshots_table_name: str = SNAPSHOTS,
+    ):
         self._connection_string: str = connection_string
         self._topic_map = topic_map
         self._commits_table_name = commits_table_name
@@ -54,25 +62,37 @@ class AsyncPersistenceManagement(IManagePersistenceAsync):
             await connection.commit()
 
         except Exception as e:
-            logging.error(f"Failed to initialize persistence with error {e}", exc_info=True)
+            logging.error(
+                f"Failed to initialize persistence with error {e}", exc_info=True
+            )
 
     async def drop(self):
         with await asyncpg.connect(self._connection_string) as connection:
             await connection.execute(
-                f"""DROP TABLE {self._snapshots_table_name};DROP TABLE {self._commits_table_name};""")
+                f"""DROP TABLE {self._snapshots_table_name};DROP TABLE {self._commits_table_name};"""
+            )
             await connection.commit()
 
     async def purge(self, tenant_id: str):
         with await asyncpg.connect(self._connection_string) as connection:
-            await connection.execute(f"""DELETE FROM {self._commits_table_name} WHERE TenantId = %s;""", tenant_id)
-            await connection.execute(f"""DELETE FROM {self._snapshots_table_name} WHERE TenantId = %s;""", tenant_id)
+            await connection.execute(
+                f"""DELETE FROM {self._commits_table_name} WHERE TenantId = %s;""",
+                tenant_id,
+            )
+            await connection.execute(
+                f"""DELETE FROM {self._snapshots_table_name} WHERE TenantId = %s;""",
+                tenant_id,
+            )
             await connection.commit()
 
     async def get_from(self, checkpoint: int) -> Iterable[Commit]:
         with await asyncpg.connect(self._connection_string) as connection:
-            fetchall = await connection.execute(f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+            fetchall = await connection.execute(
+                f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
                                       FROM {self._commits_table_name}
                                      WHERE CommitStamp >= %s
-                                     ORDER BY CheckpointNumber;""", (checkpoint,))
+                                     ORDER BY CheckpointNumber;""",
+                (checkpoint,),
+            )
             for doc in fetchall:
                 yield _item_to_commit(doc, self._topic_map)

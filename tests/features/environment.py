@@ -15,7 +15,11 @@ def before_scenario(context, _):
 
 
 def after_scenario(context, _):
-    if hasattr(context, 'mgmt'):
+    if hasattr(context, "mgmt"):
         context.mgmt.drop()
-    if hasattr(context, 'db') and isinstance(context.db, str) and os.path.exists(context.db):
+    if (
+        hasattr(context, "db")
+        and isinstance(context.db, str)
+        and os.path.exists(context.db)
+    ):
         os.remove(context.db)

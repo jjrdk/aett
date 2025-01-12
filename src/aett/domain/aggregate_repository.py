@@ -11,10 +11,13 @@ class AggregateRepository(ABC):
     The repository is responsible for loading and saving aggregates to the event store,
     typically using the ICommitEvents interface.
     """
-    TAggregate = TypeVar('TAggregate', bound=Aggregate)
+
+    TAggregate = TypeVar("TAggregate", bound=Aggregate)
 
     @abstractmethod
-    def get(self, cls: Type[TAggregate], stream_id: str, max_version: int = 2 ** 32) -> TAggregate:
+    def get(
+        self, cls: Type[TAggregate], stream_id: str, max_version: int = 2**32
+    ) -> TAggregate:
         """
         Gets the aggregate with the specified stream id and type
 
@@ -25,8 +28,12 @@ class AggregateRepository(ABC):
         pass
 
     @abstractmethod
-    def get_to(self, cls: Type[TAggregate], stream_id: str,
-                     max_time: datetime = datetime.datetime.max) -> TAggregate:
+    def get_to(
+        self,
+        cls: Type[TAggregate],
+        stream_id: str,
+        max_time: datetime = datetime.datetime.max,
+    ) -> TAggregate:
         """
         Gets the aggregate with the specified stream id and type
 
@@ -54,8 +61,13 @@ class AggregateRepository(ABC):
         pass
 
     @abstractmethod
-    def snapshot(self, cls: Type[TAggregate], stream_id: str, version: int,
-                       headers: Dict[str, str]) -> None:
+    def snapshot(
+        self,
+        cls: Type[TAggregate],
+        stream_id: str,
+        version: int,
+        headers: Dict[str, str],
+    ) -> None:
         """
         Generates a snapshot of the aggregate at the specified version.
 
@@ -67,8 +79,13 @@ class AggregateRepository(ABC):
         pass
 
     @abstractmethod
-    def snapshot_at(self, cls: Type[TAggregate], stream_id: str, cut_off: datetime.datetime,
-                          headers: Dict[str, str]) -> None:
+    def snapshot_at(
+        self,
+        cls: Type[TAggregate],
+        stream_id: str,
+        cut_off: datetime.datetime,
+        headers: Dict[str, str],
+    ) -> None:
         """
         Generates a snapshot of the aggregate at the specified time point.
 

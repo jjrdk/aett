@@ -34,26 +34,43 @@ class TestEventConflictDelegate(ConflictDelegate[TestEvent, TestEvent]):
 
 
 class TestAggregate(Aggregate[TestMemento]):
-    def __init__(self, stream_id: str, commit_sequence: int, memento: TestMemento = None):
+    def __init__(
+        self, stream_id: str, commit_sequence: int, memento: TestMemento = None
+    ):
         self.value = 0
-        super().__init__(stream_id=stream_id, commit_sequence=commit_sequence, memento=memento)
+        super().__init__(
+            stream_id=stream_id, commit_sequence=commit_sequence, memento=memento
+        )
 
     def apply_memento(self, memento: TestMemento) -> None:
         if self.id != memento.id:
             raise ValueError("Memento id does not match aggregate id")
-        self.value = int(memento.payload['key'])
+        self.value = int(memento.payload["key"])
 
     def get_memento(self) -> TestMemento:
-        return TestMemento(id=self.id, version=self.version, payload={'key': self.value + 1000})
+        return TestMemento(
+            id=self.id, version=self.version, payload={"key": self.value + 1000}
+        )
 
     def set_value(self, value: int) -> None:
         self.raise_event(
-            TestEvent(value=value, source=self.id, version=self.version, timestamp=datetime.datetime.now(datetime.timezone.utc)))
+            TestEvent(
+                value=value,
+                source=self.id,
+                version=self.version,
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
+            )
+        )
 
     def add_value(self, value: int) -> None:
         self.raise_event(
-            TestEvent(value=self.value + value, source=self.id, version=self.version,
-                      timestamp=datetime.datetime.now(datetime.timezone.utc)))
+            TestEvent(
+                value=self.value + value,
+                source=self.id,
+                version=self.version,
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
+            )
+        )
 
     def _apply(self, event: TestEvent) -> None:
         self.value = event.value

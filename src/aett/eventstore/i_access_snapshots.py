@@ -10,7 +10,9 @@ class IAccessSnapshots(ABC):
     """
 
     @abstractmethod
-    def get(self, tenant_id: str, stream_id: str, max_revision: int) -> Optional[Snapshot]:
+    def get(
+        self, tenant_id: str, stream_id: str, max_revision: int
+    ) -> Optional[Snapshot]:
         """
         Gets the snapshot at the revision indicated or the most recent snapshot below that revision.
 

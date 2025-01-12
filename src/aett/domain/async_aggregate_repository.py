@@ -12,10 +12,13 @@ class AsyncAggregateRepository(ABC):
     The repository is responsible for loading and saving aggregates to the event store,
     typically using the ICommitEvents interface.
     """
-    TAggregate = TypeVar('TAggregate', bound=Aggregate)
+
+    TAggregate = TypeVar("TAggregate", bound=Aggregate)
 
     @abstractmethod
-    async def get(self, cls: Type[TAggregate], stream_id: str, max_version: int = 2 ** 32) -> TAggregate:
+    async def get(
+        self, cls: Type[TAggregate], stream_id: str, max_version: int = 2**32
+    ) -> TAggregate:
         """
         Gets the aggregate with the specified stream id and type
 
@@ -25,8 +28,12 @@ class AsyncAggregateRepository(ABC):
         """
         pass
 
-    async def get_to(self, cls: Type[TAggregate], stream_id: str,
-                     max_time: datetime = datetime.datetime.max) -> TAggregate:
+    async def get_to(
+        self,
+        cls: Type[TAggregate],
+        stream_id: str,
+        max_time: datetime = datetime.datetime.max,
+    ) -> TAggregate:
         """
         Gets the aggregate with the specified stream id and type
 
@@ -54,8 +61,13 @@ class AsyncAggregateRepository(ABC):
         pass
 
     @abstractmethod
-    async def snapshot(self, cls: Type[TAggregate], stream_id: str, version: int,
-                       headers: Dict[str, str]) -> None:
+    async def snapshot(
+        self,
+        cls: Type[TAggregate],
+        stream_id: str,
+        version: int,
+        headers: Dict[str, str],
+    ) -> None:
         """
         Generates a snapshot of the aggregate at the specified version.
 
@@ -67,8 +79,13 @@ class AsyncAggregateRepository(ABC):
         pass
 
     @abstractmethod
-    async def snapshot_at(self, cls: Type[TAggregate], stream_id: str, cut_off: datetime.datetime,
-                          headers: Dict[str, str]) -> None:
+    async def snapshot_at(
+        self,
+        cls: Type[TAggregate],
+        stream_id: str,
+        cut_off: datetime.datetime,
+        headers: Dict[str, str],
+    ) -> None:
         """
         Generates a snapshot of the aggregate at the specified time point.
 

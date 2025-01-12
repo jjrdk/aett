@@ -1,7 +1,9 @@
 from aett.domain.aggregate import Aggregate
 from aett.domain.aggregate_repository import AggregateRepository
 from aett.domain.default_aggregate_repository import DefaultAggregateRepository
-from aett.domain.async_default_aggregate_repository import AsyncDefaultAggregateRepository
+from aett.domain.async_default_aggregate_repository import (
+    AsyncDefaultAggregateRepository,
+)
 from aett.domain.conflict_delegate import ConflictDelegate
 from aett.domain.conflict_detector import ConflictDetector
 from aett.domain.saga import Saga

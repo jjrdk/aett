@@ -73,4 +73,4 @@ class Saga(ABC):
         :return: None
         """
         index = len(self._headers)
-        self._headers[f'UndispatchedMessage.{index}'] = command
+        self._headers[f"UndispatchedMessage.{index}"] = command

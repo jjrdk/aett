@@ -16,8 +16,12 @@ from pymongo import MongoClient, AsyncMongoClient
 from aett.domain import AsyncDefaultAggregateRepository, DefaultAggregateRepository
 from aett.eventstore import EventMessage, Commit
 from test_types import TestAggregate, TestEvent, TestMemento
-from storage_factory import create_async_commit_store, create_async_snapshot_store, create_commit_store, \
-    create_snapshot_store
+from storage_factory import (
+    create_async_commit_store,
+    create_async_snapshot_store,
+    create_commit_store,
+    create_snapshot_store,
+)
 
 use_step_matcher("re")
 
@@ -26,22 +30,26 @@ use_step_matcher("re")
 def step_impl(context):
     context.stream_id = str(uuid.uuid4())
     context.tenant_id = str(uuid.uuid4())
-    commit_store = create_commit_store(context.db, context.storage_type, context.topic_map)
+    commit_store = create_commit_store(
+        context.db, context.storage_type, context.topic_map
+    )
     snapshot_store = create_snapshot_store(context.db, context.storage_type)
-    context.repository = DefaultAggregateRepository(tenant_id=context.tenant_id,
-                                                    store=commit_store,
-                                                    snapshot_store=snapshot_store)
+    context.repository = DefaultAggregateRepository(
+        tenant_id=context.tenant_id, store=commit_store, snapshot_store=snapshot_store
+    )
 
 
 @given("I have a persistent async aggregate repository")
 def step_impl(context):
     context.stream_id = str(uuid.uuid4())
     context.tenant_id = str(uuid.uuid4())
-    commit_store = create_async_commit_store(context.db, context.storage_type, context.topic_map)
+    commit_store = create_async_commit_store(
+        context.db, context.storage_type, context.topic_map
+    )
     snapshot_store = create_async_snapshot_store(context.db, context.storage_type)
-    context.repository = AsyncDefaultAggregateRepository(tenant_id=context.tenant_id,
-                                                         store=commit_store,
-                                                         snapshot_store=snapshot_store)
+    context.repository = AsyncDefaultAggregateRepository(
+        tenant_id=context.tenant_id, store=commit_store, snapshot_store=snapshot_store
+    )
 
 
 @then("a specific aggregate type can be loaded from the repository")
@@ -67,7 +75,9 @@ def step_impl(context):
 @step("an aggregate is loaded async from the repository and modified")
 @async_run_until_complete
 async def step_impl(context):
-    aggregate: TestAggregate = await context.repository.get(TestAggregate, context.stream_id)
+    aggregate: TestAggregate = await context.repository.get(
+        TestAggregate, context.stream_id
+    )
     aggregate.set_value(10)
     context.aggregate = aggregate
 
@@ -112,7 +122,7 @@ def step_impl(context):
 @then("the modified aggregate is loaded from storage")
 def step_impl(context):
     m: TestMemento = context.aggregate.get_memento()
-    assert m.payload['key'] == 1010
+    assert m.payload["key"] == 1010
 
 
 @when("a series of commits is persisted async")
@@ -120,13 +130,13 @@ def step_impl(context):
 async def step_impl(context):
     start_time = datetime.datetime.fromtimestamp(0, datetime.timezone.utc)
     for x in range(1, 10):
-        time_stamp = (start_time + datetime.timedelta(days=x))
+        time_stamp = start_time + datetime.timedelta(days=x)
         match context.storage_type:
-            case 'sqlite_async':
+            case "sqlite_async":
                 await seed_sqlite_async(context, x, time_stamp)
-            case 'mongo_async':
+            case "mongo_async":
                 await seed_mongo_async(context, x, time_stamp)
-            case 'postgres_async':
+            case "postgres_async":
                 await seed_postgres_async(context, x, time_stamp)
 
 
@@ -134,146 +144,261 @@ async def step_impl(context):
 def step_impl(context):
     start_time = datetime.datetime.fromtimestamp(0, datetime.timezone.utc)
     for x in range(1, 10):
-        time_stamp = (start_time + datetime.timedelta(days=x))
+        time_stamp = start_time + datetime.timedelta(days=x)
         match context.storage_type:
-            case 'dynamo':
+            case "dynamo":
                 seed_dynamo(context, x, time_stamp)
-            case 'inmemory':
+            case "inmemory":
                 seed_inmemory(context, x, time_stamp)
-            case 'sqlite':
+            case "sqlite":
                 seed_sqlite(context, x, time_stamp)
-            case 'mongo':
+            case "mongo":
                 seed_mongo(context, x, time_stamp)
-            case 'postgres':
+            case "postgres":
                 seed_postgres(context, x, time_stamp)
-            case 's3':
+            case "s3":
                 seed_s3(context, x, time_stamp)
 
 
 def seed_dynamo(context, x, time_stamp):
-    resource = boto3.resource('dynamodb',
-                              region_name='localhost',
-                              endpoint_url=f'http://localhost:{context.db}')
-    table = resource.Table('commits')
+    resource = boto3.resource(
+        "dynamodb",
+        region_name="localhost",
+        endpoint_url=f"http://localhost:{context.db}",
+    )
+    table = resource.Table("commits")
     item = {
-        'TenantAndStream': f'{context.tenant_id}{context.stream_id}',
-        'TenantId': context.tenant_id,
-        'StreamId': context.stream_id,
-        'StreamRevision': x,
-        'CommitId': str(uuid.uuid4()),
-        'CommitSequence': x,
-        'CommitStamp': int(time_stamp.timestamp()),
-        'Headers': to_json({}),
-        'Events': to_json([e.to_json() for e in [
-            EventMessage(body=TestEvent(source=context.stream_id, timestamp=time_stamp, version=x - 1, value=x))]])
+        "TenantAndStream": f"{context.tenant_id}{context.stream_id}",
+        "TenantId": context.tenant_id,
+        "StreamId": context.stream_id,
+        "StreamRevision": x,
+        "CommitId": str(uuid.uuid4()),
+        "CommitSequence": x,
+        "CommitStamp": int(time_stamp.timestamp()),
+        "Headers": to_json({}),
+        "Events": to_json(
+            [
+                e.to_json()
+                for e in [
+                    EventMessage(
+                        body=TestEvent(
+                            source=context.stream_id,
+                            timestamp=time_stamp,
+                            version=x - 1,
+                            value=x,
+                        )
+                    )
+                ]
+            ]
+        ),
     }
     _ = table.put_item(
-        TableName='commits',
+        TableName="commits",
         Item=item,
-        ReturnValues='NONE',
-        ReturnValuesOnConditionCheckFailure='NONE',
-        ConditionExpression='attribute_not_exists(TenantAndStream) AND attribute_not_exists(CommitSequence)')
+        ReturnValues="NONE",
+        ReturnValuesOnConditionCheckFailure="NONE",
+        ConditionExpression="attribute_not_exists(TenantAndStream) AND attribute_not_exists(CommitSequence)",
+    )
 
 
 def seed_inmemory(context, x, time_stamp):
     context.repository._store._ensure_stream(context.tenant_id, context.stream_id)
-    persistence = context.repository._store._buckets[context.tenant_id][context.stream_id]
-    commit = Commit(tenant_id=context.tenant_id, stream_id=context.stream_id, commit_stamp=time_stamp,
-                    commit_sequence=x,
-                    stream_revision=1,
-                    events=[EventMessage(body=TestEvent(source=context.stream_id,
-                                                        timestamp=time_stamp,
-                                                        version=x - 1,
-                                                        value=x))],
-                    headers={},
-                    checkpoint_token=0,
-                    commit_id=uuid.uuid4())
+    persistence = context.repository._store._buckets[context.tenant_id][
+        context.stream_id
+    ]
+    commit = Commit(
+        tenant_id=context.tenant_id,
+        stream_id=context.stream_id,
+        commit_stamp=time_stamp,
+        commit_sequence=x,
+        stream_revision=1,
+        events=[
+            EventMessage(
+                body=TestEvent(
+                    source=context.stream_id,
+                    timestamp=time_stamp,
+                    version=x - 1,
+                    value=x,
+                )
+            )
+        ],
+        headers={},
+        checkpoint_token=0,
+        commit_id=uuid.uuid4(),
+    )
     persistence.append(commit)
 
 
 async def seed_mongo_async(context, x, time_stamp):
     client = AsyncMongoClient(context.db)
-    collection = client.get_database('test').get_collection('commits')
+    collection = client.get_database("test").get_collection("commits")
     doc = {
-        'TenantId': context.tenant_id,
-        'StreamId': context.stream_id,
-        'StreamRevision': x,
-        'CommitId': str(uuid.uuid4()),
-        'CommitSequence': x,
-        'CommitStamp': int(time_stamp.timestamp()),
-        'Headers': to_json({}),
-        'Events': to_json([e.to_json() for e in [
-            EventMessage(body=TestEvent(source=context.stream_id, timestamp=time_stamp, version=x - 1, value=x))]]),
-        'CheckpointToken': x
+        "TenantId": context.tenant_id,
+        "StreamId": context.stream_id,
+        "StreamRevision": x,
+        "CommitId": str(uuid.uuid4()),
+        "CommitSequence": x,
+        "CommitStamp": int(time_stamp.timestamp()),
+        "Headers": to_json({}),
+        "Events": to_json(
+            [
+                e.to_json()
+                for e in [
+                    EventMessage(
+                        body=TestEvent(
+                            source=context.stream_id,
+                            timestamp=time_stamp,
+                            version=x - 1,
+                            value=x,
+                        )
+                    )
+                ]
+            ]
+        ),
+        "CheckpointToken": x,
     }
     _ = await collection.insert_one(doc)
 
 
 def seed_mongo(context, x, time_stamp):
     client = MongoClient(context.db)
-    collection = client.get_database('test').get_collection('commits')
+    collection = client.get_database("test").get_collection("commits")
     doc = {
-        'TenantId': context.tenant_id,
-        'StreamId': context.stream_id,
-        'StreamRevision': x,
-        'CommitId': str(uuid.uuid4()),
-        'CommitSequence': x,
-        'CommitStamp': int(time_stamp.timestamp()),
-        'Headers': to_json({}),
-        'Events': to_json([e.to_json() for e in [
-            EventMessage(body=TestEvent(source=context.stream_id, timestamp=time_stamp, version=x - 1, value=x))]]),
-        'CheckpointToken': x
+        "TenantId": context.tenant_id,
+        "StreamId": context.stream_id,
+        "StreamRevision": x,
+        "CommitId": str(uuid.uuid4()),
+        "CommitSequence": x,
+        "CommitStamp": int(time_stamp.timestamp()),
+        "Headers": to_json({}),
+        "Events": to_json(
+            [
+                e.to_json()
+                for e in [
+                    EventMessage(
+                        body=TestEvent(
+                            source=context.stream_id,
+                            timestamp=time_stamp,
+                            version=x - 1,
+                            value=x,
+                        )
+                    )
+                ]
+            ]
+        ),
+        "CheckpointToken": x,
     }
     _ = collection.insert_one(doc)
 
 
 def seed_postgres(context, x, time_stamp):
     with psycopg.connect(context.db) as conn:
-        conn.execute(f"""INSERT
+        conn.execute(
+            f"""INSERT
                       INTO commits
                          ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    RETURNING CheckpointNumber;""", (context.tenant_id, context.stream_id, context.stream_id,
-                                                     str(uuid.uuid4()), x, x, 1,
-                                                     time_stamp,
-                                                     to_json({}),
-                                                     to_json([e.to_json() for e in [EventMessage(
-                                                         body=TestEvent(source=context.stream_id, timestamp=time_stamp,
-                                                                        version=x - 1,
-                                                                        value=x))]])))
+                    RETURNING CheckpointNumber;""",
+            (
+                context.tenant_id,
+                context.stream_id,
+                context.stream_id,
+                str(uuid.uuid4()),
+                x,
+                x,
+                1,
+                time_stamp,
+                to_json({}),
+                to_json(
+                    [
+                        e.to_json()
+                        for e in [
+                            EventMessage(
+                                body=TestEvent(
+                                    source=context.stream_id,
+                                    timestamp=time_stamp,
+                                    version=x - 1,
+                                    value=x,
+                                )
+                            )
+                        ]
+                    ]
+                ),
+            ),
+        )
 
 
 async def seed_postgres_async(context, x, time_stamp):
     conn = await asyncpg.connect(context.db)
-    await conn.execute(f"""INSERT
+    await conn.execute(
+        f"""INSERT
                       INTO commits
                          ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                    RETURNING CheckpointNumber;""", context.tenant_id, context.stream_id, context.stream_id,
-                       str(uuid.uuid4()), x, x, 1,
-                       time_stamp,
-                       to_json({}),
-                       to_json([e.to_json() for e in [EventMessage(
-                           body=TestEvent(source=context.stream_id, timestamp=time_stamp,
-                                          version=x - 1,
-                                          value=x))]]))
+                    RETURNING CheckpointNumber;""",
+        context.tenant_id,
+        context.stream_id,
+        context.stream_id,
+        str(uuid.uuid4()),
+        x,
+        x,
+        1,
+        time_stamp,
+        to_json({}),
+        to_json(
+            [
+                e.to_json()
+                for e in [
+                    EventMessage(
+                        body=TestEvent(
+                            source=context.stream_id,
+                            timestamp=time_stamp,
+                            version=x - 1,
+                            value=x,
+                        )
+                    )
+                ]
+            ]
+        ),
+    )
 
 
 def seed_sqlite(context, x, time_stamp):
     with sqlite3.connect(context.db) as conn:
         cur = conn.cursor()
-        cur.execute(f"""INSERT
+        cur.execute(
+            f"""INSERT
                       INTO commits
                          ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    RETURNING CheckpointNumber;""", (context.tenant_id, context.stream_id, context.stream_id,
-                                                     str(uuid.uuid4()), x, x, 1,
-                                                     time_stamp,
-                                                     to_json({}),
-                                                     to_json([e.to_json() for e in [EventMessage(
-                                                         body=TestEvent(source=context.stream_id, timestamp=time_stamp,
-                                                                        version=x - 1,
-                                                                        value=x))]])))
+                    RETURNING CheckpointNumber;""",
+            (
+                context.tenant_id,
+                context.stream_id,
+                context.stream_id,
+                str(uuid.uuid4()),
+                x,
+                x,
+                1,
+                time_stamp,
+                to_json({}),
+                to_json(
+                    [
+                        e.to_json()
+                        for e in [
+                            EventMessage(
+                                body=TestEvent(
+                                    source=context.stream_id,
+                                    timestamp=time_stamp,
+                                    version=x - 1,
+                                    value=x,
+                                )
+                            )
+                        ]
+                    ]
+                ),
+            ),
+        )
         cur.close()
         conn.commit()
 
@@ -281,88 +406,140 @@ def seed_sqlite(context, x, time_stamp):
 async def seed_sqlite_async(context, x, time_stamp):
     async with aiosqlite.connect(context.db) as conn:
         async with conn.cursor() as cur:
-            await cur.execute(f"""INSERT
+            await cur.execute(
+                f"""INSERT
                       INTO commits
                          ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    RETURNING CheckpointNumber;""", (context.tenant_id, context.stream_id, context.stream_id,
-                                                     str(uuid.uuid4()), x, x, 1,
-                                                     time_stamp,
-                                                     to_json({}),
-                                                     to_json([e.to_json() for e in [EventMessage(
-                                                         body=TestEvent(source=context.stream_id, timestamp=time_stamp,
-                                                                        version=x - 1,
-                                                                        value=x))]])))
+                    RETURNING CheckpointNumber;""",
+                (
+                    context.tenant_id,
+                    context.stream_id,
+                    context.stream_id,
+                    str(uuid.uuid4()),
+                    x,
+                    x,
+                    1,
+                    time_stamp,
+                    to_json({}),
+                    to_json(
+                        [
+                            e.to_json()
+                            for e in [
+                                EventMessage(
+                                    body=TestEvent(
+                                        source=context.stream_id,
+                                        timestamp=time_stamp,
+                                        version=x - 1,
+                                        value=x,
+                                    )
+                                )
+                            ]
+                        ]
+                    ),
+                ),
+            )
         await conn.commit()
 
 
 def seed_s3(context, x, time_stamp):
-    commit = Commit(tenant_id=context.tenant_id, stream_id=context.stream_id, commit_stamp=time_stamp,
-                    commit_sequence=x,
-                    stream_revision=1,
-                    events=[EventMessage(body=TestEvent(source=context.stream_id,
-                                                        timestamp=time_stamp,
-                                                        version=x - 1,
-                                                        value=x))],
-                    headers={},
-                    checkpoint_token=0,
-                    commit_id=uuid.uuid4())
-    commit_key = f'commits/{commit.tenant_id}/{commit.stream_id}/{int(commit.commit_stamp.timestamp())}_{commit.commit_sequence}_{commit.stream_revision}.json'
+    commit = Commit(
+        tenant_id=context.tenant_id,
+        stream_id=context.stream_id,
+        commit_stamp=time_stamp,
+        commit_sequence=x,
+        stream_revision=1,
+        events=[
+            EventMessage(
+                body=TestEvent(
+                    source=context.stream_id,
+                    timestamp=time_stamp,
+                    version=x - 1,
+                    value=x,
+                )
+            )
+        ],
+        headers={},
+        checkpoint_token=0,
+        commit_id=uuid.uuid4(),
+    )
+    commit_key = f"commits/{commit.tenant_id}/{commit.stream_id}/{int(commit.commit_stamp.timestamp())}_{commit.commit_sequence}_{commit.stream_revision}.json"
     d = commit.__dict__
-    d['events'] = [e.to_json() for e in commit.events]
-    d['headers'] = {k: to_json(v) for k, v in commit.headers.items()}
+    d["events"] = [e.to_json() for e in commit.events]
+    d["headers"] = {k: to_json(v) for k, v in commit.headers.items()}
     body = to_json(d)
     client = context.db.to_client()
-    client.put_object(Bucket=context.db.bucket,
-                      Key=commit_key,
-                      Body=body,
-                      ContentLength=len(body),
-                      Metadata={k: to_json(v) for k, v in
-                                commit.headers.items()})
+    client.put_object(
+        Bucket=context.db.bucket,
+        Key=commit_key,
+        Body=body,
+        ContentLength=len(body),
+        Metadata={k: to_json(v) for k, v in commit.headers.items()},
+    )
 
 
 @step("a specific aggregate is loaded async at a specific time")
 @async_run_until_complete
 async def step_impl(context):
-    date_to_load = datetime.datetime.fromtimestamp(0, datetime.timezone.utc) + datetime.timedelta(days=5, hours=12)
+    date_to_load = datetime.datetime.fromtimestamp(
+        0, datetime.timezone.utc
+    ) + datetime.timedelta(days=5, hours=12)
     repo: AsyncDefaultAggregateRepository = context.repository
-    context.aggregate = await repo.get_to(TestAggregate, context.stream_id, date_to_load)
+    context.aggregate = await repo.get_to(
+        TestAggregate, context.stream_id, date_to_load
+    )
 
 
 @step("a specific aggregate is loaded at a specific time")
 def step_impl(context):
-    date_to_load = datetime.datetime.fromtimestamp(0, datetime.timezone.utc) + datetime.timedelta(days=5, hours=12)
+    date_to_load = datetime.datetime.fromtimestamp(
+        0, datetime.timezone.utc
+    ) + datetime.timedelta(days=5, hours=12)
     repo: DefaultAggregateRepository = context.repository
     context.aggregate = repo.get_to(TestAggregate, context.stream_id, date_to_load)
 
 
-@then('the aggregate is loaded at version (\\d+)')
+@then("the aggregate is loaded at version (\\d+)")
 def step_impl(context, version):
     agg: TestAggregate = context.aggregate
-    assert agg.version == int(version), f"Expected version {version} but got {agg.version}"
+    assert agg.version == int(version), (
+        f"Expected version {version} but got {agg.version}"
+    )
 
 
-@when('(\\d+) events are persisted async to an aggregate')
+@when("(\\d+) events are persisted async to an aggregate")
 @async_run_until_complete
 async def step_impl(context, count):
     start_time = time.time()
     for i in range(0, int(count)):
-        agg: TestAggregate = await context.repository.get(TestAggregate, context.stream_id)
+        agg: TestAggregate = await context.repository.get(
+            TestAggregate, context.stream_id
+        )
         agg.raise_event(
-            TestEvent(source=context.stream_id, timestamp=datetime.datetime.now(datetime.timezone.utc), version=i + 1,
-                      value=i))
+            TestEvent(
+                source=context.stream_id,
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
+                version=i + 1,
+                value=i,
+            )
+        )
         await context.repository.save(agg)
     end_time = time.time()
     elapsed = end_time - start_time
 
 
-@when('(\\d+) events are persisted to an aggregate')
+@when("(\\d+) events are persisted to an aggregate")
 def step_impl(context, count):
     for i in range(0, int(count)):
         agg: TestAggregate = context.repository.get(TestAggregate, context.stream_id)
         agg.raise_event(
-            TestEvent(source=context.stream_id, timestamp=datetime.datetime.now(datetime.timezone.utc), version=i + 1,
-                      value=i))
+            TestEvent(
+                source=context.stream_id,
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
+                version=i + 1,
+                value=i,
+            )
+        )
         context.repository.save(agg)
 
 

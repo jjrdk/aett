@@ -14,7 +14,9 @@ class Aggregate(ABC, Generic[T]):
     of the event relies on multiple dispatch to call the correct apply method in the subclass.
     """
 
-    def __init__(self, stream_id: str, commit_sequence: int, memento: Memento[T] = None):
+    def __init__(
+        self, stream_id: str, commit_sequence: int, memento: Memento[T] = None
+    ):
         """
         Initialize the aggregate
 

@@ -12,7 +12,14 @@ use_step_matcher("re")
 @when("an event is applied to the aggregate")
 def step_impl(context):
     a: TestAggregate = context.aggregate
-    a.raise_event(TestEvent(source='test', timestamp=datetime.datetime.now(datetime.timezone.utc), version=1, value=1))
+    a.raise_event(
+        TestEvent(
+            source="test",
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
+            version=1,
+            value=1,
+        )
+    )
 
 
 @then("the aggregate version is (\\d+)")
@@ -25,19 +32,29 @@ def step_impl(context, version: str):
 def step_impl(context):
     tm = TopicMap()
     tm.register(TestEvent)
-    event1: TestEvent = TestEvent(source='test', timestamp=datetime.datetime.now(datetime.timezone.utc), version=1,
-                                  value=1)
-    event2: TestEvent = TestEvent(source='test', timestamp=datetime.datetime.now(datetime.timezone.utc), version=2,
-                                  value=1)
-    msgs = [EventMessage(body=event1, headers={'topic': Topic.get(TestEvent)}),
-            EventMessage(body=event2, headers={'topic': Topic.get(TestEvent)})]
+    event1: TestEvent = TestEvent(
+        source="test",
+        timestamp=datetime.datetime.now(datetime.timezone.utc),
+        version=1,
+        value=1,
+    )
+    event2: TestEvent = TestEvent(
+        source="test",
+        timestamp=datetime.datetime.now(datetime.timezone.utc),
+        version=2,
+        value=1,
+    )
+    msgs = [
+        EventMessage(body=event1, headers={"topic": Topic.get(TestEvent)}),
+        EventMessage(body=event2, headers={"topic": Topic.get(TestEvent)}),
+    ]
     j = to_json([e.to_json() for e in msgs])
     context.events = [EventMessage.from_json(e, tm) for e in from_json(j)]
 
 
 @given("an aggregate")
 def step_impl(context):
-    agg = TestAggregate('test', 0)
+    agg = TestAggregate("test", 0)
     context.aggregate = agg
 
 

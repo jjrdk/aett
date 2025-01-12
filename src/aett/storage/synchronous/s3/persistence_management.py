@@ -22,10 +22,12 @@ class PersistenceManagement(IManagePersistence):
         self._resource.delete_bucket(Bucket=self._s3_bucket)
 
     def purge(self, tenant_id: str):
-        response = self._resource.list_objects_v2(Bucket=self._s3_bucket, Prefix=f'{self._folder_name}/{tenant_id}/')
+        response = self._resource.list_objects_v2(
+            Bucket=self._s3_bucket, Prefix=f"{self._folder_name}/{tenant_id}/"
+        )
 
-        for o in response['Contents']:
-            self._resource.delete_object(Bucket=self._s3_bucket, Key=o['Key'])
+        for o in response["Contents"]:
+            self._resource.delete_object(Bucket=self._s3_bucket, Key=o["Key"])
 
     def get_from(self, checkpoint: int) -> Iterable[Commit]:
         pass

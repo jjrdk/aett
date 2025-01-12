@@ -10,7 +10,8 @@ class SagaRepository(ABC):
     The repository is responsible for loading and saving sagas to the event store,
     typically using the ICommitEvents interface.
     """
-    TSaga = TypeVar('TSaga', bound=Saga)
+
+    TSaga = TypeVar("TSaga", bound=Saga)
 
     @abstractmethod
     def get(self, cls: Type[TSaga], stream_id: str) -> TSaga:

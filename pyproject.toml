@@ -12,6 +12,10 @@ classifiers = [
 ]
 keywords = ["events", "event store", "sqlite", 'postgresql', 'mongodb', 'dynamodb', 's3', 'event sourcing']
 requires-python = ">=3.10,<4.0"
+dependencies = [
+    'pydantic >= 2.10, < 3.0',
+    'multipledispatch ~=1.0'
+]
 
 [project.optional-dependencies]
 "sqlite_async" = ["aiosqlite~=0.20"]
@@ -29,13 +33,12 @@ packages = [
 [tool.poetry.group.test.dependencies]
 behave = "^1.2"
 boto3 = "~1.35"
-pydantic = "~2.10"
 multipledispatch = "~1.0"
 pymongo = "~4.10"
 psycopg = "~3.2.3"
 psycopg-binary = "~3.2.3"
 asyncpg = "~0.30"
-testcontainers = { version = "~4.8", extras = ['minio'] }
+testcontainers = { version = "~4.9", extras = ['minio'] }
 aiosqlite = "~0.20"
 pytest-xdist = "^3.6"
 

@@ -13,4 +13,4 @@ class Topic(object):
 
     @staticmethod
     def get(cls: type) -> str:
-        return cls.__topic__ if hasattr(cls, '__topic__') else cls.__name__
+        return cls.__topic__ if hasattr(cls, "__topic__") else cls.__name__

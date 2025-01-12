@@ -14,49 +14,61 @@ use_step_matcher("re")
 @given("I have an async (?P<storage>.+) commit store")
 def step_impl(context, storage: str):
     context.storage_type = storage
-    context.store = create_async_commit_store(connection_string=context.db, storage_type=storage,
-                                              topic_map=context.topic_map)
+    context.store = create_async_commit_store(
+        connection_string=context.db, storage_type=storage, topic_map=context.topic_map
+    )
 
 
 @given("I have an (?P<storage>.+) commit store")
 def step_impl(context, storage: str):
     context.storage_type = storage
-    context.store = create_commit_store(connection_string=context.db, storage_type=storage,
-                                        topic_map=context.topic_map)
+    context.store = create_commit_store(
+        connection_string=context.db, storage_type=storage, topic_map=context.topic_map
+    )
 
 
 @when("I commit an async event to the stream")
 @async_run_until_complete
 async def step_impl(context):
-    commit = Commit(tenant_id=context.tenant_id,
-                    stream_id=context.stream_id,
-                    stream_revision=1,
-                    commit_id=uuid.uuid4(),
-                    commit_sequence=1,
-                    commit_stamp=datetime.datetime.now(datetime.timezone.utc),
-                    headers={},
-                    events=[EventMessage(body=TestEvent(source='test',
-                                                        timestamp=datetime.datetime.now(),
-                                                        version=1,
-                                                        value=0))],
-                    checkpoint_token=0)
+    commit = Commit(
+        tenant_id=context.tenant_id,
+        stream_id=context.stream_id,
+        stream_revision=1,
+        commit_id=uuid.uuid4(),
+        commit_sequence=1,
+        commit_stamp=datetime.datetime.now(datetime.timezone.utc),
+        headers={},
+        events=[
+            EventMessage(
+                body=TestEvent(
+                    source="test", timestamp=datetime.datetime.now(), version=1, value=0
+                )
+            )
+        ],
+        checkpoint_token=0,
+    )
     await context.store.commit(commit)
 
 
 @when("I commit an event to the stream")
 def step_impl(context):
-    commit = Commit(tenant_id=context.tenant_id,
-                    stream_id=context.stream_id,
-                    stream_revision=1,
-                    commit_id=uuid.uuid4(),
-                    commit_sequence=1,
-                    commit_stamp=datetime.datetime.now(datetime.timezone.utc),
-                    headers={},
-                    events=[EventMessage(body=TestEvent(source='test',
-                                                        timestamp=datetime.datetime.now(),
-                                                        version=1,
-                                                        value=0))],
-                    checkpoint_token=0)
+    commit = Commit(
+        tenant_id=context.tenant_id,
+        stream_id=context.stream_id,
+        stream_revision=1,
+        commit_id=uuid.uuid4(),
+        commit_sequence=1,
+        commit_stamp=datetime.datetime.now(datetime.timezone.utc),
+        headers={},
+        events=[
+            EventMessage(
+                body=TestEvent(
+                    source="test", timestamp=datetime.datetime.now(), version=1, value=0
+                )
+            )
+        ],
+        checkpoint_token=0,
+    )
     context.store.commit(commit)
 
 
@@ -86,37 +98,45 @@ def step_impl(context):
 @when("I commit an async event with nested base models to the stream")
 @async_run_until_complete
 async def step_impl(context):
-    evt = NestedEvent(source='test',
-                      timestamp=datetime.datetime.now(),
-                      version=1,
-                      value=NestedValue(value=DeepNestedValue(value=0)))
-    commit = Commit(tenant_id=context.tenant_id,
-                    stream_id=context.stream_id,
-                    stream_revision=1,
-                    commit_id=uuid.uuid4(),
-                    commit_sequence=1,
-                    commit_stamp=datetime.datetime.now(datetime.timezone.utc),
-                    headers={},
-                    events=[EventMessage(body=evt)],
-                    checkpoint_token=0)
+    evt = NestedEvent(
+        source="test",
+        timestamp=datetime.datetime.now(),
+        version=1,
+        value=NestedValue(value=DeepNestedValue(value=0)),
+    )
+    commit = Commit(
+        tenant_id=context.tenant_id,
+        stream_id=context.stream_id,
+        stream_revision=1,
+        commit_id=uuid.uuid4(),
+        commit_sequence=1,
+        commit_stamp=datetime.datetime.now(datetime.timezone.utc),
+        headers={},
+        events=[EventMessage(body=evt)],
+        checkpoint_token=0,
+    )
     await context.store.commit(commit)
 
 
 @when("I commit an event with nested base models to the stream")
 def step_impl(context):
-    evt = NestedEvent(source='test',
-                      timestamp=datetime.datetime.now(),
-                      version=1,
-                      value=NestedValue(value=DeepNestedValue(value=0)))
-    commit = Commit(tenant_id=context.tenant_id,
-                    stream_id=context.stream_id,
-                    stream_revision=1,
-                    commit_id=uuid.uuid4(),
-                    commit_sequence=1,
-                    commit_stamp=datetime.datetime.now(datetime.timezone.utc),
-                    headers={},
-                    events=[EventMessage(body=evt)],
-                    checkpoint_token=0)
+    evt = NestedEvent(
+        source="test",
+        timestamp=datetime.datetime.now(),
+        version=1,
+        value=NestedValue(value=DeepNestedValue(value=0)),
+    )
+    commit = Commit(
+        tenant_id=context.tenant_id,
+        stream_id=context.stream_id,
+        stream_revision=1,
+        commit_id=uuid.uuid4(),
+        commit_sequence=1,
+        commit_stamp=datetime.datetime.now(datetime.timezone.utc),
+        headers={},
+        events=[EventMessage(body=evt)],
+        checkpoint_token=0,
+    )
     context.store.commit(commit)
 
 
@@ -124,4 +144,6 @@ def step_impl(context):
 def step_impl(context):
     stream = context.stream
     value = stream[0].events[0].body.value.value
-    assert isinstance(value, DeepNestedValue), f"Expected DeepNestedValue, got {type(value)}"
+    assert isinstance(value, DeepNestedValue), (
+        f"Expected DeepNestedValue, got {type(value)}"
+    )

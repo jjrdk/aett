@@ -7,11 +7,13 @@ from aett.storage.synchronous.postgresql import _item_to_commit
 
 
 class PersistenceManagement(IManagePersistence):
-    def __init__(self,
-                 connection_string: str,
-                 topic_map: TopicMap,
-                 commits_table_name: str = COMMITS,
-                 snapshots_table_name: str = SNAPSHOTS):
+    def __init__(
+        self,
+        connection_string: str,
+        topic_map: TopicMap,
+        commits_table_name: str = COMMITS,
+        snapshots_table_name: str = SNAPSHOTS,
+    ):
         self._connection_string: str = connection_string
         self._topic_map = topic_map
         self._commits_table_name = commits_table_name
@@ -19,7 +21,9 @@ class PersistenceManagement(IManagePersistence):
 
     def initialize(self):
         try:
-            with psycopg.connect(self._connection_string, autocommit=True) as connection:
+            with psycopg.connect(
+                self._connection_string, autocommit=True
+            ) as connection:
                 with connection.cursor() as c:
                     c.execute(f"""CREATE TABLE {self._commits_table_name}
         (
@@ -58,21 +62,32 @@ class PersistenceManagement(IManagePersistence):
     def drop(self):
         with psycopg.connect(self._connection_string, autocommit=True) as connection:
             with connection.cursor() as c:
-                c.execute(f"""DROP TABLE {self._snapshots_table_name};DROP TABLE {self._commits_table_name};""")
+                c.execute(
+                    f"""DROP TABLE {self._snapshots_table_name};DROP TABLE {self._commits_table_name};"""
+                )
 
     def purge(self, tenant_id: str):
         with psycopg.connect(self._connection_string, autocommit=True) as connection:
             with connection.cursor() as c:
-                c.execute(f"""DELETE FROM {self._commits_table_name} WHERE TenantId = %s;""", tenant_id)
-                c.execute(f"""DELETE FROM {self._snapshots_table_name} WHERE TenantId = %s;""", tenant_id)
+                c.execute(
+                    f"""DELETE FROM {self._commits_table_name} WHERE TenantId = %s;""",
+                    tenant_id,
+                )
+                c.execute(
+                    f"""DELETE FROM {self._snapshots_table_name} WHERE TenantId = %s;""",
+                    tenant_id,
+                )
 
     def get_from(self, checkpoint: int) -> Iterable[Commit]:
         with psycopg.connect(self._connection_string, autocommit=True) as connection:
             with connection.cursor() as cur:
-                cur.execute(f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+                cur.execute(
+                    f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
                                   FROM {self._commits_table_name}
                                  WHERE CommitStamp >= %s
-                                 ORDER BY CheckpointNumber;""", (checkpoint,))
+                                 ORDER BY CheckpointNumber;""",
+                    (checkpoint,),
+                )
                 fetchall = cur.fetchall()
                 for doc in fetchall:
                     yield _item_to_commit(doc, self._topic_map)

@@ -2,10 +2,17 @@ import boto3
 
 
 class S3Config:
-    def __init__(self, bucket: str, aws_access_key_id: str = None, aws_secret_access_key: str = None,
-                 aws_session_token: str = None,
-                 region: str = 'us-east-1', endpoint_url: str = None, use_tls: bool = True,
-                 profile_name: str = 'default'):
+    def __init__(
+        self,
+        bucket: str,
+        aws_access_key_id: str = None,
+        aws_secret_access_key: str = None,
+        aws_session_token: str = None,
+        profile_name: str = None,
+        region: str = "us-east-1",
+        endpoint_url: str = None,
+        use_tls: bool = True,
+    ):
         """
         Defines the configuration for the S3 client.
         If a profile name is provided, the access key id and secret access are disregarded and the profile credentials
@@ -30,16 +37,15 @@ class S3Config:
         self._profile_name = profile_name
 
     def to_client(self):
-        if self._profile_name != '':
-            session = boto3.Session(profile_name=self._profile_name)
-            return session.client(service_name='s3',
-                                  region_name=self._region,
-                                  endpoint_url=self._endpoint_url,
-                                  verify=self._use_tls)
-        return boto3.client('s3',
-                            aws_access_key_id=self._aws_access_key_id,
-                            aws_secret_access_key=self._aws_secret_access_key,
-                            aws_session_token=self._aws_session_token,
-                            region_name=self._region,
-                            endpoint_url=self._endpoint_url,
-                            verify=self._use_tls)
+        session = boto3.Session(
+            profile_name=self._profile_name,
+            aws_access_key_id=self._aws_access_key_id,
+            aws_secret_access_key=self._aws_secret_access_key,
+            aws_session_token=self._aws_session_token,
+        )
+        return session.client(
+            service_name="s3",
+            region_name=self._region,
+            endpoint_url=self._endpoint_url,
+            verify=self._use_tls,
+        )

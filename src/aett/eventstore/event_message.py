@@ -7,6 +7,7 @@ from aett.eventstore.topic import Topic
 from aett.eventstore.topic_map import TopicMap
 from aett.eventstore.base_event import BaseEvent
 
+
 class EventMessage(BaseModel):
     """
     Represents a single event message within a commit.
@@ -28,20 +29,24 @@ class EventMessage(BaseModel):
         """
         if self.headers is None:
             self.headers = {}
-        if 'topic' not in self.headers:
-            self.headers['topic'] = Topic.get(type(self.body))
+        if "topic" not in self.headers:
+            self.headers["topic"] = Topic.get(type(self.body))
         return to_json(self)
 
     @staticmethod
-    def from_json(j: bytes | str, topic_map: TopicMap) -> 'EventMessage':
+    def from_json(j: bytes | str, topic_map: TopicMap) -> "EventMessage":
         json_dict = from_json(j)
-        headers = json_dict['headers'] if 'headers' in json_dict and json_dict['headers'] is not None else None
-        decoded_body = json_dict['body']
-        topic = decoded_body.pop('$type', None)
-        if topic is None and headers is not None and 'topic' in headers:
-            topic = headers['topic']
-        if headers is not None and topic is None and 'topic' in headers:
-            topic = headers['topic']
+        headers = (
+            json_dict["headers"]
+            if "headers" in json_dict and json_dict["headers"] is not None
+            else None
+        )
+        decoded_body = json_dict["body"]
+        topic = decoded_body.pop("$type", None)
+        if topic is None and headers is not None and "topic" in headers:
+            topic = headers["topic"]
+        if headers is not None and topic is None and "topic" in headers:
+            topic = headers["topic"]
         if topic is None:
             return EventMessage(body=BaseEvent(**decoded_body), headers=headers)
         else:
