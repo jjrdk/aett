@@ -10,11 +10,11 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
-keywords = ["events", "event store", "sqlite", 'postgresql', 'mongodb', 'dynamodb', 's3', 'event sourcing']
+keywords = ["events", "event store", "sqlite", "postgresql", "mongodb", "dynamodb", "s3", "event sourcing"]
 requires-python = ">=3.10,<4.0"
 dependencies = [
-    'pydantic >= 2.10, < 3.0',
-    'multipledispatch ~=1.0'
+    "pydantic >= 2.10, < 3.0",
+    "multipledispatch ~=1.0"
 ]
 
 [project.optional-dependencies]
@@ -33,7 +33,6 @@ packages = [
 [tool.poetry.group.test.dependencies]
 behave = "^1.2"
 boto3 = "~1.35"
-multipledispatch = "~1.0"
 pymongo = "~4.10"
 psycopg = "~3.2.3"
 psycopg-binary = "~3.2.3"
