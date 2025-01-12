@@ -5,6 +5,7 @@ description = "Event store for Python"
 readme = "README.md"
 authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
 license = { file = "LICENSE" }
+urls = { Homepage = "https://github.com/jjrdk/aett" }
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python",
@@ -44,11 +45,8 @@ pytest-xdist = "^3.6"
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.9"
 
-[project.urls]
-Homepage = "https://github.com/jjrdk/aett"
-
 [project.scripts]
 
 [build-system]
-requires = ["setuptools>=70.0.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
