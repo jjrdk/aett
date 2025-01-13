@@ -12,6 +12,6 @@ def _item_to_commit(item, topic_map: TopicMap):
         commit_sequence=item[5],
         commit_stamp=item[6],
         headers=from_json(item[8]),
-        events=[EventMessage.from_json(e, topic_map) for e in from_json(item[9])],
+        events=[EventMessage.from_dict(e, topic_map) for e in from_json(item[9])],
         checkpoint_token=item[7],
     )

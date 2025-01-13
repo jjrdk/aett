@@ -15,7 +15,7 @@ class Aggregate(ABC, Generic[T]):
     """
 
     def __init__(
-        self, stream_id: str, commit_sequence: int, memento: Memento[T] = None
+        self, stream_id: str, commit_sequence: int, memento: Memento[T] | None = None
     ):
         """
         Initialize the aggregate

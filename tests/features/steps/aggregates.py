@@ -49,7 +49,7 @@ def step_impl(context):
         EventMessage(body=event2, headers={"topic": Topic.get(TestEvent)}),
     ]
     j = to_json([e.to_json() for e in msgs])
-    context.events = [EventMessage.from_json(e, tm) for e in from_json(j)]
+    context.events = [EventMessage.from_dict(e, tm) for e in from_json(j)]
 
 
 @given("an aggregate")

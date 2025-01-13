@@ -32,7 +32,7 @@ class AggregateRepository(ABC):
         self,
         cls: Type[TAggregate],
         stream_id: str,
-        max_time: datetime = datetime.datetime.max,
+        max_time: datetime.datetime = datetime.datetime.max,
     ) -> TAggregate:
         """
         Gets the aggregate with the specified stream id and type
@@ -44,7 +44,7 @@ class AggregateRepository(ABC):
         pass
 
     @abstractmethod
-    def save(self, aggregate: T, headers: Dict[str, str] = None) -> None:
+    def save(self, aggregate: T, headers: Dict[str, str] | None = None) -> None:
         """
         Save the aggregate to the repository.
 

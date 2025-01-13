@@ -118,7 +118,7 @@ class CommitStore(ICommitEvents):
             commit_stamp=doc.get("commit_stamp"),
             headers=doc.get("headers"),
             events=[
-                EventMessage.from_json(e, self._topic_map) for e in doc.get("events")
+                EventMessage.from_dict(e, self._topic_map) for e in doc.get("events")
             ],
             checkpoint_token=0,
         )

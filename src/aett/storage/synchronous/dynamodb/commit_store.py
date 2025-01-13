@@ -122,7 +122,7 @@ class CommitStore(ICommitEvents):
             ),
             headers=from_json(bytes(item["Headers"])),
             events=[
-                EventMessage.from_json(e, self._topic_map)
+                EventMessage.from_dict(e, self._topic_map)
                 for e in from_json(bytes(item["Events"]))
             ],
             checkpoint_token=0,

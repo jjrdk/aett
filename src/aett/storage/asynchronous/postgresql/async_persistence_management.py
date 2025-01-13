@@ -2,6 +2,7 @@ import logging
 from typing import Iterable
 
 import asyncpg
+from asyncpg import Connection
 
 from aett.eventstore import (
     IManagePersistenceAsync,
@@ -28,7 +29,7 @@ class AsyncPersistenceManagement(IManagePersistenceAsync):
 
     async def initialize(self):
         try:
-            connection = await asyncpg.connect(self._connection_string)
+            connection: Connection = await asyncpg.connect(self._connection_string)
             await connection.execute(f"""CREATE TABLE {self._commits_table_name}
         (
             TenantId varchar(64) NOT NULL,
@@ -59,8 +60,6 @@ class AsyncPersistenceManagement(IManagePersistenceAsync):
             Headers bytea NOT NULL,
             CONSTRAINT PK_Snapshots PRIMARY KEY (TenantId, StreamId, StreamRevision)
         );""")
-            await connection.commit()
-
         except Exception as e:
             logging.error(
                 f"Failed to initialize persistence with error {e}", exc_info=True

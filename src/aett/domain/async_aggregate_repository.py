@@ -28,11 +28,12 @@ class AsyncAggregateRepository(ABC):
         """
         pass
 
+    @abstractmethod
     async def get_to(
         self,
         cls: Type[TAggregate],
         stream_id: str,
-        max_time: datetime = datetime.datetime.max,
+        max_time: datetime.datetime = datetime.datetime.max,
     ) -> TAggregate:
         """
         Gets the aggregate with the specified stream id and type
