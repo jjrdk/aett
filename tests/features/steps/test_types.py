@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from aett.domain import Aggregate, Saga, ConflictDelegate
 from aett.eventstore import DomainEvent, Memento, Topic
+from aett.eventstore.base_command import BaseCommand
 
 
 class DeepNestedValue(BaseModel):
@@ -24,6 +25,11 @@ class TestEvent(DomainEvent):
     value: int
 
 
+@Topic("Command")
+class TestCommand(BaseCommand):
+    value: int
+
+
 class TestMemento(Memento):
     pass
 
@@ -35,7 +41,7 @@ class TestEventConflictDelegate(ConflictDelegate[TestEvent, TestEvent]):
 
 class TestAggregate(Aggregate[TestMemento]):
     def __init__(
-        self, stream_id: str, commit_sequence: int, memento: TestMemento = None
+            self, stream_id: str, commit_sequence: int, memento: TestMemento = None
     ):
         self.value = 0
         super().__init__(
@@ -78,4 +84,8 @@ class TestAggregate(Aggregate[TestMemento]):
 
 class TestSaga(Saga):
     def _apply(self, event: TestEvent) -> None:
-        pass
+        cmd = TestCommand(aggregate_id="test",
+                          version=0,
+                          timestamp=datetime.datetime.now(datetime.timezone.utc),
+                          value=event.value)
+        self.dispatch(cmd)

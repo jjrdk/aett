@@ -18,7 +18,7 @@ Feature: Aggregate repository behavior
 
     Examples:
       | storage  |
-      #| dynamo   |
+      | dynamo   |
       | inmemory |
       | mongo    |
       | postgres |
@@ -49,7 +49,7 @@ Feature: Aggregate repository behavior
 
     Examples:
       | storage  |
-      #| dynamo   |
+      | dynamo   |
       | inmemory |
       | mongo    |
       | postgres |
@@ -78,7 +78,7 @@ Feature: Aggregate repository behavior
 
     Examples:
       | storage  |
-      #| dynamo   |
+      | dynamo   |
       | inmemory |
       | mongo    |
       | postgres |
@@ -111,7 +111,7 @@ Feature: Aggregate repository behavior
 
     Examples:
       | storage  |
-      #| dynamo   |
+      | dynamo   |
       | inmemory |
       | mongo    |
       | postgres |
@@ -140,7 +140,7 @@ Feature: Aggregate repository behavior
 
     Examples:
       | storage  |
-      ##| dynamo   |
+      | dynamo   |
       | inmemory |
       | mongo    |
       | postgres |
@@ -169,7 +169,7 @@ Feature: Aggregate repository behavior
 
     Examples:
       | storage  | count |
-      #| dynamo   | 1000  |
+      | dynamo   | 1000  |
       | inmemory | 1000  |
       | mongo    | 1000  |
       | postgres | 1000  |

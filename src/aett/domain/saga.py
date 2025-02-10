@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import List, Dict, Any
 
-from aett.domain.constants import T
+from aett.domain.constants import TCommand
 from aett.eventstore import EventMessage, BaseEvent
 
 
@@ -42,14 +42,14 @@ class Saga(ABC):
         return self._version
 
     @property
-    def commit_sequence(self):
+    def commit_sequence(self) -> int:
         """
         Gets the commit sequence number of the saga
         """
         return self._commit_sequence
 
     @property
-    def headers(self):
+    def headers(self) -> Dict[str, Any]:
         """
         Gets the metadata headers of the saga
         """
@@ -66,7 +66,7 @@ class Saga(ABC):
         self.uncommitted.append(EventMessage(body=event, headers=self._headers))
         self._version += 1
 
-    def dispatch(self, command: T) -> None:
+    def dispatch(self, command: TCommand) -> None:
         """
         Adds a command to the stream to be dispatched when the saga is committed
         :param command: The command to dispatch

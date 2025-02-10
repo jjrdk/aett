@@ -161,7 +161,12 @@ def step_impl(context):
 
 
 def seed_dynamo(context, x, time_stamp):
-    resource = boto3.resource(
+    session = boto3.Session(
+        aws_access_key_id="dummy",
+        aws_secret_access_key="dummy",
+        aws_session_token="dummy",
+    )
+    resource = session.resource(
         "dynamodb",
         region_name="localhost",
         endpoint_url=f"http://localhost:{context.db}",

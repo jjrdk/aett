@@ -2,7 +2,7 @@ import datetime
 from abc import ABC, abstractmethod
 from typing import TypeVar, Type, Dict
 
-from aett.domain.aggregate import Aggregate, T
+from aett.domain.aggregate import Aggregate
 
 
 class AggregateRepository(ABC):
@@ -44,7 +44,7 @@ class AggregateRepository(ABC):
         pass
 
     @abstractmethod
-    def save(self, aggregate: T, headers: Dict[str, str] | None = None) -> None:
+    def save(self, aggregate: TAggregate, headers: Dict[str, str] | None = None) -> None:
         """
         Save the aggregate to the repository.
 

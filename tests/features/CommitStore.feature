@@ -46,7 +46,7 @@ Feature: Persist commits
 
     Examples:
       | storage  |
-      #| dynamo   |
+      | dynamo   |
       | inmemory |
       | mongo    |
       | postgres |

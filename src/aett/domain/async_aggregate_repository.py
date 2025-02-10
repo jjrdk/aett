@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from typing import TypeVar, Type, Dict
 
 from aett.domain import Aggregate
-from aett.domain.constants import T
 
 
 class AsyncAggregateRepository(ABC):
@@ -45,7 +44,7 @@ class AsyncAggregateRepository(ABC):
         pass
 
     @abstractmethod
-    async def save(self, aggregate: T, headers: Dict[str, str] = None) -> None:
+    async def save(self, aggregate: TAggregate, headers: Dict[str, str] = None) -> None:
         """
         Save the aggregate to the repository.
 

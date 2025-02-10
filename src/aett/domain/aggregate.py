@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import Generic, List
 
-from aett.domain.constants import T
+from aett.domain.constants import TMemento
 from aett.eventstore import DomainEvent, EventMessage, Memento
 
 
-class Aggregate(ABC, Generic[T]):
+class Aggregate(ABC, Generic[TMemento]):
     """
     An aggregate is a cluster of domain objects that can be treated as a single unit. The aggregate base class requires
     implementors to provide a method to apply a snapshot and to get a memento.
@@ -15,7 +15,7 @@ class Aggregate(ABC, Generic[T]):
     """
 
     def __init__(
-        self, stream_id: str, commit_sequence: int, memento: Memento[T] | None = None
+        self, stream_id: str, commit_sequence: int, memento: Memento[TMemento] | None = None
     ):
         """
         Initialize the aggregate
@@ -53,7 +53,7 @@ class Aggregate(ABC, Generic[T]):
         return self._commit_sequence
 
     @abstractmethod
-    def apply_memento(self, memento: T) -> None:
+    def apply_memento(self, memento: TMemento) -> None:
         """
         Apply a memento to the aggregate
         :param memento: The memento to apply
@@ -62,7 +62,7 @@ class Aggregate(ABC, Generic[T]):
         pass
 
     @abstractmethod
-    def get_memento(self) -> T:
+    def get_memento(self) -> TMemento:
         """
         Get a memento of the current state of the aggregate
         :return: A memento instance

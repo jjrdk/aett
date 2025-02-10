@@ -36,7 +36,7 @@ class PersistenceManagement(IManagePersistence):
         tables = self.dynamodb.tables.all()
         table_names = [table.name for table in tables]
         if self.commits_table_name not in table_names:
-            _ = self.dynamodb.create_table(
+            response = self.dynamodb.create_table(
                 TableName=self.commits_table_name,
                 KeySchema=[
                     {"AttributeName": "TenantAndStream", "KeyType": "HASH"},

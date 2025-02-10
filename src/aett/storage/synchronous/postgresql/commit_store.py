@@ -27,11 +27,11 @@ class CommitStore(ICommitEvents):
     def __init__(
         self,
         connection_string: str,
-        topic_map: TopicMap,
+        topic_map: TopicMap = None,
         conflict_detector: ConflictDetector = None,
         table_name=COMMITS,
     ):
-        self._topic_map = topic_map
+        self._topic_map = topic_map if topic_map else TopicMap()
         self._connection_string = connection_string
         self._conflict_detector = (
             conflict_detector if conflict_detector is not None else ConflictDetector()

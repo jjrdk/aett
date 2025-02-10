@@ -20,7 +20,7 @@ Feature: Persist snapshots
 
     Examples:
       | storage  |
-      #| dynamo   |
+      | dynamo   |
       | inmemory |
       | mongo    |
       | postgres |

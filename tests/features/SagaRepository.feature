@@ -18,7 +18,7 @@ Feature: Saga repository behavior
 
     Examples:
       | storage  |
-      #| dynamo   |
+      | dynamo   |
       | inmemory |
       | mongo    |
       | postgres |
@@ -49,7 +49,7 @@ Feature: Saga repository behavior
 
     Examples:
       | storage  |
-      #| dynamo   |
+      | dynamo   |
       | inmemory |
       | mongo    |
       | postgres |
