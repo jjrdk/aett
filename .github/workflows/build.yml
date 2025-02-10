@@ -13,3 +13,5 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: ./.github/build
+      with:
+        release-tag: 0.0.0

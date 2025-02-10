@@ -3,7 +3,6 @@ inputs:
   release-tag:
     description: 'The release tag to use for the package'
     required: true
-    default: '0.0.0'
 runs:
   using: composite
   steps:
