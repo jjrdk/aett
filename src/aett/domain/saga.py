@@ -74,3 +74,5 @@ class Saga(ABC):
         """
         index = len(self._headers)
         self._headers[f"UndispatchedMessage.{index}"] = command
+        from aett.eventstore import Topic
+        self._headers[f"Topic.UndispatchedMessage.{index}"] = Topic.get(type(command))

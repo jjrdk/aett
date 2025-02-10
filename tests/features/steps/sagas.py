@@ -32,8 +32,3 @@ def step_impl(context):
 @then("a command is emitted from the saga")
 def step_impl(context):
     assert 'UndispatchedMessage.0' in context.saga.headers
-
-
-@step("can be read from the persisted event headers")
-def step_impl(context):
-    raise NotImplementedError(u'STEP: And can be read from the persisted event headers')
