@@ -41,7 +41,7 @@ class TestEventConflictDelegate(ConflictDelegate[TestEvent, TestEvent]):
 
 class TestAggregate(Aggregate[TestMemento]):
     def __init__(
-            self, stream_id: str, commit_sequence: int, memento: TestMemento = None
+        self, stream_id: str, commit_sequence: int, memento: TestMemento = None
     ):
         self.value = 0
         super().__init__(
@@ -84,8 +84,10 @@ class TestAggregate(Aggregate[TestMemento]):
 
 class TestSaga(Saga):
     def _apply(self, event: TestEvent) -> None:
-        cmd = TestCommand(aggregate_id="test",
-                          version=0,
-                          timestamp=datetime.datetime.now(datetime.timezone.utc),
-                          value=event.value)
+        cmd = TestCommand(
+            aggregate_id="test",
+            version=0,
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
+            value=event.value,
+        )
         self.dispatch(cmd)

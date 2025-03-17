@@ -19,11 +19,11 @@ from aett.storage.asynchronous.mongodb.mapping import _doc_to_commit
 
 class AsyncCommitStore(ICommitEventsAsync):
     def __init__(
-        self,
-        db: database.AsyncDatabase,
-        topic_map: TopicMap,
-        conflict_detector: ConflictDetector = None,
-        table_name=COMMITS,
+            self,
+            db: database.AsyncDatabase,
+            topic_map: TopicMap,
+            conflict_detector: ConflictDetector = None,
+            table_name=COMMITS,
     ):
         self._topic_map = topic_map
         self._collection: collection.AsyncCollection = db.get_collection(table_name)
@@ -35,11 +35,11 @@ class AsyncCommitStore(ICommitEventsAsync):
         )
 
     async def get(
-        self,
-        tenant_id: str,
-        stream_id: str,
-        min_revision: int = 0,
-        max_revision: int = MAX_INT,
+            self,
+            tenant_id: str,
+            stream_id: str,
+            min_revision: int = 0,
+            max_revision: int = MAX_INT,
     ) -> typing.AsyncIterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
@@ -54,15 +54,15 @@ class AsyncCommitStore(ICommitEventsAsync):
 
         query_response: AsyncCursor = self._collection.find({"$and": [filters]})
         async for doc in query_response.sort(
-            "CheckpointToken", direction=pymongo.ASCENDING
+                "CheckpointToken", direction=pymongo.ASCENDING
         ):
             yield _doc_to_commit(doc, self._topic_map)
 
     async def get_to(
-        self,
-        tenant_id: str,
-        stream_id: str,
-        max_time: datetime.datetime = datetime.datetime.max,
+            self,
+            tenant_id: str,
+            stream_id: str,
+            max_time: datetime.datetime = datetime.datetime.max,
     ) -> typing.AsyncIterable[Commit]:
         filters = {
             "TenantId": tenant_id,
@@ -72,13 +72,13 @@ class AsyncCommitStore(ICommitEventsAsync):
 
         query_response: cursor.AsyncCursor = self._collection.find({"$and": [filters]})
         async for doc in query_response.sort(
-            "CheckpointToken", direction=pymongo.ASCENDING
+                "CheckpointToken", direction=pymongo.ASCENDING
         ):
             yield _doc_to_commit(doc, self._topic_map)
 
     async def get_all_to(
-        self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
-    ) -> Iterable[Commit]:
+            self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
+    ) -> typing.AsyncIterable[Commit]:
         filters = {
             "TenantId": tenant_id,
             "CommitStamp": {"$lte": int(max_time.timestamp())},
@@ -86,11 +86,11 @@ class AsyncCommitStore(ICommitEventsAsync):
 
         query_response: cursor.AsyncCursor = self._collection.find({"$and": [filters]})
         async for doc in query_response.sort(
-            "CheckpointToken", direction=pymongo.ASCENDING
+                "CheckpointToken", direction=pymongo.ASCENDING
         ):
             yield _doc_to_commit(doc, self._topic_map)
 
-    async def commit(self, commit: Commit) -> None:
+    async def commit(self, commit: Commit) -> Commit:
         try:
             seq_ = await self._counters_collection.find_one_and_update(
                 filter={"_id": "CheckpointToken"}, update={"$inc": {"seq": 1}}
@@ -110,13 +110,22 @@ class AsyncCommitStore(ICommitEventsAsync):
                 "CheckpointToken": int(ret),
             }
             _ = await self._collection.insert_one(doc)
+            return Commit(tenant_id=commit.tenant_id,
+                          stream_id=commit.stream_id,
+                          stream_revision=commit.stream_revision,
+                          commit_id=commit.commit_id,
+                          commit_sequence=commit.commit_sequence,
+                          commit_stamp=commit.commit_stamp,
+                          headers=commit.headers,
+                          events=commit.events,
+                          checkpoint_token=ret)
         except Exception as e:
             if isinstance(e, pymongo.errors.DuplicateKeyError):
                 if await self._detect_duplicate(
-                    commit.commit_id,
-                    commit.tenant_id,
-                    commit.stream_id,
-                    commit.commit_sequence,
+                        commit.commit_id,
+                        commit.tenant_id,
+                        commit.stream_id,
+                        commit.commit_sequence,
                 ):
                     raise Exception(
                         f"Commit {commit.commit_id} already exists in stream {commit.stream_id}"
@@ -137,7 +146,7 @@ class AsyncCommitStore(ICommitEventsAsync):
                 )
 
     async def _detect_duplicate(
-        self, commit_id: UUID, tenant_id: str, stream_id: str, commit_sequence: int
+            self, commit_id: UUID, tenant_id: str, stream_id: str, commit_sequence: int
     ) -> bool:
         duplicate_check = await self._collection.find_one(
             {
@@ -163,8 +172,8 @@ class AsyncCommitStore(ICommitEventsAsync):
         async for doc in query_response:
             c = _doc_to_commit(doc, self._topic_map)
             if self._conflict_detector.conflicts_with(
-                list(map(self._get_body, commit.events)),
-                list(map(self._get_body, c.events)),
+                    list(map(self._get_body, commit.events)),
+                    list(map(self._get_body, c.events)),
             ):
                 return True, -1
             i = int(doc["StreamRevision"])

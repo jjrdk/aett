@@ -44,7 +44,9 @@ class AggregateRepository(ABC):
         pass
 
     @abstractmethod
-    def save(self, aggregate: TAggregate, headers: Dict[str, str] | None = None) -> None:
+    def save(
+        self, aggregate: TAggregate, headers: Dict[str, str] | None = None
+    ) -> None:
         """
         Save the aggregate to the repository.
 

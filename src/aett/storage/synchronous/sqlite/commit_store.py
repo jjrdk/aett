@@ -136,7 +136,7 @@ class CommitStore(ICommitEvents):
                     checkpoint_token=checkpoint_number[0],
                 )
 
-        except sqlite3.IntegrityError as ie:
+        except sqlite3.IntegrityError:
             if self._detect_duplicate(
                 commit.commit_id, commit.tenant_id, commit.stream_id
             ):

@@ -6,21 +6,21 @@ from aett.eventstore import Commit
 
 class IManagePersistence(ABC):
     @abstractmethod
-    def initialize(self):
+    def initialize(self) -> None:
         """
         Initializes the persistence mechanism.
         """
         pass
 
     @abstractmethod
-    def drop(self):
+    def drop(self) -> None:
         """
         Drops the persistence mechanism.
         """
         pass
 
     @abstractmethod
-    def purge(self, tenant_id: str):
+    def purge(self, tenant_id: str) -> None:
         """
         Purges the persistence mechanism.
 

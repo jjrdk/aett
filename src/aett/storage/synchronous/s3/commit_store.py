@@ -135,7 +135,7 @@ class CommitStore(ICommitEvents):
             Key=commit_key,
             Body=body,
             ContentLength=len(body),
-            Metadata={k: to_json(v).decode('utf-8') for k, v in commit.headers.items()},
+            Metadata={k: to_json(v).decode("utf-8") for k, v in commit.headers.items()},
         )
 
     def check_exists(self, commit_sequence: int, commit: Commit):

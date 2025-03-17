@@ -1,6 +1,9 @@
 import inspect
 import os.path
 import uuid
+from typing import Coroutine
+
+from behave.api.async_step import async_run_until_complete
 
 from aett.eventstore import TopicMap
 from steps.test_types import TestEvent
@@ -14,12 +17,15 @@ def before_scenario(context, _):
     context.topic_map = tm
 
 
-def after_scenario(context, _):
+@async_run_until_complete
+async def after_scenario(context, _):
     if hasattr(context, "mgmt"):
-        context.mgmt.drop()
+        dropped: Coroutine | None = context.mgmt.drop()
+        if dropped:
+            await dropped
     if (
-        hasattr(context, "db")
-        and isinstance(context.db, str)
-        and os.path.exists(context.db)
+            hasattr(context, "db")
+            and isinstance(context.db, str)
+            and os.path.exists(context.db)
     ):
         os.remove(context.db)

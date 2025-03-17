@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, AsyncIterable
 
 import pymongo
 from pymongo.asynchronous import collection, cursor
@@ -118,7 +118,7 @@ class AsyncPersistenceManagement(IManagePersistenceAsync):
         c = self.db.get_collection(self.commits_table_name)
         await c.delete_many({"TenantId": tenant_id})
 
-    async def get_from(self, checkpoint: int) -> Iterable[Commit]:
+    async def get_from(self, checkpoint: int) -> AsyncIterable[Commit]:
         c = self.db.get_collection(self.commits_table_name)
         filters = {"CommitSequence": {"$gte": checkpoint}}
         query_response: cursor.AsyncCursor = c.find({"$and": [filters]})

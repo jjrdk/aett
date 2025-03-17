@@ -42,7 +42,7 @@ class ICommitEvents(ABC):
         tenant_id: str,
         stream_id: str,
         max_time: datetime.datetime = datetime.datetime.max,
-    ) -> typing.AsyncIterable[Commit]:
+    ) -> typing.Iterable[Commit]:
         """
         Gets the corresponding commits from the stream indicated starting at the revision specified until the
         end of the stream sorted in ascending order--from oldest to newest.

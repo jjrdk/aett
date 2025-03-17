@@ -4,7 +4,7 @@ import logging
 import uuid
 from typing import Type, Dict
 
-from pydantic_core import from_json
+from pydantic_core import from_json, to_json
 
 from aett.domain.aggregate_repository import AggregateRepository, Aggregate
 from aett.eventstore import ICommitEvents, IAccessSnapshots, Commit, Snapshot, MAX_INT
@@ -99,14 +99,10 @@ class DefaultAggregateRepository(AggregateRepository):
         aggregate.uncommitted.clear()
         return aggregate
 
-    def save(
-        self, aggregate: AggregateRepository.TAggregate, headers: Dict[str, str] = None
-    ) -> None:
+    def save(self, aggregate: AggregateRepository.TAggregate, **kwargs) -> None:
         self._logger.debug(
             f"Saving aggregate {aggregate.id} at version {aggregate.version}"
         )
-        if headers is None:
-            headers = {}
         if len(aggregate.uncommitted) == 0:
             return
         commit = Commit(
@@ -116,7 +112,7 @@ class DefaultAggregateRepository(AggregateRepository):
             commit_id=uuid.uuid4(),
             commit_sequence=aggregate.commit_sequence + 1,
             commit_stamp=datetime.datetime.now(datetime.timezone.utc),
-            headers=dict(headers),
+            headers={key: to_json(value).decode("utf-8") for key, value in kwargs},
             events=list(aggregate.uncommitted),
             checkpoint_token=0,
         )
@@ -129,13 +125,15 @@ class DefaultAggregateRepository(AggregateRepository):
         cls: Type[AggregateRepository.TAggregate],
         stream_id: str,
         version: int = MAX_INT,
-        headers: Dict[str, str] = None,
+        **kwargs,
     ) -> None:
         self._logger.debug(
             f"Snapshotting aggregate {cls.__name__} with id {stream_id} at version {version}"
         )
         agg = self.get(cls, stream_id, version)
-        self._snapshot_aggregate(agg, headers)
+        self._snapshot_aggregate(
+            agg, {key: to_json(value).decode("utf-8") for key, value in kwargs}
+        )
 
     def snapshot_at(
         self,

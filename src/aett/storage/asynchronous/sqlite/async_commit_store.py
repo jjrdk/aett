@@ -1,5 +1,5 @@
 import datetime
-from typing import Iterable
+from typing import Iterable, AsyncIterable
 from uuid import UUID
 
 import aiosqlite
@@ -37,7 +37,7 @@ class AsyncCommitStore(ICommitEventsAsync):
         stream_id: str,
         min_revision: int = 0,
         max_revision: int = MAX_INT,
-    ):
+    ) -> AsyncIterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
         async with aiosqlite.connect(self._connection_string) as connection:
@@ -62,7 +62,7 @@ class AsyncCommitStore(ICommitEventsAsync):
         tenant_id: str,
         stream_id: str,
         max_time: datetime.datetime = datetime.datetime.max,
-    ) -> Iterable[Commit]:
+    ) -> AsyncIterable[Commit]:
         async with aiosqlite.connect(self._connection_string) as connection:
             cur = await connection.cursor()
             await cur.execute(
@@ -80,7 +80,7 @@ class AsyncCommitStore(ICommitEventsAsync):
 
     async def get_all_to(
         self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
-    ) -> Iterable[Commit]:
+    ) -> AsyncIterable[Commit]:
         async with aiosqlite.connect(self._connection_string) as connection:
             cur = await connection.cursor()
             await cur.execute(
@@ -96,7 +96,7 @@ class AsyncCommitStore(ICommitEventsAsync):
                 yield _item_to_commit(doc, self._topic_map)
             cur.close()
 
-    async def commit(self, commit: Commit):
+    async def commit(self, commit: Commit) -> Commit:
         try:
             async with aiosqlite.connect(self._connection_string) as connection:
                 cur: aiosqlite.Cursor = await connection.cursor()

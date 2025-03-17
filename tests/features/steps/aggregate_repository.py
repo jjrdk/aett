@@ -299,7 +299,7 @@ def seed_mongo(context, x, time_stamp):
 def seed_postgres(context, x, time_stamp):
     with psycopg.connect(context.db) as conn:
         conn.execute(
-            f"""INSERT
+            """INSERT
                       INTO commits
                          ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -336,7 +336,7 @@ def seed_postgres(context, x, time_stamp):
 async def seed_postgres_async(context, x, time_stamp):
     conn = await asyncpg.connect(context.db)
     await conn.execute(
-        f"""INSERT
+        """INSERT
                       INTO commits
                          ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -372,7 +372,7 @@ def seed_sqlite(context, x, time_stamp):
     with sqlite3.connect(context.db) as conn:
         cur = conn.cursor()
         cur.execute(
-            f"""INSERT
+            """INSERT
                       INTO commits
                          ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -412,7 +412,7 @@ async def seed_sqlite_async(context, x, time_stamp):
     async with aiosqlite.connect(context.db) as conn:
         async with conn.cursor() as cur:
             await cur.execute(
-                f"""INSERT
+                """INSERT
                       INTO commits
                          ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

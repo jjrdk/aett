@@ -2,7 +2,6 @@ from typing import Dict, Any
 
 from pydantic import BaseModel, Field
 
-from aett.eventstore.base_event import BaseEvent
 from aett.eventstore.topic import Topic
 from aett.eventstore.topic_map import TopicMap
 
@@ -14,9 +13,11 @@ class EventMessage(BaseModel):
 
     body: Any = Field(description="Gets the body of the event message.")
 
-    headers: Dict[str, Any] | None = Field(default=None,
-                                           description="Gets the metadata which provides additional, "
-                                                       "unstructured information about this event message.")
+    headers: Dict[str, Any] | None = Field(
+        default=None,
+        description="Gets the metadata which provides additional, "
+        "unstructured information about this event message.",
+    )
 
     def to_json(self) -> dict:
         """
@@ -43,5 +44,9 @@ class EventMessage(BaseModel):
             return EventMessage(body=decoded_body, headers=headers)
         else:
             t = topic_map.get(topic=topic)
-            body = t.model_validate(decoded_body) if t is not None and issubclass(t, BaseModel) else t(**decoded_body)
+            body = (
+                t.model_validate(decoded_body)
+                if t is not None and issubclass(t, BaseModel)
+                else t(**decoded_body)
+            )
             return EventMessage(body=body, headers=headers)

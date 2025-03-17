@@ -21,7 +21,7 @@ class ICommitEventsAsync(ABC):
         stream_id: str,
         min_revision: int = 0,
         max_revision: int = MAX_INT,
-    ) -> Iterable[Commit]:
+    ) -> typing.AsyncIterable[Commit]:
         """
         Gets the corresponding commits from the stream indicated starting at the revision specified until the
         end of the stream sorted in ascending order--from oldest to newest.
@@ -59,7 +59,7 @@ class ICommitEventsAsync(ABC):
     @abstractmethod
     async def get_all_to(
         self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
-    ) -> Iterable[Commit]:
+    ) -> typing.AsyncIterable[Commit]:
         """
         Gets the corresponding commits from the stream indicated starting at the revision specified until the
         end of the stream sorted in ascending order--from oldest to newest.
@@ -73,7 +73,7 @@ class ICommitEventsAsync(ABC):
         pass
 
     @abstractmethod
-    async def commit(self, commit: Commit):
+    async def commit(self, commit: Commit) -> Commit:
         """
         Writes the to-be-committed events stream provided to the underlying persistence mechanism.
 

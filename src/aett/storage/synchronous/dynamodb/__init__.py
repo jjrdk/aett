@@ -2,12 +2,12 @@ import boto3
 
 
 def _get_resource(
-        profile_name: str | None = None,
-        aws_access_key_id: str | None = None,
-        aws_secret_access_key: str | None = None,
-        aws_session_token: str | None = None,
-        region: str = "eu-central-1",
-        port: int = 8000,
+    profile_name: str | None = None,
+    aws_access_key_id: str | None = None,
+    aws_secret_access_key: str | None = None,
+    aws_session_token: str | None = None,
+    region: str = "eu-central-1",
+    port: int = 8000,
 ):
     session = boto3.Session(
         profile_name=profile_name,

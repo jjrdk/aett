@@ -72,7 +72,8 @@ class Saga(ABC):
         :param command: The command to dispatch
         :return: None
         """
-        index = len(self._headers)
-        self._headers[f"UndispatchedMessage.{index}"] = command
         from aett.eventstore import Topic
-        self._headers[f"Topic.UndispatchedMessage.{index}"] = Topic.get(type(command))
+
+        topic_header = Topic.get(type(command))
+        self._headers[f"UndispatchedMessage.{len(self._headers)}"] = EventMessage(body=command,
+                                                                                  headers={"topic": topic_header})

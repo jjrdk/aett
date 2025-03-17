@@ -107,7 +107,7 @@ async def step_impl(context, storage: str):
                 endpoint_url=f"http://localhost:{exposed_port}",
                 use_tls=False,
                 aws_access_key_id="minioadmin",
-                aws_secret_access_key="minioadmin"
+                aws_secret_access_key="minioadmin",
             )
             mgmt = S3PersistenceManagement(s3_config=context.db)
             mgmt.initialize()

@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, List
+from typing import Any, List, Self
 
 from aett.eventstore.topic import Topic
 
@@ -12,26 +12,30 @@ class TopicMap:
     def __init__(self):
         self.__topics = {}
 
-    def add(self, topic: str, cls: type):
+    def add(self, topic: str, cls: type) -> Self:
         """
         Adds the topic and class to the map.
         :param topic: The topic of the event.
         :param cls: The class of the event.
         """
         self.__topics[topic] = cls
+        return self
 
-    def register(self, instance: Any):
+    def register(self, instance: Any) -> Self:
         t = instance if isinstance(instance, type) else type(instance)
         topic = Topic.get(t)
         if topic not in self.__topics:
             self.add(topic, t)
 
-    def register_module(self, module: object):
+        return self
+
+    def register_module(self, module: object) -> Self:
         """
         Registers all the classes in the module.
         """
         for c in inspect.getmembers(module, inspect.isclass):
             self.register(c[1])
+        return self
 
     def get(self, topic: str) -> type | None:
         """

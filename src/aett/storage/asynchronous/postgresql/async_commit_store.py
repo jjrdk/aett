@@ -89,7 +89,7 @@ class AsyncCommitStore(ICommitEventsAsync):
 
     async def get_all_to(
         self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
-    ) -> Iterable[Commit]:
+    ) -> typing.AsyncIterable[Commit]:
         connection = await asyncpg.connect(self._connection_string)
         fetchall = await connection.fetch(
             f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
@@ -102,7 +102,7 @@ class AsyncCommitStore(ICommitEventsAsync):
         for doc in fetchall:
             yield _item_to_commit(doc, self._topic_map)
 
-    async def commit(self, commit: Commit):
+    async def commit(self, commit: Commit) -> Commit:
         try:
             connection = await asyncpg.connect(self._connection_string)
             json = to_json([e.to_json() for e in commit.events])

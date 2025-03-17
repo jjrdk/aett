@@ -72,7 +72,7 @@ class AsyncDefaultAggregateRepository(AsyncAggregateRepository):
         memento_type = (
             inspect.signature(cls.apply_memento).parameters["memento"].annotation
         )
-        aggregate = cls(
+        aggregate: Aggregate = cls(
             stream_id,
             commit_sequence,
             memento_type(**from_json(snapshot.payload))

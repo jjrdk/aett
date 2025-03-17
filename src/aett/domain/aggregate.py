@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Generic, List
 
 from aett.domain.constants import TMemento
-from aett.eventstore import DomainEvent, EventMessage, Memento
+from aett.eventstore import DomainEvent, EventMessage
 
 
 class Aggregate(ABC, Generic[TMemento]):
@@ -15,7 +15,7 @@ class Aggregate(ABC, Generic[TMemento]):
     """
 
     def __init__(
-        self, stream_id: str, commit_sequence: int, memento: Memento[TMemento] | None = None
+        self, stream_id: str, commit_sequence: int, memento: TMemento | None = None
     ):
         """
         Initialize the aggregate

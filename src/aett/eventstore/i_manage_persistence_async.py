@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterable
+from typing import Iterable, AsyncIterable
 
 from aett.eventstore import Commit
 
@@ -13,7 +13,7 @@ class IManagePersistenceAsync(ABC):
         pass
 
     @abstractmethod
-    async def drop(self):
+    async def drop(self) -> None:
         """
         Drops the persistence mechanism.
         """
@@ -29,7 +29,7 @@ class IManagePersistenceAsync(ABC):
         pass
 
     @abstractmethod
-    async def get_from(self, checkpoint: int) -> Iterable[Commit]:
+    async def get_from(self, checkpoint: int) -> AsyncIterable[Commit]:
         """
         Gets the commits from the checkpoint.
         :param checkpoint: The checkpoint to start from.
