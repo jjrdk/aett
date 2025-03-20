@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Any
 
 from pydantic import BaseModel
 
@@ -30,7 +30,7 @@ class Snapshot(BaseModel):
     Gets the commit sequence at which the snapshot applies.
     """
 
-    payload: str
+    payload: Any
     """
     Gets the snapshot or materialized view of the stream at the revision indicated.
     """

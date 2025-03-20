@@ -1,10 +1,14 @@
 import datetime
-from typing import Dict, List
+from typing import Dict, List, Annotated
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, PlainSerializer, BeforeValidator
 
 from aett.eventstore.event_message import EventMessage
+
+
+def _convert_event_list(event_list: List[EventMessage]) -> List[dict]:
+    return [x.to_json() for x in event_list]
 
 
 class Commit(BaseModel):
@@ -48,7 +52,9 @@ class Commit(BaseModel):
     Gets the metadata which provides additional, unstructured information about this commit.
     """
 
-    events: List[EventMessage]
+    events: Annotated[List[EventMessage], PlainSerializer(func=_convert_event_list,
+                                                          return_type=List[dict],
+                                                          when_used="json")] = Field(default_factory=list)
     """
     Gets the collection of event messages to be committed as a single unit.
     """

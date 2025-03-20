@@ -1,10 +1,24 @@
 import datetime
+from typing import List
 
 from pydantic import BaseModel
 
 from aett.domain import Aggregate, Saga, ConflictDelegate
 from aett.eventstore import DomainEvent, Memento, Topic
 from aett.eventstore.base_command import BaseCommand
+
+
+@Topic("simple")
+class SimpleMessage(BaseModel):
+    id: str | None
+    created: datetime.datetime
+    value: str
+    count: int
+    contents: List[str]
+
+    def __eq__(self, other) -> bool:
+        return all(getattr(self, key) == other[key] if isinstance(other, dict) else getattr(other, key) for key in
+                   self.model_dump())
 
 
 class DeepNestedValue(BaseModel):

@@ -6,6 +6,9 @@ from aett.eventstore.topic import Topic
 from aett.eventstore.topic_map import TopicMap
 
 
+TOPIC_HEADER = "topic"
+
+
 class EventMessage(BaseModel):
     """
     Represents a single event message within a commit.
@@ -14,9 +17,9 @@ class EventMessage(BaseModel):
     body: Any = Field(description="Gets the body of the event message.")
 
     headers: Dict[str, Any] | None = Field(
-        default=None,
+        default_factory=dict,
         description="Gets the metadata which provides additional, "
-        "unstructured information about this event message.",
+                    "unstructured information about this event message.",
     )
 
     def to_json(self) -> dict:
@@ -26,7 +29,7 @@ class EventMessage(BaseModel):
         if self.headers is None:
             self.headers = {}
         if "topic" not in self.headers:
-            self.headers["topic"] = Topic.get(type(self.body))
+            self.headers[TOPIC_HEADER] = Topic.get(type(self.body))
         return self.model_dump(serialize_as_any=True)
 
     @staticmethod
@@ -37,9 +40,9 @@ class EventMessage(BaseModel):
             else {}
         )
         decoded_body = json_dict["body"]
-        topic = decoded_body.pop("$type", None)
-        if topic is None and "topic" in headers:
-            topic = headers["topic"]
+        topic = decoded_body.pop("$type", None) if isinstance(decoded_body, dict) else None
+        if topic is None and TOPIC_HEADER in headers:
+            topic = headers[TOPIC_HEADER]
         if topic is None:
             return EventMessage(body=decoded_body, headers=headers)
         else:
@@ -47,6 +50,6 @@ class EventMessage(BaseModel):
             body = (
                 t.model_validate(decoded_body)
                 if t is not None and issubclass(t, BaseModel)
-                else t(**decoded_body)
+                else decoded_body
             )
             return EventMessage(body=body, headers=headers)
