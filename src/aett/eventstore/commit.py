@@ -52,9 +52,12 @@ class Commit(BaseModel):
     Gets the metadata which provides additional, unstructured information about this commit.
     """
 
-    events: Annotated[List[EventMessage], PlainSerializer(func=_convert_event_list,
-                                                          return_type=List[dict],
-                                                          when_used="json")] = Field(default_factory=list)
+    events: Annotated[
+        List[EventMessage],
+        PlainSerializer(
+            func=_convert_event_list, return_type=List[dict], when_used="json"
+        ),
+    ] = Field(default_factory=list)
     """
     Gets the collection of event messages to be committed as a single unit.
     """

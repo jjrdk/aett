@@ -17,8 +17,12 @@ class SimpleMessage(BaseModel):
     contents: List[str]
 
     def __eq__(self, other) -> bool:
-        return all(getattr(self, key) == other[key] if isinstance(other, dict) else getattr(other, key) for key in
-                   self.model_dump())
+        return all(
+            getattr(self, key) == other[key]
+            if isinstance(other, dict)
+            else getattr(other, key)
+            for key in self.model_dump()
+        )
 
 
 class DeepNestedValue(BaseModel):

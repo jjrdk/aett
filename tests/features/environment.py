@@ -24,8 +24,8 @@ async def after_scenario(context, _):
         if dropped:
             await dropped
     if (
-            hasattr(context, "db")
-            and isinstance(context.db, str)
-            and os.path.exists(context.db)
+        hasattr(context, "db")
+        and isinstance(context.db, str)
+        and os.path.exists(context.db)
     ):
         os.remove(context.db)

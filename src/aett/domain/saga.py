@@ -75,5 +75,6 @@ class Saga(ABC):
         from aett.eventstore import Topic
 
         topic_header = Topic.get(type(command))
-        self._headers[f"UndispatchedMessage.{len(self._headers)}"] = EventMessage(body=command,
-                                                                                  headers={"topic": topic_header})
+        self._headers[f"UndispatchedMessage.{len(self._headers)}"] = EventMessage(
+            body=command, headers={"topic": topic_header}
+        )

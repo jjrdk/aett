@@ -19,7 +19,7 @@ class EventMessage(BaseModel):
     headers: Dict[str, Any] | None = Field(
         default_factory=dict,
         description="Gets the metadata which provides additional, "
-                    "unstructured information about this event message.",
+        "unstructured information about this event message.",
     )
 
     def to_json(self) -> dict:
@@ -40,7 +40,9 @@ class EventMessage(BaseModel):
             else {}
         )
         decoded_body = json_dict["body"]
-        topic = decoded_body.pop("$type", None) if isinstance(decoded_body, dict) else None
+        topic = (
+            decoded_body.pop("$type", None) if isinstance(decoded_body, dict) else None
+        )
         if topic is None and TOPIC_HEADER in headers:
             topic = headers[TOPIC_HEADER]
         if topic is None:
