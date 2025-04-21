@@ -1,6 +1,6 @@
 [project]
 name = "aett"
-version = "3.0.0"
+version = "3.0.1"
 description = "Event store for Python"
 readme = "README.md"
 authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
@@ -14,8 +14,8 @@ classifiers = [
 keywords = ["events", "event store", "sqlite", "postgresql", "mongodb", "dynamodb", "s3", "event sourcing"]
 requires-python = ">=3.11,<4.0"
 dependencies = [
-    "pydantic >= 2.10, < 3.0",
-    "multipledispatch ~=1.0"
+    "pydantic (>= 2.10, < 3.0)",
+    "multipledispatch (>=1.0, <2.0)"
 ]
 
 [project.optional-dependencies]
