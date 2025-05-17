@@ -6,7 +6,7 @@ from pydantic_core import from_json, to_json
 
 from aett.eventstore import EventMessage, Snapshot, Commit
 from aett.eventstore.event_message import TOPIC_HEADER
-from features.steps.test_types import TestEvent, SimpleMessage
+from steps.test_types import TestEvent, SimpleMessage
 
 use_step_matcher("re")
 
