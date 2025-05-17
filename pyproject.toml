@@ -19,12 +19,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-"sqlite_async" = ["aiosqlite~=0.20"]
-"postgresql" = ['psycopg~=3.2.3', 'psycopg-binary~=3.2.3']
-"postgresql_async" = ["asyncpg~=0.30"]
-"mongodb" = ["pymongo~=4.11"]
-"dynamodb" = ["boto3~=1.37"]
-"s3" = ["boto3~=1.37"]
+sqlite_async = ["aiosqlite~=0.21"]
+postgresql = ['psycopg~=3.2', 'psycopg-binary~=3.2']
+postgresql_async = ["asyncpg~=0.30"]
+mongodb = ["pymongo~=4.11"]
+dynamodb = ["boto3~=1.37"]
+s3 = ["boto3~=1.37"]
 
 [tool.poetry]
 packages = [
