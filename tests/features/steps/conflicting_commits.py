@@ -150,7 +150,7 @@ def step_impl(context):
         context.exception = e
 
 
-@then("then a conflict exception is thrown")
+@then("a conflict exception is thrown")
 def step_impl(context):
     assert hasattr(context, "exception")
     assert isinstance(context.exception, ConflictingCommitException), (
@@ -158,7 +158,7 @@ def step_impl(context):
     )
 
 
-@then("then a non-conflict exception is thrown")
+@then("a non-conflict exception is thrown")
 def step_impl(context):
     assert hasattr(context, "exception")
     assert isinstance(context.exception, NonConflictingCommitException), (

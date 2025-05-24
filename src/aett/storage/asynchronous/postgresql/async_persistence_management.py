@@ -1,5 +1,5 @@
 import logging
-from typing import Iterable
+from typing import AsyncIterable
 
 import asyncpg
 from asyncpg import Connection
@@ -66,32 +66,31 @@ class AsyncPersistenceManagement(IManagePersistenceAsync):
             )
 
     async def drop(self):
-        with await asyncpg.connect(self._connection_string) as connection:
-            await connection.execute(
-                f"""DROP TABLE {self._snapshots_table_name};DROP TABLE {self._commits_table_name};"""
-            )
-            await connection.commit()
+        connection = await asyncpg.connect(self._connection_string)
+        await connection.execute(
+            f"""DROP TABLE {self._snapshots_table_name};DROP TABLE {self._commits_table_name};"""
+        )
 
     async def purge(self, tenant_id: str):
-        with await asyncpg.connect(self._connection_string) as connection:
-            await connection.execute(
-                f"""DELETE FROM {self._commits_table_name} WHERE TenantId = %s;""",
-                tenant_id,
-            )
-            await connection.execute(
-                f"""DELETE FROM {self._snapshots_table_name} WHERE TenantId = %s;""",
-                tenant_id,
-            )
-            await connection.commit()
+        connection: Connection = await asyncpg.connect(self._connection_string)
+        await connection.execute(
+            f"""DELETE FROM {self._commits_table_name} WHERE TenantId = %s;""",
+            tenant_id,
+        )
+        await connection.execute(
+            f"""DELETE FROM {self._snapshots_table_name} WHERE TenantId = %s;""",
+            tenant_id,
+        )
+        await connection.close()
 
-    async def get_from(self, checkpoint: int) -> Iterable[Commit]:
-        with await asyncpg.connect(self._connection_string) as connection:
-            fetchall = await connection.execute(
-                f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+    async def get_from(self, checkpoint: int) -> AsyncIterable[Commit]:
+        connection: Connection = await asyncpg.connect(self._connection_string)
+        fetchall = await connection.execute(
+            f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
                                       FROM {self._commits_table_name}
                                      WHERE CommitStamp >= %s
                                      ORDER BY CheckpointNumber;""",
-                (checkpoint,),
-            )
-            for doc in fetchall:
-                yield _item_to_commit(doc, self._topic_map)
+            (checkpoint,),
+        )
+        for doc in fetchall:
+            yield _item_to_commit(doc, self._topic_map)

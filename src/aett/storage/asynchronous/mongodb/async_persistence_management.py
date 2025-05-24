@@ -1,4 +1,4 @@
-from typing import Iterable, AsyncIterable
+from typing import AsyncIterable
 
 import pymongo
 from pymongo.asynchronous import collection, cursor

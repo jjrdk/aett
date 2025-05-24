@@ -73,7 +73,7 @@ class AsyncPersistenceManagement(IManagePersistenceAsync):
             pass
 
     async def drop(self):
-        async with aiosqlite.connect(self._connection_string) as connection:
+        async with aiosqlite.connect(self._connection_string, timeout=30) as connection:
             c: aiosqlite.Cursor = await connection.cursor()
             await c.execute(f"DROP TABLE {self._snapshots_table_name};")
             await c.execute(f"DROP TABLE {self._commits_table_name};")

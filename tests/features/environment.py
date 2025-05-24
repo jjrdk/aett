@@ -28,4 +28,7 @@ async def after_scenario(context, _):
         and isinstance(context.db, str)
         and os.path.exists(context.db)
     ):
-        os.remove(context.db)
+        try:
+            os.remove(context.db)
+        finally:
+            pass

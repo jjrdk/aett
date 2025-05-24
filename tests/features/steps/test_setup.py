@@ -60,6 +60,7 @@ async def step_impl(context, storage: str):
                 aws_secret_access_key="dummy",
             )
             mgmt.initialize()
+            context.mgmt = mgmt
         case "inmemory":
             context.db = "inmemory"
             pass

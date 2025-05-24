@@ -6,7 +6,7 @@ Feature: Persist commits
     When I have an async commit store with a conflict detector
     And I commit an async event to the stream
     And I commit a conflicting event async to the stream
-    Then then a conflict exception is thrown
+    Then a conflict exception is thrown
 
     Examples:
       | storage        |
@@ -20,7 +20,7 @@ Feature: Persist commits
     When I have an commit store with a conflict detector
     And I commit an event to the stream
     And I commit a conflicting event to the stream
-    Then then a conflict exception is thrown
+    Then a conflict exception is thrown
 
     Examples:
       | storage  |
@@ -37,7 +37,7 @@ Feature: Persist commits
     When I have an async commit store with a conflict detector
     And I commit an async event to the stream
     And I commit a non-conflicting event async to the stream
-    Then then a non-conflict exception is thrown
+    Then a non-conflict exception is thrown
 
     Examples:
       | storage        |
@@ -51,7 +51,7 @@ Feature: Persist commits
     When I have an commit store with a conflict detector
     And I commit an event to the stream
     And I commit a non-conflicting event to the stream
-    Then then a non-conflict exception is thrown
+    Then a non-conflict exception is thrown
 
     Examples:
       | storage  |
