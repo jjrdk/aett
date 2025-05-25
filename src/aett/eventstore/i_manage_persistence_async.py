@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterable, AsyncIterable
+from typing import AsyncIterable
 
 from aett.eventstore import Commit
 

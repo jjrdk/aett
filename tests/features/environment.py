@@ -20,9 +20,12 @@ def before_scenario(context, _):
 @async_run_until_complete
 async def after_scenario(context, _):
     if hasattr(context, "mgmt"):
-        dropped: Coroutine | None = context.mgmt.drop()
-        if dropped:
-            await dropped
+        try:
+            dropped: Coroutine | None = context.mgmt.drop()
+            if dropped:
+                await dropped
+        except Exception as e:
+            print(e)
     if (
         hasattr(context, "db")
         and isinstance(context.db, str)
