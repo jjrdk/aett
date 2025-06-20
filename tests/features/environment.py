@@ -35,3 +35,8 @@ async def after_scenario(context, _):
             os.remove(context.db)
         finally:
             pass
+    if hasattr(context, "process"):
+        try:
+            context.process.stop()
+        finally:
+            pass
