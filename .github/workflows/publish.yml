@@ -13,12 +13,16 @@ jobs:
   publish-aett:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: ./.github/build
-      with:
-        release-tag: ${{ github.event.release.tag_name }}
-    - name: Publish package
-      uses: pypa/gh-action-pypi-publish@v1.8.14
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Print publish version
+        run: |
+          echo "Publishing version: ${{ github.event.release.tag_name }}"
+        shell: bash
+      - uses: actions/checkout@v4
+      - uses: ./.github/build
+        with:
+          release-tag: ${{ github.event.release.tag_name }}
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@v1.8.14
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
