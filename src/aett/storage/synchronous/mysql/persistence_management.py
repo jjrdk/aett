@@ -81,7 +81,10 @@ class PersistenceManagement(IManagePersistence):
                              autocommit=True) as connection:
             with connection.cursor() as c:
                 c.execute(
-                    f"""DROP TABLE {self._snapshots_table_name};DROP TABLE {self._commits_table_name};"""
+                    f"""DROP TABLE {self._snapshots_table_name};"""
+                )
+                c.execute(
+                    f"""DROP TABLE {self._commits_table_name};"""
                 )
             connection.commit()
 

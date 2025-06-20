@@ -84,7 +84,10 @@ class AsyncPersistenceManagement(IManagePersistenceAsync):
                                    autocommit=True)
         c = await connection.cursor()
         await c.execute(
-            f"""DROP TABLE {self._snapshots_table_name};DROP TABLE {self._commits_table_name};"""
+            f"""DROP TABLE {self._snapshots_table_name};"""
+        )
+        await c.execute(
+            f"""DROP TABLE {self._commits_table_name};"""
         )
         await c.close()
         await connection.commit()
