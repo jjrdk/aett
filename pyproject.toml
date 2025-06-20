@@ -1,6 +1,6 @@
 [project]
 name = "aett"
-version = "3.0.1"
+version = "0.0.0"
 description = "Event store for Python"
 readme = "README.md"
 authors = [{ name = "Jacob Reimers", email = "pypi@reimers.io" }]
