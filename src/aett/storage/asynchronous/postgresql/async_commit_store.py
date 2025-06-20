@@ -1,6 +1,5 @@
 import datetime
 import typing
-from typing import Iterable
 from uuid import UUID
 
 import asyncpg

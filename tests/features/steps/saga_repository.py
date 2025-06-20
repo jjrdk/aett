@@ -18,6 +18,7 @@ def step_impl(context):
         connection_string=context.db,
         storage_type=context.storage_type,
         topic_map=context.topic_map,
+        context=context,
     )
     context.repository = AsyncDefaultSagaRepository(str(uuid.uuid4()), commit_store)
 

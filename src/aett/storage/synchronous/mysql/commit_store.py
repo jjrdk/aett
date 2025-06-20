@@ -20,7 +20,7 @@ from aett.eventstore import (
     Commit,
     EventMessage,
 )
-from aett.storage.synchronous.postgresql import _item_to_commit
+from aett.storage.synchronous.mysql import _item_to_commit
 
 
 class CommitStore(ICommitEvents):

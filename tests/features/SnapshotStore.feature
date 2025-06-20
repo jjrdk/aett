@@ -11,6 +11,7 @@ Feature: Persist snapshots
       | mongo_async    |
       | postgres_async |
       | sqlite_async   |
+      | mysql_async    |
 
   Scenario Outline: Commit async snapshots of the aggregate
     Given a running <storage> server

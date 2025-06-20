@@ -1,11 +1,11 @@
-from typing import Iterable
+from typing import AsyncIterable
 
-import pymysql
-from aett.eventstore import IManagePersistence, TopicMap, COMMITS, SNAPSHOTS, Commit
-from aett.storage.synchronous.mysql import _item_to_commit
+from aiomysql import connect
+from aett.eventstore import IManagePersistenceAsync, TopicMap, COMMITS, SNAPSHOTS, Commit
+from aett.storage.synchronous.postgresql import _item_to_commit
 
 
-class PersistenceManagement(IManagePersistence):
+class AsyncPersistenceManagement(IManagePersistenceAsync):
     def __init__(
             self,
             host: str,
@@ -26,7 +26,7 @@ class PersistenceManagement(IManagePersistence):
         self._commits_table_name = commits_table_name
         self._snapshots_table_name = snapshots_table_name
 
-    def initialize(self):
+    async def initialize(self):
         try:
             stmts = [stmt.strip() for stmt in f"""CREATE TABLE IF NOT EXISTS {self._commits_table_name}
                      (
@@ -58,41 +58,46 @@ class PersistenceManagement(IManagePersistence):
                          Headers blob NOT NULL,
                          CONSTRAINT PK_Snapshots PRIMARY KEY (TenantId, StreamId, StreamRevision)
                      );""".split(';') if stmt.strip()]
-            with pymysql.connect(host=self.host,
-                                 user=self._user,
-                                 password=self._password,
-                                 database=self._database,
-                                 port=self._port,
-                                 autocommit=True) as connection:
-                with connection.cursor() as c:
-                    for stmt in stmts:
-                        c.execute(query=stmt)
-                connection.commit()
+            connection = await connect(
+                host=self.host,
+                user=self._user,
+                password=self._password,
+                db=self._database,
+                port=self._port,
+                autocommit=True)
+            cur = await  connection.cursor()
+            for stmt in stmts:
+                await cur.execute(query=stmt)
+            await cur.close()
+            await connection.commit()
+            await connection.close()
         except Exception as e:
             print(e)
             pass
 
-    def drop(self):
-        with pymysql.connect(host=self.host,
-                             user=self._user,
-                             password=self._password,
-                             database=self._database,
-                             port=self._port,
-                             autocommit=True) as connection:
-            with connection.cursor() as c:
-                c.execute(
-                    f"""DROP TABLE {self._snapshots_table_name};DROP TABLE {self._commits_table_name};"""
-                )
-            connection.commit()
+    async def drop(self):
+        connection = await connect(host=self.host,
+                                   user=self._user,
+                                   password=self._password,
+                                   db=self._database,
+                                   port=self._port,
+                                   autocommit=True)
+        c = await connection.cursor()
+        await c.execute(
+            f"""DROP TABLE {self._snapshots_table_name};DROP TABLE {self._commits_table_name};"""
+        )
+        await c.close()
+        await connection.commit()
+        await connection.close()
 
-    def purge(self, tenant_id: str):
-        with pymysql.connect(host=self.host,
-                             user=self._user,
-                             password=self._password,
-                             database=self._database,
-                             port=self._port,
-                             autocommit=True) as connection:
-            with connection.cursor() as c:
+    async def purge(self, tenant_id: str):
+        async with connect(host=self.host,
+                           user=self._user,
+                           password=self._password,
+                           db=self._database,
+                           port=self._port,
+                           autocommit=True) as connection:
+            async with connection.cursor() as c:
                 c.execute(
                     f"""DELETE FROM {self._commits_table_name} WHERE TenantId = %s;""",
                     tenant_id,
@@ -103,21 +108,21 @@ class PersistenceManagement(IManagePersistence):
                 )
             connection.commit()
 
-    def get_from(self, checkpoint: int) -> Iterable[Commit]:
-        with pymysql.connect(host=self.host,
-                             user=self._user,
-                             password=self._password,
-                             database=self._database,
-                             port=self._port,
-                             autocommit=True) as connection:
-            with connection.cursor() as cur:
-                cur.execute(
+    async def get_from(self, checkpoint: int) -> AsyncIterable[Commit]:
+        async with connect(host=self.host,
+                           user=self._user,
+                           password=self._password,
+                           db=self._database,
+                           port=self._port,
+                           autocommit=True) as connection:
+            async with connection.cursor() as cur:
+                await cur.execute(
                     f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
                                   FROM {self._commits_table_name}
                                  WHERE CommitStamp >= %s
                                  ORDER BY CheckpointNumber;""",
                     (checkpoint,),
                 )
-                fetchall = cur.fetchall()
+                fetchall = await cur.fetchall()
                 for doc in fetchall:
                     yield _item_to_commit(doc, self._topic_map)

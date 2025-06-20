@@ -10,6 +10,7 @@ Feature: Saga repository behavior
       | mongo_async    |
       | postgres_async |
       | sqlite_async   |
+      | mysql_async    |
 
   Scenario Outline: Loading an saga from the repository
     Given a running <storage> server
@@ -39,6 +40,7 @@ Feature: Saga repository behavior
       | mongo_async    |
       | postgres_async |
       | sqlite_async   |
+      | mysql_async    |
 
   Scenario Outline: Loading a modified aggregate from the repository
     Given a running <storage> server

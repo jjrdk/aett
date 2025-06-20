@@ -11,6 +11,7 @@ Feature: Persist commits
       | mongo_async    |
       | postgres_async |
       | sqlite_async   |
+      | mysql_async    |
 
   Scenario Outline: Commit event with nested base models to async stream
     Given a running <storage> server
@@ -24,6 +25,7 @@ Feature: Persist commits
       | mongo_async    |
       | postgres_async |
       | sqlite_async   |
+      | mysql_async    |
 
   Scenario Outline: Commit event to sync stream
     Given a running <storage> server

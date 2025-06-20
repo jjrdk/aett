@@ -10,7 +10,7 @@ use_step_matcher("re")
 @given("I have an async snapshot store")
 def step_impl(context):
     context.store = create_async_snapshot_store(
-        connection_string=context.db, storage_type=context.storage_type
+        connection_string=context.db, storage_type=context.storage_type, context=context
     )
 
 

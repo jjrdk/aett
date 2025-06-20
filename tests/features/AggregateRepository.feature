@@ -10,6 +10,7 @@ Feature: Aggregate repository behavior
       | mongo_async    |
       | postgres_async |
       | sqlite_async   |
+      | mysql_async    |
 
   Scenario Outline: Sync loading an aggregate from the repository
     Given a running <storage> server
@@ -39,6 +40,7 @@ Feature: Aggregate repository behavior
       | mongo_async    |
       | postgres_async |
       | sqlite_async   |
+      | mysql_async    |
 
   Scenario Outline: Sync loading a modified aggregate from the repository
     Given a running <storage> server
@@ -70,6 +72,7 @@ Feature: Aggregate repository behavior
       | mongo_async    |
       | postgres_async |
       | sqlite_async   |
+      | mysql_async    |
 
   Scenario Outline: Sync saving an aggregate to the repository
     Given a running <storage> server
@@ -102,6 +105,7 @@ Feature: Aggregate repository behavior
       | mongo_async    |
       | postgres_async |
       | sqlite_async   |
+      | mysql_async    |
 
   Scenario Outline: Load snapshots before events
     Given a running <storage> server
@@ -134,6 +138,7 @@ Feature: Aggregate repository behavior
       | mongo_async    |
       | postgres_async |
       | sqlite_async   |
+      | mysql_async    |
 
   Scenario Outline: Retrieving based on time
     Given a running <storage> server
@@ -164,6 +169,7 @@ Feature: Aggregate repository behavior
       | mongo_async    | 1000  |
       | postgres_async | 1000  |
       | sqlite_async   | 1000  |
+      | mysql_async    | 1000  |
 
   Scenario Outline: Thousand event aggregate
     Given a running <storage> server
@@ -180,4 +186,4 @@ Feature: Aggregate repository behavior
       | postgres | 1000  |
       | s3       | 100   |
       | sqlite   | 1000  |
-      | mysql   | 1000  |
+      | mysql    | 1000  |

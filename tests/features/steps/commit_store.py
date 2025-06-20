@@ -15,7 +15,7 @@ use_step_matcher("re")
 def step_impl(context, storage: str):
     context.storage_type = storage
     context.store = create_async_commit_store(
-        connection_string=context.db, storage_type=storage, topic_map=context.topic_map
+        connection_string=context.db, storage_type=storage, topic_map=context.topic_map, context=context
     )
 
 

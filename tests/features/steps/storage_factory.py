@@ -35,6 +35,9 @@ from aett.storage.synchronous.mongodb.snapshot_store import (
 from aett.storage.asynchronous.postgresql.async_commit_store import (
     AsyncCommitStore as PostgresAsyncCommitStore,
 )
+from aett.storage.asynchronous.mysql.async_commit_store import (
+    AsyncCommitStore as MySqlAsyncCommitStore,
+)
 from aett.storage.synchronous.postgresql.commit_store import (
     CommitStore as PostgresCommitStore,
 )
@@ -46,6 +49,9 @@ from aett.storage.asynchronous.postgresql.async_snapshot_store import (
 )
 from aett.storage.synchronous.postgresql.snapshot_store import (
     SnapshotStore as PostgresSnapshotStore,
+)
+from aett.storage.asynchronous.mysql.async_snapshot_store import (
+    AsyncSnapshotStore as MySqlAsyncSnapshotStore,
 )
 from aett.storage.synchronous.mysql.snapshot_store import (
     SnapshotStore as MySqlSnapshotStore,
@@ -71,25 +77,41 @@ def create_async_commit_store(
         storage_type: str,
         topic_map: TopicMap,
         conflict_detector: ConflictDetector = None,
+        context: Any = None,
 ) -> ICommitEventsAsync:
+    commit_store: ICommitEventsAsync | None = None
     match storage_type:
         case "mongo_async":
             client = AsyncMongoClient(connection_string)
-            return MongoAsyncCommitStore(
+            commit_store = MongoAsyncCommitStore(
                 client.get_database("test"), topic_map, conflict_detector
             )
         case "postgres_async":
-            return PostgresAsyncCommitStore(
+            commit_store = PostgresAsyncCommitStore(
                 connection_string=connection_string,
+                topic_map=topic_map,
+                conflict_detector=conflict_detector,
+            )
+        case "mysql_async":
+            commit_store = MySqlAsyncCommitStore(
+                host=context.host,
+                user=context.user,
+                password=context.password,
+                database=context.database,
+                port=context.port,
                 topic_map=topic_map,
                 conflict_detector=conflict_detector,
             )
         case "sqlite_async":
-            return SqliteAsyncCommitStore(
+            commit_store = SqliteAsyncCommitStore(
                 connection_string=connection_string,
                 topic_map=topic_map,
                 conflict_detector=conflict_detector,
             )
+
+    if not commit_store:
+        raise ValueError(f"Unknown storage type: {storage_type}")
+    return commit_store
 
 
 def create_commit_store(
@@ -152,16 +174,26 @@ def create_commit_store(
 
 
 def create_async_snapshot_store(
-        connection_string: str, storage_type: str
+        connection_string: str, storage_type: str, context: Any = None
 ) -> IAccessSnapshotsAsync:
+    snapshot_store: IAccessSnapshotsAsync | None = None
     match storage_type:
         case "mongo_async":
             client = AsyncMongoClient(connection_string)
-            return MongoAsyncSnapshotStore(client.get_database("test"))
+            snapshot_store = MongoAsyncSnapshotStore(client.get_database("test"))
         case "postgres_async":
-            return PostgresAsyncSnapshotStore(connection_string=connection_string)
+            snapshot_store = PostgresAsyncSnapshotStore(connection_string=connection_string)
         case "sqlite_async":
-            return SqliteAsyncSnapshotStore(connection_string=connection_string)
+            snapshot_store = SqliteAsyncSnapshotStore(connection_string=connection_string)
+        case "mysql_async":
+            snapshot_store = MySqlAsyncSnapshotStore(
+                host=context.host,
+                user=context.user,
+                password=context.password,
+                database=context.database,
+                port=context.port,
+            )
+    return snapshot_store
 
 
 def create_snapshot_store(
