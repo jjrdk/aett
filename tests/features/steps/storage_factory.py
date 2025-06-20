@@ -38,11 +38,17 @@ from aett.storage.asynchronous.postgresql.async_commit_store import (
 from aett.storage.synchronous.postgresql.commit_store import (
     CommitStore as PostgresCommitStore,
 )
+from aett.storage.synchronous.mysql.commit_store import (
+    CommitStore as MySqlCommitStore,
+)
 from aett.storage.asynchronous.postgresql.async_snapshot_store import (
     AsyncSnapshotStore as PostgresAsyncSnapshotStore,
 )
 from aett.storage.synchronous.postgresql.snapshot_store import (
     SnapshotStore as PostgresSnapshotStore,
+)
+from aett.storage.synchronous.mysql.snapshot_store import (
+    SnapshotStore as MySqlSnapshotStore,
 )
 from aett.storage.asynchronous.sqlite.async_commit_store import (
     AsyncCommitStore as SqliteAsyncCommitStore,
@@ -61,10 +67,10 @@ from aett.storage.synchronous.s3.snapshot_store import SnapshotStore as S3Snapsh
 
 
 def create_async_commit_store(
-    connection_string: str,
-    storage_type: str,
-    topic_map: TopicMap,
-    conflict_detector: ConflictDetector = None,
+        connection_string: str,
+        storage_type: str,
+        topic_map: TopicMap,
+        conflict_detector: ConflictDetector = None,
 ) -> ICommitEventsAsync:
     match storage_type:
         case "mongo_async":
@@ -87,14 +93,16 @@ def create_async_commit_store(
 
 
 def create_commit_store(
-    connection_string: Any,
-    storage_type: str,
-    topic_map: TopicMap,
-    conflict_detector: ConflictDetector = None,
+        connection_string: Any,
+        storage_type: str,
+        topic_map: TopicMap,
+        conflict_detector: ConflictDetector = None,
+        context: Any = None,
 ) -> ICommitEvents:
+    commit_store: ICommitEvents | None = None
     match storage_type:
         case "dynamo":
-            return DynamoDbCommitStore(
+            commit_store = DynamoDbCommitStore(
                 topic_map=topic_map,
                 conflict_detector=conflict_detector,
                 region="localhost",
@@ -104,34 +112,47 @@ def create_commit_store(
                 port=int(connection_string),
             )
         case "inmemory":
-            return InMemoryCommitStore(conflict_detector=conflict_detector)
+            commit_store = InMemoryCommitStore(conflict_detector=conflict_detector)
         case "mongo":
             client = MongoClient(connection_string)
-            return MongoCommitStore(
+            commit_store = MongoCommitStore(
                 client.get_database("test"), topic_map, conflict_detector
             )
         case "postgres":
-            return PostgresCommitStore(
+            commit_store = PostgresCommitStore(
                 connection_string=connection_string,
                 topic_map=topic_map,
                 conflict_detector=conflict_detector,
             )
+        case "mysql":
+            commit_store = MySqlCommitStore(
+                host=context.host,
+                user=context.user,
+                password=context.password,
+                database=context.database,
+                port=context.port,
+                topic_map=topic_map,
+                conflict_detector=conflict_detector,
+            )
         case "s3":
-            return S3CommitStore(
+            commit_store = S3CommitStore(
                 s3_config=connection_string,
                 topic_map=topic_map,
                 conflict_detector=conflict_detector,
             )
         case "sqlite":
-            return SqliteCommitStore(
+            commit_store = SqliteCommitStore(
                 connection_string=connection_string,
                 topic_map=topic_map,
                 conflict_detector=conflict_detector,
             )
+    if not commit_store:
+        raise ValueError(f"Unknown storage type: {storage_type}")
+    return commit_store
 
 
 def create_async_snapshot_store(
-    connection_string: str, storage_type: str
+        connection_string: str, storage_type: str
 ) -> IAccessSnapshotsAsync:
     match storage_type:
         case "mongo_async":
@@ -144,11 +165,12 @@ def create_async_snapshot_store(
 
 
 def create_snapshot_store(
-    connection_string: Any, storage_type: str
+        connection_string: Any, storage_type: str, context: Any = None
 ) -> IAccessSnapshots:
+    snapshot_store: IAccessSnapshots | None = None
     match storage_type:
         case "dynamo":
-            return DynamoDbSnapshotStore(
+            snapshot_store = DynamoDbSnapshotStore(
                 region="localhost",
                 port=int(connection_string),
                 aws_access_key_id="dummy",
@@ -156,13 +178,24 @@ def create_snapshot_store(
                 aws_session_token="dummy",
             )
         case "inmemory":
-            return InMemorySnapshotStore()
+            snapshot_store = InMemorySnapshotStore()
         case "mongo":
             client = MongoClient(connection_string)
-            return MongoSnapshotStore(client.get_database("test"))
+            snapshot_store = MongoSnapshotStore(client.get_database("test"))
         case "postgres":
-            return PostgresSnapshotStore(connection_string=connection_string)
+            snapshot_store = PostgresSnapshotStore(connection_string=connection_string)
+        case "mysql":
+            snapshot_store = MySqlSnapshotStore(
+                host=context.host,
+                user=context.user,
+                password=context.password,
+                database=context.database,
+                port=context.port,
+            )
         case "s3":
-            return S3SnapshotStore(s3_config=connection_string)
+            snapshot_store = S3SnapshotStore(s3_config=connection_string)
         case "sqlite":
-            return SqliteSnapshotStore(connection_string=connection_string)
+            snapshot_store = SqliteSnapshotStore(connection_string=connection_string)
+    if not snapshot_store:
+        raise ValueError(f"Unknown storage type: {storage_type}")
+    return snapshot_store

@@ -17,7 +17,7 @@ def step_impl(context):
 @given("I have an snapshot store")
 def step_impl(context):
     context.store = create_snapshot_store(
-        connection_string=context.db, storage_type=context.storage_type
+        connection_string=context.db, storage_type=context.storage_type, context=context
     )
 
 

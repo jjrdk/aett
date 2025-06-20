@@ -24,6 +24,7 @@ Feature: Saga repository behavior
       | postgres |
       | s3       |
       | sqlite   |
+      | mysql    |
 
   Scenario Outline: Loading a modified aggregate from the repository async
     Given a running <storage> server
@@ -55,3 +56,4 @@ Feature: Saga repository behavior
       | postgres |
       | s3       |
       | sqlite   |
+      | mysql    |

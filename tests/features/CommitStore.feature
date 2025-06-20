@@ -36,6 +36,7 @@ Feature: Persist commits
       | mongo    |
       | postgres |
       | sqlite   |
+      | mysql    |
 
   Scenario Outline: Commit event with nested base models to sync stream
     Given a running <storage> server
@@ -52,3 +53,4 @@ Feature: Persist commits
       | postgres |
       | s3       |
       | sqlite   |
+      | mysql    |

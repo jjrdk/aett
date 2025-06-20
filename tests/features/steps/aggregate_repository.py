@@ -8,6 +8,7 @@ import uuid
 import asyncpg
 import boto3
 import psycopg
+import pymysql
 from behave import *
 from behave.api.async_step import async_run_until_complete
 from pydantic_core import to_json
@@ -31,9 +32,9 @@ def step_impl(context):
     context.stream_id = str(uuid.uuid4())
     context.tenant_id = str(uuid.uuid4())
     commit_store = create_commit_store(
-        context.db, context.storage_type, context.topic_map
+        context.db, context.storage_type, context.topic_map, context=context
     )
-    snapshot_store = create_snapshot_store(context.db, context.storage_type)
+    snapshot_store = create_snapshot_store(context.db, context.storage_type, context=context)
     context.repository = DefaultAggregateRepository(
         tenant_id=context.tenant_id, store=commit_store, snapshot_store=snapshot_store
     )
@@ -156,6 +157,8 @@ def step_impl(context):
                 seed_mongo(context, x, time_stamp)
             case "postgres":
                 seed_postgres(context, x, time_stamp)
+            case "mysql":
+                seed_mysql(context, x, time_stamp)
             case "s3":
                 seed_s3(context, x, time_stamp)
 
@@ -185,20 +188,19 @@ def seed_dynamo(context, x, time_stamp):
             [
                 e.to_json()
                 for e in [
-                    EventMessage(
-                        body=TestEvent(
-                            source=context.stream_id,
-                            timestamp=time_stamp,
-                            version=x - 1,
-                            value=x,
-                        )
+                EventMessage(
+                    body=TestEvent(
+                        source=context.stream_id,
+                        timestamp=time_stamp,
+                        version=x - 1,
+                        value=x,
                     )
-                ]
+                )
+            ]
             ]
         ),
     }
     _ = table.put_item(
-        TableName="commits",
         Item=item,
         ReturnValues="NONE",
         ReturnValuesOnConditionCheckFailure="NONE",
@@ -249,15 +251,15 @@ async def seed_mongo_async(context, x, time_stamp):
             [
                 e.to_json()
                 for e in [
-                    EventMessage(
-                        body=TestEvent(
-                            source=context.stream_id,
-                            timestamp=time_stamp,
-                            version=x - 1,
-                            value=x,
-                        )
+                EventMessage(
+                    body=TestEvent(
+                        source=context.stream_id,
+                        timestamp=time_stamp,
+                        version=x - 1,
+                        value=x,
                     )
-                ]
+                )
+            ]
             ]
         ),
         "CheckpointToken": x,
@@ -280,15 +282,15 @@ def seed_mongo(context, x, time_stamp):
             [
                 e.to_json()
                 for e in [
-                    EventMessage(
-                        body=TestEvent(
-                            source=context.stream_id,
-                            timestamp=time_stamp,
-                            version=x - 1,
-                            value=x,
-                        )
+                EventMessage(
+                    body=TestEvent(
+                        source=context.stream_id,
+                        timestamp=time_stamp,
+                        version=x - 1,
+                        value=x,
                     )
-                ]
+                )
+            ]
             ]
         ),
         "CheckpointToken": x,
@@ -300,10 +302,11 @@ def seed_postgres(context, x, time_stamp):
     with psycopg.connect(context.db) as conn:
         conn.execute(
             """INSERT
-                      INTO commits
-                         ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    RETURNING CheckpointNumber;""",
+               INTO commits
+               (TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp,
+                Headers, Payload)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+               RETURNING CheckpointNumber;""",
             (
                 context.tenant_id,
                 context.stream_id,
@@ -318,6 +321,45 @@ def seed_postgres(context, x, time_stamp):
                     [
                         e.to_json()
                         for e in [
+                        EventMessage(
+                            body=TestEvent(
+                                source=context.stream_id,
+                                timestamp=time_stamp,
+                                version=x - 1,
+                                value=x,
+                            )
+                        )
+                    ]
+                    ]
+                ),
+            ),
+        )
+
+
+def seed_mysql(context, x, time_stamp):
+    with pymysql.connect(host=context.host, user=context.user, password=context.password, database=context.database,
+                         port=context.port, autocommit=True) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """INSERT
+                   INTO commits
+                   (TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp,
+                    Headers, Payload)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);""",
+                (
+                    context.tenant_id,
+                    context.stream_id,
+                    context.stream_id,
+                    uuid.uuid4().bytes,
+                    x,
+                    x,
+                    1,
+                    time_stamp,
+                    to_json({}),
+                    to_json(
+                        [
+                            e.to_json()
+                            for e in [
                             EventMessage(
                                 body=TestEvent(
                                     source=context.stream_id,
@@ -327,20 +369,21 @@ def seed_postgres(context, x, time_stamp):
                                 )
                             )
                         ]
-                    ]
+                        ]
+                    ),
                 ),
-            ),
-        )
+            )
 
 
 async def seed_postgres_async(context, x, time_stamp):
     conn = await asyncpg.connect(context.db)
     await conn.execute(
         """INSERT
-                      INTO commits
-                         ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                    RETURNING CheckpointNumber;""",
+           INTO commits
+           (TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers,
+            Payload)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           RETURNING CheckpointNumber;""",
         context.tenant_id,
         context.stream_id,
         context.stream_id,
@@ -354,15 +397,15 @@ async def seed_postgres_async(context, x, time_stamp):
             [
                 e.to_json()
                 for e in [
-                    EventMessage(
-                        body=TestEvent(
-                            source=context.stream_id,
-                            timestamp=time_stamp,
-                            version=x - 1,
-                            value=x,
-                        )
+                EventMessage(
+                    body=TestEvent(
+                        source=context.stream_id,
+                        timestamp=time_stamp,
+                        version=x - 1,
+                        value=x,
                     )
-                ]
+                )
+            ]
             ]
         ),
     )
@@ -373,10 +416,11 @@ def seed_sqlite(context, x, time_stamp):
         cur = conn.cursor()
         cur.execute(
             """INSERT
-                      INTO commits
-                         ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    RETURNING CheckpointNumber;""",
+               INTO commits
+               (TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp,
+                Headers, Payload)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               RETURNING CheckpointNumber;""",
             (
                 context.tenant_id,
                 context.stream_id,
@@ -391,15 +435,15 @@ def seed_sqlite(context, x, time_stamp):
                     [
                         e.to_json()
                         for e in [
-                            EventMessage(
-                                body=TestEvent(
-                                    source=context.stream_id,
-                                    timestamp=time_stamp,
-                                    version=x - 1,
-                                    value=x,
-                                )
+                        EventMessage(
+                            body=TestEvent(
+                                source=context.stream_id,
+                                timestamp=time_stamp,
+                                version=x - 1,
+                                value=x,
                             )
-                        ]
+                        )
+                    ]
                     ]
                 ),
             ),
@@ -413,10 +457,11 @@ async def seed_sqlite_async(context, x, time_stamp):
         async with conn.cursor() as cur:
             await cur.execute(
                 """INSERT
-                      INTO commits
-                         ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    RETURNING CheckpointNumber;""",
+                   INTO commits
+                   (TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp,
+                    Headers, Payload)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   RETURNING CheckpointNumber;""",
                 (
                     context.tenant_id,
                     context.stream_id,
@@ -431,15 +476,15 @@ async def seed_sqlite_async(context, x, time_stamp):
                         [
                             e.to_json()
                             for e in [
-                                EventMessage(
-                                    body=TestEvent(
-                                        source=context.stream_id,
-                                        timestamp=time_stamp,
-                                        version=x - 1,
-                                        value=x,
-                                    )
+                            EventMessage(
+                                body=TestEvent(
+                                    source=context.stream_id,
+                                    timestamp=time_stamp,
+                                    version=x - 1,
+                                    value=x,
                                 )
-                            ]
+                            )
+                        ]
                         ]
                     ),
                 ),

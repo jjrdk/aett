@@ -28,7 +28,7 @@ def step_impl(context):
 def step_impl(context):
     conflict_detector = ConflictDetector([TestEventConflictDelegate()])
     context.store = create_commit_store(
-        context.db, context.storage_type, context.topic_map, conflict_detector
+        context.db, context.storage_type, context.topic_map, conflict_detector, context=context
     )
 
 

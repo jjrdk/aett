@@ -4,6 +4,7 @@ from pymongo import AsyncMongoClient, MongoClient
 from testcontainers.core.container import DockerContainer
 from testcontainers.minio import MinioContainer
 from testcontainers.mongodb import MongoDbContainer
+from testcontainers.mysql import MySqlContainer
 from testcontainers.postgres import PostgresContainer
 
 import test_types
@@ -22,6 +23,9 @@ from aett.storage.asynchronous.postgresql.async_persistence_management import (
 )
 from aett.storage.synchronous.postgresql.persistence_management import (
     PersistenceManagement as PostgresPersistenceManagement,
+)
+from aett.storage.synchronous.mysql.persistence_management import (
+    PersistenceManagement as MySqlPersistenceManagement,
 )
 from aett.storage.asynchronous.sqlite.async_persistence_management import (
     AsyncPersistenceManagement as SqliteAsyncPersistenceManagement,
@@ -86,6 +90,21 @@ async def step_impl(context, storage: str):
             context.db = pg_container.get_connection_url().replace("+psycopg2", "")
             mgmt = PostgresPersistenceManagement(
                 connection_string=context.db, topic_map=tm
+            )
+            mgmt.initialize()
+            context.mgmt = mgmt
+        case "mysql":
+            context.process = MySqlContainer()
+            mysql_container = context.process.start()
+            context.db = mysql_container.get_connection_url()
+            context.host = mysql_container.get_container_host_ip()
+            context.port = int(mysql_container.get_exposed_port(3306))
+            context.user = mysql_container.username
+            context.password = mysql_container.password
+            context.database = mysql_container.dbname
+            mgmt = MySqlPersistenceManagement(
+                host=context.host, user=context.user, password=context.password, port=context.port,
+                database=context.database, topic_map=tm
             )
             mgmt.initialize()
             context.mgmt = mgmt
