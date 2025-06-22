@@ -50,6 +50,9 @@ from aett.storage.synchronous.postgresql.commit_store import (
 from aett.storage.synchronous.mysql.commit_store import (
     CommitStore as MySqlCommitStore,
 )
+from aett.storage.synchronous.mssql.commit_store import (
+    CommitStore as MsSqlCommitStore,
+)
 from aett.storage.asynchronous.postgresql.async_snapshot_store import (
     AsyncSnapshotStore as PostgresAsyncSnapshotStore,
 )
@@ -61,6 +64,9 @@ from aett.storage.asynchronous.mysql.async_snapshot_store import (
 )
 from aett.storage.synchronous.mysql.snapshot_store import (
     SnapshotStore as MySqlSnapshotStore,
+)
+from aett.storage.synchronous.mssql.snapshot_store import (
+    SnapshotStore as MsSqlSnapshotStore,
 )
 from aett.storage.asynchronous.sqlite.async_commit_store import (
     AsyncCommitStore as SqliteAsyncCommitStore,
@@ -196,6 +202,11 @@ def create_commit_store(
                 topic_map=topic_map,
                 conflict_detector=conflict_detector,
             )
+        case "mssql":
+            commit_store = MsSqlCommitStore(
+                connection_string=connection_string,
+                topic_map=topic_map,
+                conflict_detector=conflict_detector)
     if not commit_store:
         raise ValueError(f"Unknown storage type: {storage_type}")
     return commit_store
@@ -270,6 +281,8 @@ def create_snapshot_store(
             snapshot_store = S3SnapshotStore(s3_config=connection_string)
         case "sqlite":
             snapshot_store = SqliteSnapshotStore(connection_string=connection_string)
+        case "mssql":
+            snapshot_store = MsSqlSnapshotStore(connection_string=connection_string)
     if not snapshot_store:
         raise ValueError(f"Unknown storage type: {storage_type}")
     return snapshot_store
