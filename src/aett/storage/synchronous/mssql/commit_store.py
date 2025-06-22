@@ -3,7 +3,7 @@ import typing
 from typing import Iterable
 from uuid import UUID
 
-import pymssql
+from pymssql import IntegrityError, connect
 from pydantic_core import to_json, from_json
 
 from aett.domain import (
@@ -20,16 +20,16 @@ from aett.eventstore import (
     Commit,
     EventMessage,
 )
-from aett.storage.synchronous.postgresql import _item_to_commit
+from aett.storage.synchronous.mssql import _item_to_commit
 
 
 class CommitStore(ICommitEvents):
     def __init__(
-        self,
-        connection_string: str,
-        topic_map: TopicMap = None,
-        conflict_detector: ConflictDetector = None,
-        table_name=COMMITS,
+            self,
+            connection_string: str,
+            topic_map: TopicMap | None = None,
+            conflict_detector: ConflictDetector | None = None,
+            table_name=COMMITS,
     ):
         self._topic_map = topic_map if topic_map else TopicMap()
         self._connection_string = connection_string
@@ -39,15 +39,15 @@ class CommitStore(ICommitEvents):
         self._table_name = table_name
 
     def get(
-        self,
-        tenant_id: str,
-        stream_id: str,
-        min_revision: int = 0,
-        max_revision: int = MAX_INT,
+            self,
+            tenant_id: str,
+            stream_id: str,
+            min_revision: int = 0,
+            max_revision: int = MAX_INT,
     ) -> typing.Iterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
-        with pymssql.connect(self._connection_string, autocommit=True) as connection:
+        with connect(self._connection_string, autocommit=True) as connection:
             with connection.cursor() as cur:
                 cur.execute(
                     f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
@@ -65,12 +65,12 @@ class CommitStore(ICommitEvents):
                     yield _item_to_commit(doc, self._topic_map)
 
     def get_to(
-        self,
-        tenant_id: str,
-        stream_id: str,
-        max_time: datetime.datetime = datetime.datetime.max,
+            self,
+            tenant_id: str,
+            stream_id: str,
+            max_time: datetime.datetime = datetime.datetime.max,
     ) -> Iterable[Commit]:
-        with pymssql.connect(self._connection_string, autocommit=True) as connection:
+        with connect(self._connection_string, autocommit=True) as connection:
             with connection.cursor() as cur:
                 cur.execute(
                     f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
@@ -86,9 +86,9 @@ class CommitStore(ICommitEvents):
                     yield _item_to_commit(doc, self._topic_map)
 
     def get_all_to(
-        self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
+            self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
     ) -> Iterable[Commit]:
-        with pymssql.connect(self._connection_string, autocommit=True) as connection:
+        with connect(self._connection_string, autocommit=True) as connection:
             with connection.cursor() as cur:
                 cur.execute(
                     f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
@@ -104,8 +104,8 @@ class CommitStore(ICommitEvents):
 
     def commit(self, commit: Commit):
         try:
-            with pymssql.connect(
-                self._connection_string, autocommit=True
+            with connect(
+                    self._connection_string, autocommit=True
             ) as connection:
                 with connection.cursor() as cur:
                     json = to_json([e.to_json() for e in commit.events])
@@ -113,8 +113,7 @@ class CommitStore(ICommitEvents):
                         f"""INSERT
           INTO {self._table_name}
              ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        RETURNING CheckpointNumber;""",
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);""",
                         (
                             commit.tenant_id,
                             commit.stream_id,
@@ -128,7 +127,7 @@ class CommitStore(ICommitEvents):
                             json,
                         ),
                     )
-                    checkpoint_number = cur.fetchone()
+                    checkpoint_number = cur.lastrowid
                     cur.close()
                     connection.commit()
                     return Commit(
@@ -142,9 +141,9 @@ class CommitStore(ICommitEvents):
                         events=commit.events,
                         checkpoint_token=checkpoint_number[0],
                     )
-        except pymssql.errors.UniqueViolation:
+        except IntegrityError:
             if self._detect_duplicate(
-                commit.commit_id, commit.tenant_id, commit.stream_id
+                    commit.commit_id, commit.tenant_id, commit.stream_id
             ):
                 raise DuplicateCommitException(
                     f"Commit {commit.commit_id} already exists in stream {commit.stream_id}"
@@ -163,11 +162,11 @@ class CommitStore(ICommitEvents):
             raise Exception(f"Failed to commit {commit.commit_id} with error {e}")
 
     def _detect_duplicate(
-        self, commit_id: UUID, tenant_id: str, stream_id: str
+            self, commit_id: UUID, tenant_id: str, stream_id: str
     ) -> bool:
         try:
-            with pymssql.connect(
-                self._connection_string, autocommit=True
+            with connect(
+                    self._connection_string, autocommit=True
             ) as connection:
                 with connection.cursor() as cur:
                     cur.execute(
@@ -187,7 +186,7 @@ class CommitStore(ICommitEvents):
             )
 
     def _detect_conflicts(self, commit: Commit) -> (bool, int):
-        with pymssql.connect(self._connection_string, autocommit=True) as connection:
+        with connect(self._connection_string, autocommit=True) as connection:
             with connection.cursor() as cur:
                 cur.execute(
                     f"""SELECT StreamRevision, Payload
@@ -208,7 +207,7 @@ class CommitStore(ICommitEvents):
                     uncommitted_events = list(map(self._get_body, commit.events))
                     committed_events = list(map(self._get_body, events))
                     if self._conflict_detector.conflicts_with(
-                        uncommitted_events, committed_events
+                            uncommitted_events, committed_events
                     ):
                         return True, -1
                     if doc[0] > latest_revision:
