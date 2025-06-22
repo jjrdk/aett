@@ -1,17 +1,20 @@
 import boto3
+import botocore.client
+from botocore.client import BaseClient
+import inspect
 
 
 class S3Config:
     def __init__(
-        self,
-        bucket: str,
-        aws_access_key_id: str = None,
-        aws_secret_access_key: str = None,
-        aws_session_token: str = None,
-        profile_name: str = None,
-        region: str = "us-east-1",
-        endpoint_url: str = None,
-        use_tls: bool = True,
+            self,
+            bucket: str,
+            aws_access_key_id: str | None = None,
+            aws_secret_access_key: str | None = None,
+            aws_session_token: str | None = None,
+            profile_name: str | None = None,
+            region: str = "us-east-1",
+            endpoint_url: str | None = None,
+            use_tls: bool = True,
     ):
         """
         Defines the configuration for the S3 client.
@@ -29,14 +32,14 @@ class S3Config:
         """
         self._aws_session_token = aws_session_token
         self._aws_secret_access_key = aws_secret_access_key
-        self._aws_access_key_id: str = aws_access_key_id
+        self._aws_access_key_id = aws_access_key_id
         self._use_tls = use_tls
         self.bucket = bucket
         self._region = region
         self._endpoint_url = endpoint_url
         self._profile_name = profile_name
 
-    def to_client(self):
+    def to_client(self) -> BaseClient:
         session = boto3.Session(
             profile_name=self._profile_name,
             aws_access_key_id=self._aws_access_key_id,

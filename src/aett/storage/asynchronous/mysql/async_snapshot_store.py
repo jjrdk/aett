@@ -26,11 +26,11 @@ class AsyncSnapshotStore(IAccessSnapshotsAsync):
     ) -> Snapshot | None:
         try:
             async with connect(host=self._host,
-                                  user=self._user,
-                                  password=self._password,
-                                  db=self._database,
-                                  port=self._port,
-                                  autocommit=True) as connection:
+                               user=self._user,
+                               password=self._password,
+                               db=self._database,
+                               port=self._port,
+                               autocommit=True) as connection:
                 async with connection.cursor() as cur:
                     await cur.execute(
                         f"""SELECT *
@@ -59,16 +59,16 @@ class AsyncSnapshotStore(IAccessSnapshotsAsync):
                 f"Failed to get snapshot for stream {stream_id} with error {e}"
             )
 
-    async def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] = None):
+    async def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] | None = None):
         if headers is None:
             headers = {}
         try:
             async with connect(host=self._host,
-                                 user=self._user,
-                                 password=self._password,
-                                 db=self._database,
-                                 port=self._port,
-                                 autocommit=True) as connection:
+                               user=self._user,
+                               password=self._password,
+                               db=self._database,
+                               port=self._port,
+                               autocommit=True) as connection:
                 async with connection.cursor() as cur:
                     await cur.execute(
                         f"""INSERT INTO {self._table_name} ( TenantId, StreamId, StreamRevision, CommitSequence, Payload, Headers) VALUES (%s, %s, %s, %s, %s, %s);""",

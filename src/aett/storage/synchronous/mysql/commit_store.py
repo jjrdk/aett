@@ -18,7 +18,7 @@ from aett.eventstore import (
     COMMITS,
     MAX_INT,
     Commit,
-    EventMessage,
+    EventMessage, BaseEvent,
 )
 from aett.storage.synchronous.mysql import _item_to_commit
 
@@ -32,7 +32,7 @@ class CommitStore(ICommitEvents):
             database: str,
             topic_map: TopicMap,
             port: int = 3306,
-            conflict_detector: ConflictDetector = None,
+            conflict_detector: ConflictDetector | None = None,
             table_name=COMMITS,
     ):
         self._topic_map = topic_map if topic_map else TopicMap()
@@ -214,7 +214,7 @@ class CommitStore(ICommitEvents):
                 f"Failed to detect duplicate commit {commit_id} with error {e}"
             )
 
-    def _detect_conflicts(self, commit: Commit) -> (bool, int):
+    def _detect_conflicts(self, commit: Commit) -> typing.Tuple[bool, int]:
         with connect(host=self._host,
                      user=self._user,
                      password=self._password,
@@ -249,5 +249,5 @@ class CommitStore(ICommitEvents):
                 return False, latest_revision
 
     @staticmethod
-    def _get_body(e):
+    def _get_body(e: EventMessage) -> BaseEvent:
         return e.body

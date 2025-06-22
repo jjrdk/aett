@@ -1,6 +1,7 @@
 import typing
 
-import pymongo
+from pymongo import DESCENDING
+from pymongo.errors import PyMongoError
 from pydantic_core import from_json, to_json
 from pymongo import database
 
@@ -15,7 +16,7 @@ class SnapshotStore(IAccessSnapshots):
         self.collection: database.Collection = db.get_collection(table_name)
 
     def get(
-        self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
+            self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
     ) -> Snapshot | None:
         try:
             filters = {
@@ -25,7 +26,7 @@ class SnapshotStore(IAccessSnapshots):
             }
             cursor = (
                 self.collection.find({"$and": [filters]})
-                .sort("StreamRevision", direction=pymongo.DESCENDING)
+                .sort("StreamRevision", direction=DESCENDING)
                 .limit(1)
             )
             item = next(cursor, None)
@@ -42,10 +43,10 @@ class SnapshotStore(IAccessSnapshots):
             )
         except Exception as e:
             raise Exception(
-                f"Failed to get snapshot for stream {stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}"
+                f"Failed to get snapshot for stream {stream_id} with status code {e}"
             )
 
-    def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] = None):
+    def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] | None = None):
         if headers is None:
             headers = {}
         try:
@@ -60,5 +61,5 @@ class SnapshotStore(IAccessSnapshots):
             _ = self.collection.insert_one(doc)
         except Exception as e:
             raise Exception(
-                f"Failed to add snapshot for stream {snapshot.stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}"
+                f"Failed to add snapshot for stream {snapshot.stream_id} with status code {e}"
             )

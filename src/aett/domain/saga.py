@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import List, Dict, Any
 
-from aett.domain.constants import TCommand
+from aett.domain.constants import TCommand, UNDISPATCHEDMESSAGES
 from aett.eventstore import EventMessage, BaseEvent
 
 
@@ -75,6 +75,6 @@ class Saga(ABC):
         from aett.eventstore import Topic
 
         topic_header = Topic.get(type(command))
-        self._headers[f"UndispatchedMessage.{len(self._headers)}"] = EventMessage(
+        self._headers[f"{UNDISPATCHEDMESSAGES}.{len(self._headers)}"] = EventMessage(
             body=command, headers={"topic": topic_header}
         )

@@ -1,5 +1,5 @@
 import datetime
-from typing import Iterable, AsyncIterable
+from typing import AsyncIterable, Tuple
 from uuid import UUID
 
 import aiosqlite
@@ -11,18 +11,18 @@ from aett.domain import (
     ConflictingCommitException,
     NonConflictingCommitException,
 )
-from aett.eventstore import TopicMap, COMMITS, MAX_INT, Commit, EventMessage
+from aett.eventstore import TopicMap, COMMITS, MAX_INT, Commit, EventMessage, BaseEvent
 from aett.eventstore.i_commit_events_async import ICommitEventsAsync
 from aett.storage.asynchronous.sqlite.functions import _item_to_commit
 
 
 class AsyncCommitStore(ICommitEventsAsync):
     def __init__(
-        self,
-        connection_string: str,
-        topic_map: TopicMap,
-        conflict_detector: ConflictDetector = None,
-        table_name=COMMITS,
+            self,
+            connection_string: str,
+            topic_map: TopicMap,
+            conflict_detector: ConflictDetector | None = None,
+            table_name=COMMITS,
     ):
         self._topic_map = topic_map
         self._connection_string = connection_string
@@ -32,11 +32,11 @@ class AsyncCommitStore(ICommitEventsAsync):
         self._table_name = table_name
 
     async def get(
-        self,
-        tenant_id: str,
-        stream_id: str,
-        min_revision: int = 0,
-        max_revision: int = MAX_INT,
+            self,
+            tenant_id: str,
+            stream_id: str,
+            min_revision: int = 0,
+            max_revision: int = MAX_INT,
     ) -> AsyncIterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
@@ -58,10 +58,10 @@ class AsyncCommitStore(ICommitEventsAsync):
                 yield _item_to_commit(doc, self._topic_map)
 
     async def get_to(
-        self,
-        tenant_id: str,
-        stream_id: str,
-        max_time: datetime.datetime = datetime.datetime.max,
+            self,
+            tenant_id: str,
+            stream_id: str,
+            max_time: datetime.datetime = datetime.datetime.max,
     ) -> AsyncIterable[Commit]:
         async with aiosqlite.connect(self._connection_string) as connection:
             cur = await connection.cursor()
@@ -79,22 +79,21 @@ class AsyncCommitStore(ICommitEventsAsync):
                 yield _item_to_commit(doc, self._topic_map)
 
     async def get_all_to(
-        self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
+            self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
     ) -> AsyncIterable[Commit]:
         async with aiosqlite.connect(self._connection_string) as connection:
-            cur = await connection.cursor()
-            await cur.execute(
-                f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+            async with connection.cursor() as cur:
+                await cur.execute(
+                    f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
                               FROM {self._table_name}
                              WHERE TenantId = ?
                               AND CommitStamp <= ?
                              ORDER BY CheckpointNumber;""",
-                (tenant_id, max_time),
-            )
-            fetchall = await cur.fetchall()
-            for doc in fetchall:
-                yield _item_to_commit(doc, self._topic_map)
-            cur.close()
+                    (tenant_id, max_time),
+                )
+                fetchall = await cur.fetchall()
+                for doc in fetchall:
+                    yield _item_to_commit(doc, self._topic_map)
 
     async def commit(self, commit: Commit) -> Commit:
         try:
@@ -120,7 +119,7 @@ class AsyncCommitStore(ICommitEventsAsync):
                         json,
                     ),
                 )
-                checkpoint_number = await cur.fetchone()
+                checkpoint_number = cur.lastrowid
                 await cur.close()
                 await connection.commit()
                 return Commit(
@@ -132,12 +131,12 @@ class AsyncCommitStore(ICommitEventsAsync):
                     commit_stamp=commit.commit_stamp,
                     headers=commit.headers,
                     events=commit.events,
-                    checkpoint_token=checkpoint_number[0],
+                    checkpoint_token=checkpoint_number,
                 )
 
         except aiosqlite.IntegrityError:
             if await self._detect_duplicate(
-                commit.commit_id, commit.tenant_id, commit.stream_id
+                    commit.commit_id, commit.tenant_id, commit.stream_id
             ):
                 raise DuplicateCommitException(
                     f"Commit {commit.commit_id} already exists in stream {commit.stream_id}"
@@ -157,7 +156,7 @@ class AsyncCommitStore(ICommitEventsAsync):
             raise Exception(f"Failed to commit {commit.commit_id} with error {e}")
 
     async def _detect_duplicate(
-        self, commit_id: UUID, tenant_id: str, stream_id: str
+            self, commit_id: UUID, tenant_id: str, stream_id: str
     ) -> bool:
         try:
             async with aiosqlite.connect(self._connection_string) as connection:
@@ -179,7 +178,7 @@ class AsyncCommitStore(ICommitEventsAsync):
                 f"Failed to detect duplicate commit {commit_id} with error {e}"
             )
 
-    async def _detect_conflicts(self, commit: Commit) -> (bool, int):
+    async def _detect_conflicts(self, commit: Commit) -> Tuple[bool, int]:
         async with aiosqlite.connect(self._connection_string) as connection:
             cur: aiosqlite.Cursor = await connection.cursor()
             await cur.execute(
@@ -201,7 +200,7 @@ class AsyncCommitStore(ICommitEventsAsync):
                 uncommitted_events = list(map(self._get_body, commit.events))
                 committed_events = list(map(self._get_body, events))
                 if self._conflict_detector.conflicts_with(
-                    uncommitted_events, committed_events
+                        uncommitted_events, committed_events
                 ):
                     return True, -1
                 if doc[0] > latest_revision:
@@ -209,5 +208,5 @@ class AsyncCommitStore(ICommitEventsAsync):
             return False, latest_revision
 
     @staticmethod
-    def _get_body(e):
+    def _get_body(e: EventMessage) -> BaseEvent:
         return e.body

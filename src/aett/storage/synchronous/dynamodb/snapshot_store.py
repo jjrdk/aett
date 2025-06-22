@@ -9,14 +9,14 @@ from aett.eventstore import SNAPSHOTS, MAX_INT, Snapshot, IAccessSnapshots
 
 class SnapshotStore(IAccessSnapshots):
     def __init__(
-        self,
-        table_name: str = SNAPSHOTS,
-        region: str = "eu-central-1",
-        profile_name: str = None,
-        aws_access_key_id: str = None,
-        aws_secret_access_key: str = None,
-        aws_session_token: str = None,
-        port: int = 8000,
+            self,
+            table_name: str = SNAPSHOTS,
+            region: str = "eu-central-1",
+            profile_name: str | None = None,
+            aws_access_key_id: str | None = None,
+            aws_secret_access_key: str | None = None,
+            aws_session_token: str | None = None,
+            port: int = 8000,
     ):
         self.dynamodb = _get_resource(
             profile_name=profile_name,
@@ -30,7 +30,7 @@ class SnapshotStore(IAccessSnapshots):
         self.table_name = table_name
 
     def get(
-        self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
+            self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
     ) -> Snapshot | None:
         try:
             query_response = self.table.query(
@@ -38,8 +38,8 @@ class SnapshotStore(IAccessSnapshots):
                 ConsistentRead=True,
                 Limit=1,
                 KeyConditionExpression=(
-                    Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
-                    & Key("StreamRevision").lte(max_revision)
+                        Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
+                        & Key("StreamRevision").lte(max_revision)
                 ),
                 ScanIndexForward=False,
             )
@@ -56,10 +56,10 @@ class SnapshotStore(IAccessSnapshots):
             )
         except Exception as e:
             raise Exception(
-                f"Failed to get snapshot for stream {stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}"
+                f"Failed to get snapshot for stream {stream_id} with status code {e}"
             )
 
-    def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] = None):
+    def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] | None = None):
         if headers is None:
             headers = {}
         try:
@@ -81,5 +81,5 @@ class SnapshotStore(IAccessSnapshots):
             )
         except Exception as e:
             raise Exception(
-                f"Failed to add snapshot for stream {snapshot.stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}"
+                f"Failed to add snapshot for stream {snapshot.stream_id} with status code {e}"
             )

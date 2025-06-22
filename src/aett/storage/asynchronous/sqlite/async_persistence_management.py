@@ -1,7 +1,7 @@
 import logging
 
 import aiosqlite
-from typing import Iterable
+from typing import Iterable, AsyncIterable
 
 from aett.eventstore import (
     IManagePersistenceAsync,
@@ -45,16 +45,16 @@ class AsyncPersistenceManagement(IManagePersistenceAsync):
            Payload blob NOT NULL
     );""")
                 await c.execute(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_CommitSequence ON Commits (TenantId, StreamId, CommitSequence);"
+                    f"CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_CommitSequence ON {self._commits_table_name} (TenantId, StreamId, CommitSequence);"
                 )
                 await c.execute(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_CommitId ON Commits (TenantId, StreamId, CommitId);"
+                    f"CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_CommitId ON {self._commits_table_name} (TenantId, StreamId, CommitId);"
                 )
                 await c.execute(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_Revisions ON Commits (TenantId, StreamId, StreamRevision, Items);"
+                    f"CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_Revisions ON {self._commits_table_name} (TenantId, StreamId, StreamRevision, Items);"
                 )
                 await c.execute(
-                    "CREATE INDEX IF NOT EXISTS IX_Commits_Stamp ON Commits (CommitStamp);"
+                    f"CREATE INDEX IF NOT EXISTS IX_Commits_Stamp ON {self._commits_table_name} (CommitStamp);"
                 )
                 await c.execute(f"""CREATE TABLE IF NOT EXISTS {self._snapshots_table_name}
     (
@@ -92,7 +92,7 @@ class AsyncPersistenceManagement(IManagePersistenceAsync):
             )
             await connection.commit()
 
-    async def get_from(self, checkpoint: int) -> Iterable[Commit]:
+    async def get_from(self, checkpoint: int) -> AsyncIterable[Commit]:
         async with aiosqlite.connect(self._connection_string) as connection:
             cur: aiosqlite.Cursor = await connection.cursor()
             await cur.execute(

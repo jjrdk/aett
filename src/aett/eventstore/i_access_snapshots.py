@@ -26,7 +26,7 @@ class IAccessSnapshots(ABC):
         pass
 
     @abstractmethod
-    def add(self, snapshot: Snapshot, headers: Dict[str, str] = None) -> None:
+    def add(self, snapshot: Snapshot, headers: Dict[str, str] | None = None) -> None:
         """
         Adds the snapshot provided to the stream indicated. Using a snapshotId of Guid.Empty will always persist the
         snapshot.

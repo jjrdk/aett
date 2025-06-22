@@ -40,16 +40,16 @@ class PersistenceManagement(IManagePersistence):
            Payload blob NOT NULL
     );""")
                 c.execute(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_CommitSequence ON Commits (TenantId, StreamId, CommitSequence);"
+                    f"CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_CommitSequence ON {self._commits_table_name} (TenantId, StreamId, CommitSequence);"
                 )
                 c.execute(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_CommitId ON Commits (TenantId, StreamId, CommitId);"
+                    f"CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_CommitId ON {self._commits_table_name} (TenantId, StreamId, CommitId);"
                 )
                 c.execute(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_Revisions ON Commits (TenantId, StreamId, StreamRevision, Items);"
+                    f"CREATE UNIQUE INDEX IF NOT EXISTS IX_Commits_Revisions ON {self._commits_table_name} (TenantId, StreamId, StreamRevision, Items);"
                 )
                 c.execute(
-                    "CREATE INDEX IF NOT EXISTS IX_Commits_Stamp ON Commits (CommitStamp);"
+                    f"CREATE INDEX IF NOT EXISTS IX_Commits_Stamp ON {self._commits_table_name} (CommitStamp);"
                 )
                 c.execute(f"""CREATE TABLE IF NOT EXISTS {self._snapshots_table_name}
     (

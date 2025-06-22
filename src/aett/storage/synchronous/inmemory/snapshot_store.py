@@ -8,7 +8,7 @@ class SnapshotStore(IAccessSnapshots):
         self.buckets: typing.Dict[str, typing.Dict[str, typing.List[Snapshot]]] = {}
 
     def get(
-        self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
+            self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
     ) -> Snapshot | None:
         if not self._ensure_stream(tenant_id=tenant_id, stream_id=stream_id):
             return None
@@ -22,7 +22,7 @@ class SnapshotStore(IAccessSnapshots):
         )
         return snapshots[-1]
 
-    def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] = None):
+    def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] | None = None):
         self._ensure_stream(snapshot.tenant_id, snapshot.stream_id)
         stream = self.buckets[snapshot.tenant_id][snapshot.stream_id]
         if len(stream) == 0:
@@ -32,7 +32,7 @@ class SnapshotStore(IAccessSnapshots):
             if latest.stream_revision <= snapshot.stream_revision:
                 raise ValueError("Conflicting commit")
             stream.append(snapshot)
-            stream.sort()
+            stream.sort(key=lambda s: s.stream_revision, reverse=False)
 
     def _ensure_stream(self, tenant_id: str, stream_id: str) -> bool:
         if tenant_id not in self.buckets:

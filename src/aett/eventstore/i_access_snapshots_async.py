@@ -11,7 +11,7 @@ class IAccessSnapshotsAsync(ABC):
 
     @abstractmethod
     async def get(
-        self, tenant_id: str, stream_id: str, max_revision: int
+            self, tenant_id: str, stream_id: str, max_revision: int
     ) -> Optional[Snapshot]:
         """
         Gets the snapshot at the revision indicated or the most recent snapshot below that revision.
@@ -26,7 +26,7 @@ class IAccessSnapshotsAsync(ABC):
         pass
 
     @abstractmethod
-    async def add(self, snapshot: Snapshot, headers: Dict[str, str] = None):
+    async def add(self, snapshot: Snapshot, headers: Dict[str, str] | None = None):
         """
         Adds the snapshot provided to the stream indicated. Using a snapshotId of Guid.Empty will always persist the
         snapshot.

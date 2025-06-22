@@ -44,8 +44,10 @@ asyncpg = "~0.30"
 testcontainers = { version = "~4.9", extras = ['minio', 'mysql'] }
 aiosqlite = "~0.21"
 pymysql = "~1.1"
+types-pymysql = "~1.1"
 aiomysql = "~0.2"
 pytest-xdist = "^3.6"
+mypy = ">=1.16.1,<2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.9"

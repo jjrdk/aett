@@ -1,7 +1,5 @@
 from typing import Iterable
 
-from boto3 import client
-
 from aett.eventstore import IManagePersistence, COMMITS, Commit, StreamHead
 from aett.storage.synchronous.s3 import S3Config
 
@@ -10,7 +8,7 @@ class PersistenceManagement(IManagePersistence):
     def __init__(self, s3_config: S3Config, folder_name=COMMITS):
         self._folder_name = folder_name
         self._s3_bucket = s3_config.bucket
-        self._resource: client = s3_config.to_client()
+        self._resource = s3_config.to_client()
 
     def initialize(self):
         try:
@@ -30,7 +28,7 @@ class PersistenceManagement(IManagePersistence):
             self._resource.delete_object(Bucket=self._s3_bucket, Key=o["Key"])
 
     def get_from(self, checkpoint: int) -> Iterable[Commit]:
-        pass
+        return []
 
     def get_streams_to_snapshot(self, threshold: int) -> Iterable[StreamHead]:
-        pass
+        return []

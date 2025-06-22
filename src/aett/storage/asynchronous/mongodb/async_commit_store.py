@@ -1,5 +1,4 @@
 import typing
-from typing import Iterable
 import datetime
 from uuid import UUID
 
@@ -8,8 +7,9 @@ from aett.domain import (
     ConflictingCommitException,
     NonConflictingCommitException,
 )
-from aett.eventstore import Commit, TopicMap, ICommitEventsAsync, COMMITS, MAX_INT
-import pymongo
+from aett.eventstore import Commit, TopicMap, ICommitEventsAsync, COMMITS, MAX_INT, EventMessage, BaseEvent
+from pymongo import ASCENDING
+from pymongo.errors import DuplicateKeyError
 from pydantic_core import to_json
 from pymongo.asynchronous import database, collection, cursor
 from pymongo.asynchronous.cursor import AsyncCursor
@@ -19,11 +19,11 @@ from aett.storage.asynchronous.mongodb.mapping import _doc_to_commit
 
 class AsyncCommitStore(ICommitEventsAsync):
     def __init__(
-        self,
-        db: database.AsyncDatabase,
-        topic_map: TopicMap,
-        conflict_detector: ConflictDetector = None,
-        table_name=COMMITS,
+            self,
+            db: database.AsyncDatabase,
+            topic_map: TopicMap,
+            conflict_detector: ConflictDetector | None = None,
+            table_name=COMMITS,
     ):
         self._topic_map = topic_map
         self._collection: collection.AsyncCollection = db.get_collection(table_name)
@@ -35,15 +35,15 @@ class AsyncCommitStore(ICommitEventsAsync):
         )
 
     async def get(
-        self,
-        tenant_id: str,
-        stream_id: str,
-        min_revision: int = 0,
-        max_revision: int = MAX_INT,
+            self,
+            tenant_id: str,
+            stream_id: str,
+            min_revision: int = 0,
+            max_revision: int = MAX_INT,
     ) -> typing.AsyncIterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
-        filters = {"TenantId": tenant_id, "StreamId": stream_id}
+        filters: typing.Dict[str, typing.Any] = {"TenantId": tenant_id, "StreamId": stream_id}
         if min_revision > 0:
             filters["StreamRevision"] = {"$gte": min_revision}
         if max_revision < MAX_INT:
@@ -54,15 +54,15 @@ class AsyncCommitStore(ICommitEventsAsync):
 
         query_response: AsyncCursor = self._collection.find({"$and": [filters]})
         async for doc in query_response.sort(
-            "CheckpointToken", direction=pymongo.ASCENDING
+                "CheckpointToken", direction=ASCENDING
         ):
             yield _doc_to_commit(doc, self._topic_map)
 
     async def get_to(
-        self,
-        tenant_id: str,
-        stream_id: str,
-        max_time: datetime.datetime = datetime.datetime.max,
+            self,
+            tenant_id: str,
+            stream_id: str,
+            max_time: datetime.datetime = datetime.datetime.max,
     ) -> typing.AsyncIterable[Commit]:
         filters = {
             "TenantId": tenant_id,
@@ -72,12 +72,12 @@ class AsyncCommitStore(ICommitEventsAsync):
 
         query_response: cursor.AsyncCursor = self._collection.find({"$and": [filters]})
         async for doc in query_response.sort(
-            "CheckpointToken", direction=pymongo.ASCENDING
+                "CheckpointToken", direction=ASCENDING
         ):
             yield _doc_to_commit(doc, self._topic_map)
 
     async def get_all_to(
-        self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
+            self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
     ) -> typing.AsyncIterable[Commit]:
         filters = {
             "TenantId": tenant_id,
@@ -86,7 +86,7 @@ class AsyncCommitStore(ICommitEventsAsync):
 
         query_response: cursor.AsyncCursor = self._collection.find({"$and": [filters]})
         async for doc in query_response.sort(
-            "CheckpointToken", direction=pymongo.ASCENDING
+                "CheckpointToken", direction=ASCENDING
         ):
             yield _doc_to_commit(doc, self._topic_map)
 
@@ -122,12 +122,12 @@ class AsyncCommitStore(ICommitEventsAsync):
                 checkpoint_token=ret,
             )
         except Exception as e:
-            if isinstance(e, pymongo.errors.DuplicateKeyError):
+            if isinstance(e, DuplicateKeyError):
                 if await self._detect_duplicate(
-                    commit.commit_id,
-                    commit.tenant_id,
-                    commit.stream_id,
-                    commit.commit_sequence,
+                        commit.commit_id,
+                        commit.tenant_id,
+                        commit.stream_id,
+                        commit.commit_sequence,
                 ):
                     raise Exception(
                         f"Commit {commit.commit_id} already exists in stream {commit.stream_id}"
@@ -144,11 +144,11 @@ class AsyncCommitStore(ICommitEventsAsync):
                         )
             else:
                 raise Exception(
-                    f"Failed to commit event to stream {commit.stream_id} with status code {e.response['ResponseMetadata']['HTTPStatusCode']}"
+                    f"Failed to commit event to stream {commit.stream_id} with status code {e}"
                 )
 
     async def _detect_duplicate(
-        self, commit_id: UUID, tenant_id: str, stream_id: str, commit_sequence: int
+            self, commit_id: UUID, tenant_id: str, stream_id: str, commit_sequence: int
     ) -> bool:
         duplicate_check = await self._collection.find_one(
             {
@@ -157,10 +157,12 @@ class AsyncCommitStore(ICommitEventsAsync):
                 "CommitSequence": commit_sequence,
             }
         )
+        if not duplicate_check:
+            return False
         s = str(duplicate_check.get("CommitId"))
         return s == str(commit_id)
 
-    async def _detect_conflicts(self, commit: Commit) -> (bool, int):
+    async def _detect_conflicts(self, commit: Commit) -> typing.Tuple[bool, int]:
         filters = {
             "TenantId": commit.tenant_id,
             "StreamId": commit.stream_id,
@@ -168,14 +170,14 @@ class AsyncCommitStore(ICommitEventsAsync):
         }
         query_response: cursor.AsyncCursor = self._collection.find(
             {"$and": [filters]}
-        ).sort("CheckpointToken", direction=pymongo.ASCENDING)
+        ).sort("CheckpointToken", direction=ASCENDING)
 
         latest_revision = 0
         async for doc in query_response:
             c = _doc_to_commit(doc, self._topic_map)
             if self._conflict_detector.conflicts_with(
-                list(map(self._get_body, commit.events)),
-                list(map(self._get_body, c.events)),
+                    list(map(self._get_body, commit.events)),
+                    list(map(self._get_body, c.events)),
             ):
                 return True, -1
             i = int(doc["StreamRevision"])
@@ -184,5 +186,5 @@ class AsyncCommitStore(ICommitEventsAsync):
         return False, latest_revision
 
     @staticmethod
-    def _get_body(e):
+    def _get_body(e: EventMessage) -> BaseEvent:
         return e.body

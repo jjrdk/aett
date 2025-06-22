@@ -2,6 +2,7 @@ import datetime
 
 from behave import *
 
+from aett.domain.constants import UNDISPATCHEDMESSAGES
 from test_types import TestEvent, TestSaga
 
 use_step_matcher("re")
@@ -31,4 +32,4 @@ def step_impl(context):
 
 @then("a command is emitted from the saga")
 def step_impl(context):
-    assert "UndispatchedMessage.0" in context.saga.headers
+    assert f"{UNDISPATCHEDMESSAGES}.0" in context.saga.headers

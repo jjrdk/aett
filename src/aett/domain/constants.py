@@ -8,3 +8,5 @@ TCommand = TypeVar("TCommand", bound=BaseCommand)
 
 TUncommitted = TypeVar("TUncommitted", bound=BaseEvent)
 TCommitted = TypeVar("TCommitted", bound=BaseEvent)
+
+UNDISPATCHEDMESSAGES = "UndispatchedMessage"

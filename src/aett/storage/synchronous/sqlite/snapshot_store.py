@@ -45,7 +45,7 @@ class SnapshotStore(IAccessSnapshots):
                 f"Failed to get snapshot for stream {stream_id} with error {e}"
             )
 
-    def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] = None):
+    def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] | None = None):
         try:
             with sqlite3.connect(self._connection_string) as connection:
                 cur = connection.cursor()

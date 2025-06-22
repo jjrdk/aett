@@ -12,18 +12,18 @@ from aett.eventstore import ICommitEvents, Commit, MAX_INT, EventMessage, BaseEv
 
 
 class CommitStore(ICommitEvents):
-    def __init__(self, conflict_detector: ConflictDetector = None):
+    def __init__(self, conflict_detector: ConflictDetector | None = None):
         self._buckets: typing.Dict[str, typing.Dict[str, typing.List[Commit]]] = {}
         self._conflict_detector: ConflictDetector = (
             conflict_detector if conflict_detector is not None else ConflictDetector()
         )
 
     def get(
-        self,
-        tenant_id: str,
-        stream_id: str,
-        min_revision: int = 0,
-        max_revision: int = MAX_INT,
+            self,
+            tenant_id: str,
+            stream_id: str,
+            min_revision: int = 0,
+            max_revision: int = MAX_INT,
     ) -> typing.Iterable[Commit]:
         if not self._ensure_stream(tenant_id=tenant_id, stream_id=stream_id):
             return []
@@ -37,10 +37,10 @@ class CommitStore(ICommitEvents):
         )
 
     def get_to(
-        self,
-        tenant_id: str,
-        stream_id: str,
-        max_time: datetime.datetime = datetime.datetime.max,
+            self,
+            tenant_id: str,
+            stream_id: str,
+            max_time: datetime.datetime = datetime.datetime.max,
     ) -> Iterable[Commit]:
         if not self._ensure_stream(tenant_id=tenant_id, stream_id=stream_id):
             return []
@@ -48,7 +48,7 @@ class CommitStore(ICommitEvents):
         return (commit for commit in commits if commit.commit_stamp <= max_time)
 
     def get_all_to(
-        self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
+            self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
     ) -> Iterable[Commit]:
         commits: typing.List[Commit] = []
         for bucket in self._buckets:
@@ -73,8 +73,8 @@ class CommitStore(ICommitEvents):
                 for e in c
             ]
             if self._conflict_detector.conflicts_with(
-                list(map(self._get_body, commit.events)),
-                list(map(self._get_body, commits)),
+                    list(map(self._get_body, commit.events)),
+                    list(map(self._get_body, commits)),
             ):
                 raise ConflictingCommitException("Conflicting commit")
             else:
