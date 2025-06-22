@@ -27,17 +27,17 @@ packages = [
 sqlite_async = ["aiosqlite~=0.21"]
 postgresql = ['psycopg~=3.2', 'psycopg-binary~=3.2']
 postgresql_async = ["asyncpg~=0.30"]
-mongodb = ["pymongo~=4.11"]
-dynamodb = ["boto3~=1.37"]
-s3 = ["boto3~=1.37"]
+mongodb = ["pymongo~=4.13"]
+dynamodb = ["boto3~=1.38"]
+s3 = ["boto3~=1.38"]
 mysql = ["pymysql~=1.1"]
 mysql_async = ["aiomysql~=0.2"]
 
 [tool.poetry.group.test.dependencies]
 behave = "^1.2"
-boto3 = "~1.37"
+boto3 = "~1.38"
 boto3-stubs = { version = ">=1.38", extras = ['full'] }
-pymongo = "~4.11"
+pymongo = "~4.13"
 psycopg = "~3.2"
 psycopg-binary = "~3.2"
 asyncpg = "~0.30"
