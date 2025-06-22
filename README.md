@@ -1,5 +1,3 @@
-from features.steps.test_types import TestAggregatefrom aett.storage.synchronous.postgresql.snapshot_store import SnapshotStore
-
 # ᚨᛖᛏᛏ (Aett) is an Event Store for Python
 
 Provides a framework for managing and storing event streams.
