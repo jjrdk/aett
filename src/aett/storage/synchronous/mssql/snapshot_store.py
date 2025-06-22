@@ -1,5 +1,5 @@
 import typing
-import pymssql
+from pymssql import connect
 from pydantic_core import from_json, to_json
 
 from aett.eventstore import IAccessSnapshots, SNAPSHOTS, MAX_INT, Snapshot
@@ -11,11 +11,11 @@ class SnapshotStore(IAccessSnapshots):
         self._table_name = table_name
 
     def get(
-        self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
+            self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
     ) -> Snapshot | None:
         try:
-            with pymssql.connect(
-                self._connection_string, autocommit=True
+            with connect(
+                    self._connection_string, autocommit=True
             ) as connection:
                 with connection.cursor() as cur:
                     cur.execute(
@@ -45,12 +45,12 @@ class SnapshotStore(IAccessSnapshots):
                 f"Failed to get snapshot for stream {stream_id} with error {e}"
             )
 
-    def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] = None):
+    def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] | None = None):
         if headers is None:
             headers = {}
         try:
-            with pymssql.connect(
-                self._connection_string, autocommit=True
+            with connect(
+                    self._connection_string, autocommit=True
             ) as connection:
                 with connection.cursor() as cur:
                     cur.execute(
