@@ -11,11 +11,16 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
-keywords = ["events", "event store", "sqlite", "postgresql", "mongodb", "dynamodb", "s3", "event sourcing"]
+keywords = ["events", "event store", "sqlite", "postgresql", "mysql", "mongodb", "dynamodb", "s3", "event sourcing"]
 requires-python = ">=3.11,<4.0"
 dependencies = [
     "pydantic (>= 2.10, < 3.0)",
     "multipledispatch (>=1.0, <2.0)"
+]
+
+[tool.poetry]
+packages = [
+    { include = "aett", from = "src" }
 ]
 
 [project.optional-dependencies]
@@ -27,11 +32,6 @@ dynamodb = ["boto3~=1.37"]
 s3 = ["boto3~=1.37"]
 mysql = ["pymysql~=1.1"]
 mysql_async = ["aiomysql~=0.2"]
-
-[tool.poetry]
-packages = [
-    { include = "aett", from = "src" }
-]
 
 [tool.poetry.group.test.dependencies]
 behave = "^1.2"
