@@ -50,6 +50,9 @@ aiomysql = "~0.2"
 pytest-xdist = "^3.6"
 mypy = ">=1.16.1,<2.0.0"
 
+[installer]
+no-binary = ["pymssql"]
+
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.9"
 
