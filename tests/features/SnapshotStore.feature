@@ -20,11 +20,11 @@ Feature: Persist snapshots
     Then the snapshot is persisted to the store
 
     Examples:
-      | storage |
+      | storage  |
       | dynamo   |
       | inmemory |
       | mongo    |
       | postgres |
       | s3       |
       | sqlite   |
-      | mysql   |
+      | mysql    |

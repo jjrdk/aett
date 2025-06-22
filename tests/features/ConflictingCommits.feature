@@ -42,9 +42,9 @@ Feature: Persist commits
 
     Examples:
       | storage        |
-#      | mongo_async    |
-#      | postgres_async |
-#      | sqlite_async   |
+      | mongo_async    |
+      | postgres_async |
+      | sqlite_async   |
       | mysql_async    |
 
   Scenario Outline: Commit non-conflicting event to stream
