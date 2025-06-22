@@ -28,3 +28,4 @@ Feature: Persist snapshots
       | s3       |
       | sqlite   |
       | mysql    |
+      | mssql    |

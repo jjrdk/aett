@@ -4,6 +4,7 @@ from pymongo import AsyncMongoClient, MongoClient
 from testcontainers.core.container import DockerContainer
 from testcontainers.minio import MinioContainer
 from testcontainers.mongodb import MongoDbContainer
+from testcontainers.mssql import SqlServerContainer
 from testcontainers.mysql import MySqlContainer
 from testcontainers.postgres import PostgresContainer
 
@@ -29,6 +30,9 @@ from aett.storage.asynchronous.mysql.async_persistence_management import (
 )
 from aett.storage.synchronous.mysql.persistence_management import (
     PersistenceManagement as MySqlPersistenceManagement,
+)
+from aett.storage.synchronous.mssql.persistence_management import (
+    PersistenceManagement as MsSqlPersistenceManagement,
 )
 from aett.storage.asynchronous.sqlite.async_persistence_management import (
     AsyncPersistenceManagement as SqliteAsyncPersistenceManagement,
@@ -158,4 +162,11 @@ async def step_impl(context, storage: str):
             context.db = f"{context.tenant_id}.db"
             mgmt = SqliteAsyncPersistenceManagement(context.db, tm)
             await mgmt.initialize()
+            context.mgmt = mgmt
+        case "mssql":
+            context.process = SqlServerContainer()
+            mssql_container = context.process.start()
+            context.db = mssql_container.get_connection_url()
+            mgmt = MsSqlPersistenceManagement(connection_string=context.db, topic_map=tm)
+            mgmt.initialize()
             context.mgmt = mgmt

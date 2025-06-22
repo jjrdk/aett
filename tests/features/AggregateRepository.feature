@@ -26,6 +26,7 @@ Feature: Aggregate repository behavior
       | s3       |
       | sqlite   |
       | mysql    |
+      | mssql    |
 
   Scenario Outline: Async loading a modified aggregate from the repository
     Given a running <storage> server
@@ -59,6 +60,7 @@ Feature: Aggregate repository behavior
       | s3       |
       | sqlite   |
       | mysql    |
+      | mssql    |
 
   Scenario Outline: Async saving an aggregate to the repository
     Given a running <storage> server
@@ -90,6 +92,7 @@ Feature: Aggregate repository behavior
       | s3       |
       | sqlite   |
       | mysql    |
+      | mssql    |
 
   Scenario Outline: Load snapshots before events async
     Given a running <storage> server
@@ -125,6 +128,7 @@ Feature: Aggregate repository behavior
       | s3       |
       | sqlite   |
       | mysql    |
+      | mssql    |
 
   Scenario Outline: Retrieving based on time async
     Given a running <storage> server
@@ -156,6 +160,7 @@ Feature: Aggregate repository behavior
       | s3       |
       | sqlite   |
       | mysql    |
+      | mssql    |
 
   Scenario Outline: Thousand event aggregate async
     Given a running <storage> server
@@ -187,3 +192,4 @@ Feature: Aggregate repository behavior
       | s3       | 100   |
       | sqlite   | 1000  |
       | mysql    | 1000  |
+      | mssql    | 1000  |

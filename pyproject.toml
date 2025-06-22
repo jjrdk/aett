@@ -32,6 +32,7 @@ dynamodb = ["boto3~=1.38"]
 s3 = ["boto3~=1.38"]
 mysql = ["pymysql~=1.1"]
 mysql_async = ["aiomysql~=0.2"]
+mssql = ["pymssql~=2.3"]
 
 [tool.poetry.group.test.dependencies]
 behave = "^1.2"
@@ -41,7 +42,7 @@ pymongo = "~4.13"
 psycopg = "~3.2"
 psycopg-binary = "~3.2"
 asyncpg = "~0.30"
-testcontainers = { version = "~4.9", extras = ['minio', 'mysql'] }
+testcontainers = { version = "~4.9", extras = ['minio', 'mysql', 'mssql'] }
 aiosqlite = "~0.21"
 pymysql = "~1.1"
 types-pymysql = "~1.1"

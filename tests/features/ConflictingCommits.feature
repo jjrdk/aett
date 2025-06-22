@@ -31,6 +31,7 @@ Feature: Persist commits
       | s3       |
       | sqlite   |
       | mysql    |
+      | mssql    |
 
   Scenario Outline: Commit non-conflicting event to stream async
     Given a running <storage> server
@@ -64,3 +65,4 @@ Feature: Persist commits
       | s3       |
       | sqlite   |
       | mysql    |
+      | mssql    |
