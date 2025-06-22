@@ -1749,7 +1749,6 @@ files = [
     {file = "pymssql-2.3.4-cp39-cp39-win_amd64.whl", hash = "sha256:48ea563fd02f25439fe054979ebdb469fbcc15dffdc2c67388b24dca195da313"},
     {file = "pymssql-2.3.4.tar.gz", hash = "sha256:117c82d7aa9021171aa9be98368475519f33d9c32073cdcf9b0d76231abc6436"},
 ]
-markers = {main = "extra == \"mssql\""}
 
 [[package]]
 name = "pymysql"
@@ -2117,6 +2116,18 @@ files = [
 ]
 
 [[package]]
+name = "types-pymssql"
+version = "2.1.0"
+description = "Typing stubs for pymssql"
+optional = false
+python-versions = "*"
+groups = ["test"]
+files = [
+    {file = "types-pymssql-2.1.0.tar.gz", hash = "sha256:72e04114ce360a0606c3e78caab036636928ad52c4dd839e057932342774763e"},
+    {file = "types_pymssql-2.1.0-py3-none-any.whl", hash = "sha256:3a531f46f559bbedf242bde7c8dbee18200c32e830522fcc4c67ebf96215a169"},
+]
+
+[[package]]
 name = "types-pymysql"
 version = "1.1.0.20250516"
 description = "Typing stubs for PyMySQL"
@@ -2301,4 +2312,4 @@ sqlite-async = ["aiosqlite"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "ae67998be562086db595803b0697abbce31074064a80ace8c779f57ce80b0210"
+content-hash = "745b95f9aa78d0444f3ba419943c2ce728bfcebdf637e3346bc86771150bc921"

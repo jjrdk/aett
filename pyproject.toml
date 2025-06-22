@@ -49,6 +49,8 @@ types-pymysql = "~1.1"
 aiomysql = "~0.2"
 pytest-xdist = "^3.6"
 mypy = ">=1.16.1,<2.0.0"
+pymssql = "~2.3"
+types-pymssql = "~2.1"
 
 [installer]
 no-binary = ["pymssql"]
