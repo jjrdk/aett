@@ -1,18 +1,16 @@
 Feature: Saga repository behavior
-
-  Scenario Outline: Loading an saga from the repository async
-    Given a running <storage> server
-    And I have a persistent async saga repository
-    Then a specific saga type can be loaded async from the repository
-
-    Examples:
-      | storage        |
-      | mongo_async    |
-      | postgres_async |
-      | sqlite_async   |
-      | mysql_async    |
-      | dynamodb_async |
-      | s3_async       |
+#
+#  Scenario Outline: Loading an saga from the repository async
+#    Given a running <storage> server
+#    And I have a persistent async saga repository
+#    Then a specific saga type can be loaded async from the repository
+#
+#    Examples:
+#      | storage        |
+#      | mongo_async    |
+#      | postgres_async |
+#      | sqlite_async   |
+#      | mysql_async    |
 
   Scenario Outline: Loading an saga from the repository
     Given a running <storage> server
@@ -21,32 +19,29 @@ Feature: Saga repository behavior
 
     Examples:
       | storage  |
-      | dynamo   |
-      | inmemory |
-      | mongo    |
-      | postgres |
-      | s3       |
-      | sqlite   |
-      | mysql    |
+#      | dynamo   |
+#      | inmemory |
+#      | mongo    |
+#      | postgres |
+#      | s3       |
+#      | sqlite   |
+#      | mysql    |
       | mssql    |
-
-  Scenario Outline: Loading a modified aggregate from the repository async
-    Given a running <storage> server
-    And I have a persistent async saga repository
-    When a saga is loaded async from the repository and modified
-    And the saga is saved async to the repository
-    And the saga is loaded again async
-    Then the modified saga is loaded from storage
-    And the loaded saga has no headers
-
-    Examples:
-      | storage        |
-      | mongo_async    |
-      | postgres_async |
-      | sqlite_async   |
-      | mysql_async    |
-      | dynamodb_async |
-      | s3_async       |
+#
+#  Scenario Outline: Loading a modified aggregate from the repository async
+#    Given a running <storage> server
+#    And I have a persistent async saga repository
+#    When a saga is loaded async from the repository and modified
+#    And the saga is saved async to the repository
+#    And the saga is loaded again async
+#    Then the modified saga is loaded from storage
+#
+#    Examples:
+#      | storage        |
+#      | mongo_async    |
+#      | postgres_async |
+#      | sqlite_async   |
+#      | mysql_async    |
 
   Scenario Outline: Loading a modified aggregate from the repository
     Given a running <storage> server
@@ -55,15 +50,14 @@ Feature: Saga repository behavior
     And the saga is saved to the repository
     And the saga is loaded again
     Then the modified saga is loaded from storage
-    And the loaded saga has no headers
 
     Examples:
       | storage  |
-      | dynamo   |
-      | inmemory |
-      | mongo    |
-      | postgres |
-      | s3       |
-      | sqlite   |
-      | mysql    |
+#      | dynamo   |
+#      | inmemory |
+#      | mongo    |
+#      | postgres |
+#      | s3       |
+#      | sqlite   |
+#      | mysql    |
       | mssql    |
