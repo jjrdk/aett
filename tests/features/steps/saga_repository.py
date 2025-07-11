@@ -108,3 +108,9 @@ def step_impl(context):
 def step_impl(context):
     version = context.saga.version
     assert version == 1
+
+
+@step("the loaded saga has no headers")
+def step_impl(context):
+    saga = context.saga
+    assert len(saga.headers) == 0, f"Expected no headers, but found {saga.headers}"

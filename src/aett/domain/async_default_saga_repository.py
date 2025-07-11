@@ -40,6 +40,7 @@ class AsyncDefaultSagaRepository(AsyncSagaRepository):
             for event in commit.events:
                 saga.transition(event.body)
         saga.uncommitted.clear()
+        saga.headers.clear()
         return saga
 
     async def save(self, saga: Saga) -> None:

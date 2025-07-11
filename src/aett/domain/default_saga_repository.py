@@ -37,6 +37,7 @@ class DefaultSagaRepository(SagaRepository):
             for event in commit.events:
                 saga.transition(event.body)
         saga.uncommitted.clear()
+        saga.headers.clear()
         return saga
 
     def save(self, saga: Saga) -> None:

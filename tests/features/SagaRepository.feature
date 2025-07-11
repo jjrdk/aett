@@ -34,6 +34,7 @@ Feature: Saga repository behavior
     And the saga is saved async to the repository
     And the saga is loaded again async
     Then the modified saga is loaded from storage
+    And the loaded saga has no headers
 
     Examples:
       | storage        |
@@ -49,6 +50,7 @@ Feature: Saga repository behavior
     And the saga is saved to the repository
     And the saga is loaded again
     Then the modified saga is loaded from storage
+    And the loaded saga has no headers
 
     Examples:
       | storage  |
