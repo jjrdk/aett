@@ -10,17 +10,13 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
 ]
 keywords = ["events", "event store", "sqlite", "postgresql", "mysql", "mongodb", "dynamodb", "s3", "event sourcing"]
 requires-python = ">=3.11,<4.0"
 dependencies = [
-    "pydantic (>= 2.10, < 3.0)",
+    "pydantic (>= 2.11, < 3.0)",
     "multipledispatch (>=1.0, <2.0)"
-]
-
-[tool.poetry]
-packages = [
-    { include = "aett", from = "src" }
 ]
 
 [project.optional-dependencies]
@@ -28,14 +24,19 @@ sqlite_async = ["aiosqlite~=0.21"]
 postgresql = ['psycopg~=3.2', 'psycopg-binary~=3.2']
 postgresql_async = ["asyncpg~=0.30"]
 mongodb = ["pymongo~=4.13"]
-dynamodb = ["boto3~=1.38"]
-s3 = ["boto3~=1.38"]
+dynamodb = ["boto3~=1.39"]
+s3 = ["boto3~=1.39"]
 mysql = ["pymysql~=1.1"]
 mysql_async = ["aiomysql~=0.2"]
 
+[tool.poetry]
+packages = [
+    { include = "aett", from = "src" }
+]
+
 [tool.poetry.group.test.dependencies]
 behave = "^1.2"
-boto3 = "~1.38"
+boto3 = "~1.39"
 boto3-stubs = { version = ">=1.38", extras = ['full'] }
 pymongo = "~4.13"
 psycopg = "~3.2"
@@ -46,11 +47,11 @@ aiosqlite = "~0.21"
 pymysql = "~1.1"
 types-pymysql = "~1.1"
 aiomysql = "~0.2"
-pytest-xdist = "^3.6"
-mypy = ">=1.16.1,<2.0.0"
+pytest-xdist = "^3.8"
+mypy = ">=1.16,<2.0.0"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.9"
+ruff = "^0.12"
 
 [tool.ruff.lint]
 ignore = ["F401", "F403", "F405", "E722", "F811", "F821", "F841"]
