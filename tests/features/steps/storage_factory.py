@@ -13,6 +13,9 @@ from aett.eventstore import (
 from aett.storage.synchronous.dynamodb.commit_store import (
     CommitStore as DynamoDbCommitStore,
 )
+from aett.storage.asynchronous.dynamodb.async_commit_store import (
+    AsyncCommitStore as AsyncDynamoDbCommitStore,
+)
 from aett.storage.synchronous.dynamodb.snapshot_store import (
     SnapshotStore as DynamoDbSnapshotStore,
 )
@@ -81,6 +84,16 @@ def create_async_commit_store(
 ) -> ICommitEventsAsync:
     commit_store: ICommitEventsAsync | None = None
     match storage_type:
+        case "dynamodb_async":
+            commit_store = AsyncDynamoDbCommitStore(
+                topic_map=topic_map,
+                conflict_detector=conflict_detector,
+                region="localhost",
+                aws_access_key_id="dummy",
+                aws_secret_access_key="dummy",
+                aws_session_token="dummy",
+                port=int(connection_string),
+            )
         case "mongo_async":
             client = AsyncMongoClient(connection_string)
             commit_store = MongoAsyncCommitStore(

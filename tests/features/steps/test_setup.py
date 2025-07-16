@@ -15,6 +15,9 @@ from aett.storage.asynchronous.mongodb import (
 from aett.storage.synchronous.dynamodb.persistence_management import (
     PersistenceManagement as DynamoDbPersistenceManagement,
 )
+from aett.storage.asynchronous.dynamodb.async_persistence_management import (
+    AsyncPersistenceManagement as AsyncDynamoDbPersistenceManagement,
+)
 from aett.storage.synchronous.mongodb.persistence_management import (
     PersistenceManagement as MongoPersistenceManagement,
 )
@@ -68,6 +71,21 @@ async def step_impl(context, storage: str):
             )
             mgmt.initialize()
             context.mgmt = mgmt
+        case "dynamodb_async":
+            context.process = DockerContainer(
+                "amazon/dynamodb-local"
+            ).with_exposed_ports(8000)
+            context.process.start()
+            port = int(context.process.get_exposed_port(8000))
+            context.db = port
+            from aett.storage.asynchronous.dynamodb import _get_client
+            async with _get_client(
+                    aws_session_token="dummy",
+                    aws_access_key_id="dummy",
+                    aws_secret_access_key="dummy",
+                    port=port) as client:
+                mgmt = AsyncDynamoDbPersistenceManagement(client=client)
+                await mgmt.initialize()
         case "inmemory":
             context.db = "inmemory"
             pass

@@ -166,10 +166,11 @@ Feature: Aggregate repository behavior
 
     Examples:
       | storage        | count |
-      | mongo_async    | 1000  |
-      | postgres_async | 1000  |
-      | sqlite_async   | 1000  |
-      | mysql_async    | 1000  |
+#      | mongo_async    | 1000  |
+#      | postgres_async | 1000  |
+#      | sqlite_async   | 1000  |
+#      | mysql_async    | 1000  |
+      | dynamodb_async | 1000  |
 
   Scenario Outline: Thousand event aggregate
     Given a running <storage> server

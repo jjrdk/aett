@@ -33,8 +33,11 @@ class TopicMap:
         """
         Registers all the classes in the module.
         """
-        for c in inspect.getmembers(module, inspect.isclass):
-            self.register(c[1])
+        for _, o in inspect.getmembers(module, inspect.isclass):
+            if inspect.isclass(o):
+                self.register(o)
+            if inspect.ismodule(o):
+                self.register_module(o)
         return self
 
     def get(self, topic: str) -> type | None:
