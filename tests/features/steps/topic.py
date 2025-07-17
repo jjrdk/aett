@@ -1,3 +1,5 @@
+import datetime
+
 from behave import *
 from pydantic import BaseModel
 
@@ -8,6 +10,7 @@ from test_types import (
     SampleModel,
     DerivedClass,
     SecondDerivedClass,
+    TestEvent
 )
 
 use_step_matcher("re")
@@ -58,7 +61,8 @@ def step_impl(context, expected):
 
 @when("I register it with the TopicMap")
 def step_impl(context):
-    context.topic_map.register(SampleClass)
+    context.topic_map = TopicMap()
+    context.topic_map.register(context.instance)
 
 
 @then("the topic is list of all topics")
@@ -98,3 +102,26 @@ def step_impl(context):
 def step_impl(context):
     topic_map: HierarchicalTopicMap = context.topic_map
     topic_map.except_base(BaseModel)
+
+
+@given("a class with a topic annotation")
+def step_impl(context):
+    context.instance = TestEvent(source="test",
+                                 timestamp=datetime.datetime.now(datetime.timezone.utc),
+                                 version=0, value=100)
+
+
+@then("the topic can be resolved from the type")
+def step_impl(context):
+    topic = Topic.get(context.instance)
+    assert topic == "Test", (
+        f"Expected topic to be 'Test', but was '{topic}'"
+    )
+
+
+@then("the topic map can resolve the type from the topic")
+def step_impl(context):
+    topic_map: TopicMap = context.topic_map
+    resolved = topic_map.get(Topic.get(type(context.instance)))
+
+    assert isinstance(context.instance, resolved), f"Expected type to be '{type(context.instance)}', but was '{resolved}'"
