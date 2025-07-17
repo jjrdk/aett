@@ -13,6 +13,7 @@ Feature: Persist commits
       | mongo_async    |
       | postgres_async |
       | sqlite_async   |
+      | dynamodb_async |
 
   Scenario Outline: Commit conflicting event to stream
     Given a running <storage> server
@@ -46,6 +47,7 @@ Feature: Persist commits
       | postgres_async |
       | sqlite_async   |
       | mysql_async    |
+      | dynamodb_async |
 
   Scenario Outline: Commit non-conflicting event to stream
     Given a running <storage> server

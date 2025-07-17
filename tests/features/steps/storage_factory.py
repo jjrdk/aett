@@ -19,6 +19,9 @@ from aett.storage.asynchronous.dynamodb.async_commit_store import (
 from aett.storage.synchronous.dynamodb.snapshot_store import (
     SnapshotStore as DynamoDbSnapshotStore,
 )
+from aett.storage.asynchronous.dynamodb.snapshot_store import (
+    SnapshotStore as AsyncDynamoDbSnapshotStore,
+)
 from aett.storage.synchronous.inmemory.commit_store import (
     CommitStore as InMemoryCommitStore,
 )
@@ -191,6 +194,14 @@ def create_async_snapshot_store(
 ) -> IAccessSnapshotsAsync:
     snapshot_store: IAccessSnapshotsAsync | None = None
     match storage_type:
+        case "dynamodb_async":
+            snapshot_store = AsyncDynamoDbSnapshotStore(
+                region="localhost",
+                port=int(connection_string),
+                aws_access_key_id="dummy",
+                aws_secret_access_key="dummy",
+                aws_session_token="dummy",
+            )
         case "mongo_async":
             client = AsyncMongoClient(connection_string)
             snapshot_store = MongoAsyncSnapshotStore(client.get_database("test"))

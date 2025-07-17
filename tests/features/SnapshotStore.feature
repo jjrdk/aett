@@ -12,6 +12,7 @@ Feature: Persist snapshots
       | postgres_async |
       | sqlite_async   |
       | mysql_async    |
+      | dynamodb_async |
 
   Scenario Outline: Commit async snapshots of the aggregate
     Given a running <storage> server

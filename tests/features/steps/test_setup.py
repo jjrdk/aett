@@ -9,39 +9,39 @@ from testcontainers.postgres import PostgresContainer
 
 import test_types
 from aett.eventstore import TopicMap
-from aett.storage.asynchronous.mongodb import (
-    AsyncPersistenceManagement as MongoAsyncPersistenceManagement,
-)
-from aett.storage.synchronous.dynamodb.persistence_management import (
-    PersistenceManagement as DynamoDbPersistenceManagement,
-)
 from aett.storage.asynchronous.dynamodb.async_persistence_management import (
     AsyncPersistenceManagement as AsyncDynamoDbPersistenceManagement,
 )
-from aett.storage.synchronous.mongodb.persistence_management import (
-    PersistenceManagement as MongoPersistenceManagement,
-)
-from aett.storage.asynchronous.postgresql.async_persistence_management import (
-    AsyncPersistenceManagement as PostgresAsyncPersistenceManagement,
-)
-from aett.storage.synchronous.postgresql.persistence_management import (
-    PersistenceManagement as PostgresPersistenceManagement,
+from aett.storage.asynchronous.mongodb import (
+    AsyncPersistenceManagement as MongoAsyncPersistenceManagement,
 )
 from aett.storage.asynchronous.mysql.async_persistence_management import (
     AsyncPersistenceManagement as MySqlAsyncPersistenceManagement,
 )
-from aett.storage.synchronous.mysql.persistence_management import (
-    PersistenceManagement as MySqlPersistenceManagement,
+from aett.storage.asynchronous.postgresql.async_persistence_management import (
+    AsyncPersistenceManagement as PostgresAsyncPersistenceManagement,
 )
 from aett.storage.asynchronous.sqlite.async_persistence_management import (
     AsyncPersistenceManagement as SqliteAsyncPersistenceManagement,
 )
-from aett.storage.synchronous.s3 import S3Config
-from aett.storage.synchronous.sqlite.persistence_management import (
-    PersistenceManagement as SqlitePersistenceManagement,
+from aett.storage.synchronous.dynamodb.persistence_management import (
+    PersistenceManagement as DynamoDbPersistenceManagement,
 )
+from aett.storage.synchronous.mongodb.persistence_management import (
+    PersistenceManagement as MongoPersistenceManagement,
+)
+from aett.storage.synchronous.mysql.persistence_management import (
+    PersistenceManagement as MySqlPersistenceManagement,
+)
+from aett.storage.synchronous.postgresql.persistence_management import (
+    PersistenceManagement as PostgresPersistenceManagement,
+)
+from aett.storage.synchronous.s3 import S3Config
 from aett.storage.synchronous.s3.persistence_management import (
     PersistenceManagement as S3PersistenceManagement,
+)
+from aett.storage.synchronous.sqlite.persistence_management import (
+    PersistenceManagement as SqlitePersistenceManagement,
 )
 
 use_step_matcher("re")
@@ -78,14 +78,13 @@ async def step_impl(context, storage: str):
             context.process.start()
             port = int(context.process.get_exposed_port(8000))
             context.db = port
-            from aett.storage.asynchronous.dynamodb import _get_client
-            async with _get_client(
-                    aws_session_token="dummy",
-                    aws_access_key_id="dummy",
-                    aws_secret_access_key="dummy",
-                    port=port) as client:
-                mgmt = AsyncDynamoDbPersistenceManagement(client=client)
-                await mgmt.initialize()
+            mgmt = AsyncDynamoDbPersistenceManagement(
+                aws_access_key_id="dummy",
+                aws_secret_access_key="dummy",
+                aws_session_token="dummy",
+                region="localhost",
+                port=port)
+            await mgmt.initialize()
         case "inmemory":
             context.db = "inmemory"
             pass

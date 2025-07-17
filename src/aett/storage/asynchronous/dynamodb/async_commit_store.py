@@ -2,6 +2,7 @@ import datetime
 from typing import AsyncIterable
 from uuid import UUID
 
+from aioboto3 import Session
 from boto3.dynamodb.conditions import Key, Attr
 from pydantic_core import from_json, to_json
 
@@ -32,15 +33,12 @@ class AsyncCommitStore(ICommitEventsAsync):
         self._topic_map = topic_map
         self._table_name = table_name
         self._region = region
-        self._dynamodb = _get_client(
-            profile_name=profile_name,
-            aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key,
-            aws_session_token=aws_session_token,
-            region=region,
-            port=port,
-        )
-        self._table = self._dynamodb.Table(table_name)
+        self.__session = Session(aws_access_key_id=aws_access_key_id,
+                                 aws_secret_access_key=aws_secret_access_key,
+                                 aws_session_token=aws_session_token,
+                                 region_name=region,
+                                 profile_name=profile_name)
+        self.__port = port
         self._conflict_detector: ConflictDetector = (
             conflict_detector if conflict_detector is not None else ConflictDetector()
         )
@@ -54,20 +52,22 @@ class AsyncCommitStore(ICommitEventsAsync):
     ) -> AsyncIterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
-        query_response = await self._table.query(
-            TableName=self._table_name,
-            IndexName="RevisionIndex",
-            ConsistentRead=True,
-            ProjectionExpression="TenantId,StreamId,StreamRevision,CommitId,CommitSequence,CommitStamp,Headers,Events",
-            KeyConditionExpression=(
-                    Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
-                    & Key("StreamRevision").between(min_revision, max_revision)
-            ),
-            ScanIndexForward=True,
-        )
-        items = query_response["Items"]
-        for item in items:
-            yield self._item_to_commit(item)
+        async with _get_client(session=self.__session, port=self.__port) as client:
+            table = await client.Table(self._table_name)
+            query_response = await table.query(
+                TableName=self._table_name,
+                IndexName="RevisionIndex",
+                ConsistentRead=True,
+                ProjectionExpression="TenantId,StreamId,StreamRevision,CommitId,CommitSequence,CommitStamp,Headers,Events",
+                KeyConditionExpression=(
+                        Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
+                        & Key("StreamRevision").between(min_revision, max_revision)
+                ),
+                ScanIndexForward=True,
+            )
+            items = query_response["Items"]
+            for item in items:
+                yield self._item_to_commit(item)
 
     async def get_to(
             self,
@@ -75,39 +75,43 @@ class AsyncCommitStore(ICommitEventsAsync):
             stream_id: str,
             max_time: datetime.datetime = datetime.datetime.max,
     ) -> AsyncIterable[Commit]:
-        query_response = await self._table.scan(
-            IndexName="CommitStampIndex",
-            ConsistentRead=True,
-            Select="ALL_ATTRIBUTES",
-            FilterExpression=(
-                    Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
-                    & Attr("CommitStamp").lte(int(max_time.timestamp()))
-            ),
-        )
-        items = query_response["Items"]
-        for item in items:
-            if item["CommitStamp"] > max_time.timestamp():
-                break
-            yield self._item_to_commit(item)
+        async with _get_client(session=self.__session, port=self.__port) as client:
+            table = await client.Table(self._table_name)
+            query_response = await table.scan(
+                IndexName="CommitStampIndex",
+                ConsistentRead=True,
+                Select="ALL_ATTRIBUTES",
+                FilterExpression=(
+                        Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
+                        & Attr("CommitStamp").lte(int(max_time.timestamp()))
+                ),
+            )
+            items = query_response["Items"]
+            for item in items:
+                if item["CommitStamp"] > max_time.timestamp():
+                    break
+                yield self._item_to_commit(item)
 
     async def get_all_to(
             self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
     ) -> AsyncIterable[Commit]:
-        query_response = await self._table.scan(
-            IndexName="CommitStampIndex",
-            ConsistentRead=True,
-            Select="ALL_ATTRIBUTES",
-            ProjectionExpression="CommitStamp",
-            FilterExpression=(
-                    Key("TenantAndStream").begins_with(f"{tenant_id}")
-                    & Attr("CommitStamp").lte(int(max_time.timestamp()))
-            ),
-        )
-        items = query_response["Items"]
-        for item in items:
-            if item["CommitStamp"] > max_time.timestamp():
-                break
-            yield self._item_to_commit(item)
+        async with _get_client(session=self.__session, port=self.__port) as client:
+            table = await client.Table(self._table_name)
+            query_response = await table.scan(
+                IndexName="CommitStampIndex",
+                ConsistentRead=True,
+                Select="ALL_ATTRIBUTES",
+                ProjectionExpression="CommitStamp",
+                FilterExpression=(
+                        Key("TenantAndStream").begins_with(f"{tenant_id}")
+                        & Attr("CommitStamp").lte(int(max_time.timestamp()))
+                ),
+            )
+            items = query_response["Items"]
+            for item in items:
+                if item["CommitStamp"] > max_time.timestamp():
+                    break
+                yield self._item_to_commit(item)
 
     def _item_to_commit(self, item: dict) -> Commit:
         return Commit(
@@ -140,13 +144,15 @@ class AsyncCommitStore(ICommitEventsAsync):
                 "Headers": to_json(commit.headers),
                 "Events": to_json([e.to_json() for e in commit.events]),
             }
-            _ = await self._table.put_item(
-                TableName=self._table_name,
-                Item=item,
-                ReturnValues="NONE",
-                ReturnValuesOnConditionCheckFailure="NONE",
-                ConditionExpression="attribute_not_exists(TenantAndStream) AND attribute_not_exists(CommitSequence)",
-            )
+            async with _get_client(session=self.__session, port=self.__port) as client:
+                table = await client.Table(self._table_name)
+                _ = await table.put_item(
+                    TableName=self._table_name,
+                    Item=item,
+                    ReturnValues="NONE",
+                    ReturnValuesOnConditionCheckFailure="NONE",
+                    ConditionExpression="attribute_not_exists(TenantAndStream) AND attribute_not_exists(CommitSequence)",
+                )
         except Exception as e:
             if e.__class__.__name__ == "ConditionalCheckFailedException":
                 if await self._detect_duplicate(
@@ -174,20 +180,22 @@ class AsyncCommitStore(ICommitEventsAsync):
     async def _detect_duplicate(
             self, commit_id: UUID, tenant_id: str, stream_id: str, commit_sequence: int
     ) -> bool:
-        duplicate_check = await self._table.query(
-            TableName=self._table_name,
-            ConsistentRead=True,
-            ScanIndexForward=False,
-            Limit=1,
-            Select="SPECIFIC_ATTRIBUTES",
-            ProjectionExpression="CommitId",
-            KeyConditionExpression=(
-                    Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
-                    & Key("CommitSequence").eq(commit_sequence)
-            ),
-        )
-        items = duplicate_check["Items"]
-        return items[0]["CommitId"] == str(commit_id)
+        async with _get_client(session=self.__session, port=self.__port) as client:
+            table = await client.Table(self._table_name)
+            duplicate_check = await table.query(
+                TableName=self._table_name,
+                ConsistentRead=True,
+                ScanIndexForward=False,
+                Limit=1,
+                Select="SPECIFIC_ATTRIBUTES",
+                ProjectionExpression="CommitId",
+                KeyConditionExpression=(
+                        Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
+                        & Key("CommitSequence").eq(commit_sequence)
+                ),
+            )
+            items = duplicate_check["Items"]
+            return items[0]["CommitId"] == str(commit_id)
 
     async def _detect_conflicts(self, commit: Commit) -> bool:
         if commit.commit_sequence == 0:
