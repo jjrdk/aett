@@ -12,11 +12,11 @@ from aett.eventstore import ICommitEvents, IAccessSnapshots, Commit, Snapshot, M
 
 class DefaultAggregateRepository(AggregateRepository):
     def __init__(
-            self,
-            tenant_id: str,
-            store: ICommitEvents,
-            snapshot_store: IAccessSnapshots,
-            logger: logging.Logger | None = None,
+        self,
+        tenant_id: str,
+        store: ICommitEvents,
+        snapshot_store: IAccessSnapshots,
+        logger: logging.Logger | None = None,
     ):
         """
         Initialize the default aggregate repository.
@@ -35,10 +35,10 @@ class DefaultAggregateRepository(AggregateRepository):
         )
 
     def get(
-            self,
-            cls: Type[AggregateRepository.TAggregate],
-            stream_id: str,
-            max_version: int = MAX_INT,
+        self,
+        cls: Type[AggregateRepository.TAggregate],
+        stream_id: str,
+        max_version: int = MAX_INT,
     ) -> AggregateRepository.TAggregate:
         self._logger.debug(
             f"Getting aggregate {cls.__name__} with id {stream_id} at version {max_version}"
@@ -79,10 +79,10 @@ class DefaultAggregateRepository(AggregateRepository):
         return aggregate
 
     def get_to(
-            self,
-            cls: Type[AggregateRepository.TAggregate],
-            stream_id: str,
-            max_time: datetime.datetime = datetime.datetime.max,
+        self,
+        cls: Type[AggregateRepository.TAggregate],
+        stream_id: str,
+        max_time: datetime.datetime = datetime.datetime.max,
     ) -> AggregateRepository.TAggregate:
         self._logger.debug(
             f"Getting aggregate {cls.__name__} with id {stream_id} at time point {max_time:%Y%m%d-%H%M%S%z}"
@@ -121,11 +121,11 @@ class DefaultAggregateRepository(AggregateRepository):
         aggregate.uncommitted.clear()
 
     def snapshot(
-            self,
-            cls: Type[AggregateRepository.TAggregate],
-            stream_id: str,
-            version: int = MAX_INT,
-            **kwargs,
+        self,
+        cls: Type[AggregateRepository.TAggregate],
+        stream_id: str,
+        version: int = MAX_INT,
+        **kwargs,
     ) -> None:
         self._logger.debug(
             f"Snapshotting aggregate {cls.__name__} with id {stream_id} at version {version}"
@@ -136,11 +136,11 @@ class DefaultAggregateRepository(AggregateRepository):
         )
 
     def snapshot_at(
-            self,
-            cls: Type[AggregateRepository.TAggregate],
-            stream_id: str,
-            cut_off: datetime.datetime,
-            headers: Dict[str, str] | None = None,
+        self,
+        cls: Type[AggregateRepository.TAggregate],
+        stream_id: str,
+        cut_off: datetime.datetime,
+        headers: Dict[str, str] | None = None,
     ) -> None:
         self._logger.debug(
             f"Snapshotting aggregate {cls.__name__} with id {stream_id} at time point {cut_off:%Y%m%d-%H%M%S%z}"
@@ -149,7 +149,7 @@ class DefaultAggregateRepository(AggregateRepository):
         self._snapshot_aggregate(agg, headers)
 
     def _snapshot_aggregate(
-            self, aggregate: Aggregate, headers: Dict[str, str] | None = None
+        self, aggregate: Aggregate, headers: Dict[str, str] | None = None
     ) -> None:
         memento = aggregate.get_memento()
         snapshot = Snapshot(

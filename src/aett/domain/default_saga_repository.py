@@ -9,7 +9,7 @@ from aett.eventstore import ICommitEvents, Commit
 
 class DefaultSagaRepository(SagaRepository):
     def __init__(
-            self, tenant_id: str, store: ICommitEvents, logger: logging.Logger | None = None
+        self, tenant_id: str, store: ICommitEvents, logger: logging.Logger | None = None
     ):
         """
         Initialize the default saga repository.
@@ -26,7 +26,7 @@ class DefaultSagaRepository(SagaRepository):
         )
 
     def get(
-            self, cls: typing.Type[SagaRepository.TSaga], stream_id: str
+        self, cls: typing.Type[SagaRepository.TSaga], stream_id: str
     ) -> SagaRepository.TSaga:
         self._logger.debug(f"Getting saga {cls.__name__} with id {stream_id}")
         ait = self._store.get(self._tenant_id, stream_id)

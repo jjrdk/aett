@@ -8,7 +8,7 @@ class SnapshotStore(IAccessSnapshots):
         self.buckets: typing.Dict[str, typing.Dict[str, typing.List[Snapshot]]] = {}
 
     def get(
-            self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
+        self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
     ) -> Snapshot | None:
         if not self._ensure_stream(tenant_id=tenant_id, stream_id=stream_id):
             return None

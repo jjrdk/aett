@@ -12,7 +12,9 @@ class ConflictDetector:
         return ConflictDetector()
 
     def __init__(
-            self, delegates: List[ConflictDelegate] | None = None, logger: logging.Logger | None = None
+        self,
+        delegates: List[ConflictDelegate] | None = None,
+        logger: logging.Logger | None = None,
     ):
         """
         Initialize the conflict detector with the specified delegates.
@@ -38,9 +40,9 @@ class ConflictDetector:
                 self.delegates[uncommitted_type][committed_type] = delegate.detect
 
     def conflicts_with(
-            self,
-            uncommitted_events: Iterable[BaseEvent],
-            committed_events: Iterable[BaseEvent],
+        self,
+        uncommitted_events: Iterable[BaseEvent],
+        committed_events: Iterable[BaseEvent],
     ) -> bool:
         """
         Detects if the uncommitted events conflict with the committed events.
@@ -59,7 +61,7 @@ class ConflictDetector:
                     committed_keys = self.delegates[uncommitted_type].keys()
                     if committed_type in committed_keys:
                         if self.delegates[uncommitted_type][committed_type](
-                                uncommitted, committed
+                            uncommitted, committed
                         ):
                             if isinstance(uncommitted, DomainEvent):
                                 self._logger.warning(

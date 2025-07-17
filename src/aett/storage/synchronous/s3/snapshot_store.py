@@ -13,7 +13,7 @@ class SnapshotStore(IAccessSnapshots):
         self._resource = s3_config.to_client()
 
     def get(
-            self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
+        self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
     ) -> Snapshot | None:
         files = self._resource.list_objects(
             Bucket=self._s3_bucket,

@@ -17,22 +17,23 @@ from aett.eventstore import (
     COMMITS,
     MAX_INT,
     Commit,
-    EventMessage, BaseEvent,
+    EventMessage,
+    BaseEvent,
 )
 from aett.storage.asynchronous.mysql import _item_to_commit
 
 
 class AsyncCommitStore(ICommitEventsAsync):
     def __init__(
-            self,
-            host: str,
-            user: str,
-            password: str,
-            database: str,
-            topic_map: TopicMap,
-            port: int = 3306,
-            conflict_detector: ConflictDetector | None = None,
-            table_name=COMMITS,
+        self,
+        host: str,
+        user: str,
+        password: str,
+        database: str,
+        topic_map: TopicMap,
+        port: int = 3306,
+        conflict_detector: ConflictDetector | None = None,
+        table_name=COMMITS,
     ):
         self._topic_map = topic_map if topic_map else TopicMap()
         self._host: str = host
@@ -46,20 +47,22 @@ class AsyncCommitStore(ICommitEventsAsync):
         self._table_name = table_name
 
     async def get(
-            self,
-            tenant_id: str,
-            stream_id: str,
-            min_revision: int = 0,
-            max_revision: int = MAX_INT,
+        self,
+        tenant_id: str,
+        stream_id: str,
+        min_revision: int = 0,
+        max_revision: int = MAX_INT,
     ) -> typing.AsyncIterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
-        connection = await connect(host=self._host,
-                                   user=self._user,
-                                   password=self._password,
-                                   db=self._database,
-                                   port=self._port,
-                                   autocommit=True)
+        connection = await connect(
+            host=self._host,
+            user=self._user,
+            password=self._password,
+            db=self._database,
+            port=self._port,
+            autocommit=True,
+        )
         cur = await connection.cursor()
         await cur.execute(
             f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
@@ -79,17 +82,19 @@ class AsyncCommitStore(ICommitEventsAsync):
         connection.close()
 
     async def get_to(
-            self,
-            tenant_id: str,
-            stream_id: str,
-            max_time: datetime.datetime = datetime.datetime.max,
+        self,
+        tenant_id: str,
+        stream_id: str,
+        max_time: datetime.datetime = datetime.datetime.max,
     ) -> typing.AsyncIterable[Commit]:
-        connection = await connect(host=self._host,
-                                   user=self._user,
-                                   password=self._password,
-                                   db=self._database,
-                                   port=self._port,
-                                   autocommit=True)
+        connection = await connect(
+            host=self._host,
+            user=self._user,
+            password=self._password,
+            db=self._database,
+            port=self._port,
+            autocommit=True,
+        )
         cur = await connection.cursor()
         await cur.execute(
             f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
@@ -107,14 +112,16 @@ class AsyncCommitStore(ICommitEventsAsync):
         connection.close()
 
     async def get_all_to(
-            self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
+        self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
     ) -> typing.AsyncIterable[Commit]:
-        connection = await connect(host=self._host,
-                                   user=self._user,
-                                   password=self._password,
-                                   db=self._database,
-                                   port=self._port,
-                                   autocommit=True)
+        connection = await connect(
+            host=self._host,
+            user=self._user,
+            password=self._password,
+            db=self._database,
+            port=self._port,
+            autocommit=True,
+        )
         cur = await connection.cursor()
         await cur.execute(
             f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
@@ -133,12 +140,13 @@ class AsyncCommitStore(ICommitEventsAsync):
     async def commit(self, commit: Commit) -> Commit:
         try:
             async with connect(
-                    host=self._host,
-                    user=self._user,
-                    password=self._password,
-                    db=self._database,
-                    port=self._port,
-                    autocommit=True) as connection:
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                db=self._database,
+                port=self._port,
+                autocommit=True,
+            ) as connection:
                 async with connection.cursor() as cur:
                     json = to_json([e.to_json() for e in commit.events])
                     await cur.execute(
@@ -173,7 +181,7 @@ class AsyncCommitStore(ICommitEventsAsync):
                     )
         except IntegrityError:
             if await self._detect_duplicate(
-                    commit.commit_id, commit.tenant_id, commit.stream_id
+                commit.commit_id, commit.tenant_id, commit.stream_id
             ):
                 raise DuplicateCommitException(
                     f"Commit {commit.commit_id} already exists in stream {commit.stream_id}"
@@ -192,15 +200,17 @@ class AsyncCommitStore(ICommitEventsAsync):
             raise Exception(f"Failed to commit {commit.commit_id} with error {e}")
 
     async def _detect_duplicate(
-            self, commit_id: UUID, tenant_id: str, stream_id: str
+        self, commit_id: UUID, tenant_id: str, stream_id: str
     ) -> bool:
         try:
-            connection = await connect(host=self._host,
-                                       user=self._user,
-                                       password=self._password,
-                                       db=self._database,
-                                       port=self._port,
-                                       autocommit=True)
+            connection = await connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                db=self._database,
+                port=self._port,
+                autocommit=True,
+            )
             cur = await connection.cursor()
             await cur.execute(
                 f"""SELECT COUNT(*)
@@ -210,7 +220,7 @@ class AsyncCommitStore(ICommitEventsAsync):
                AND CommitId = %s;""",
                 (tenant_id, stream_id, str(commit_id)),
             )
-            result = await  cur.fetchone()
+            result = await cur.fetchone()
             await cur.close()
             connection.close()
             return result[0] > 0
@@ -220,12 +230,14 @@ class AsyncCommitStore(ICommitEventsAsync):
             )
 
     async def _detect_conflicts(self, commit: Commit) -> typing.Tuple[bool, int]:
-        connection = await connect(host=self._host,
-                                   user=self._user,
-                                   password=self._password,
-                                   db=self._database,
-                                   port=self._port,
-                                   autocommit=True)
+        connection = await connect(
+            host=self._host,
+            user=self._user,
+            password=self._password,
+            db=self._database,
+            port=self._port,
+            autocommit=True,
+        )
         cur = await connection.cursor()
         await cur.execute(
             f"""SELECT StreamRevision, Payload
@@ -240,13 +252,12 @@ class AsyncCommitStore(ICommitEventsAsync):
         latest_revision = 0
         for doc in fetchall:
             events = [
-                EventMessage.from_dict(e, self._topic_map)
-                for e in from_json(doc[1])
+                EventMessage.from_dict(e, self._topic_map) for e in from_json(doc[1])
             ]
             uncommitted_events = list(map(self._get_body, commit.events))
             committed_events = list(map(self._get_body, events))
             if self._conflict_detector.conflicts_with(
-                    uncommitted_events, committed_events
+                uncommitted_events, committed_events
             ):
                 return True, -1
             if doc[0] > latest_revision:

@@ -18,18 +18,19 @@ from aett.eventstore import (
     COMMITS,
     MAX_INT,
     Commit,
-    EventMessage, BaseEvent,
+    EventMessage,
+    BaseEvent,
 )
 from aett.storage.synchronous.postgresql import _item_to_commit
 
 
 class CommitStore(ICommitEvents):
     def __init__(
-            self,
-            connection_string: str,
-            topic_map: TopicMap | None = None,
-            conflict_detector: ConflictDetector | None = None,
-            table_name=COMMITS,
+        self,
+        connection_string: str,
+        topic_map: TopicMap | None = None,
+        conflict_detector: ConflictDetector | None = None,
+        table_name=COMMITS,
     ):
         self._topic_map = topic_map if topic_map else TopicMap()
         self._connection_string = connection_string
@@ -39,11 +40,11 @@ class CommitStore(ICommitEvents):
         self._table_name = table_name
 
     def get(
-            self,
-            tenant_id: str,
-            stream_id: str,
-            min_revision: int = 0,
-            max_revision: int = MAX_INT,
+        self,
+        tenant_id: str,
+        stream_id: str,
+        min_revision: int = 0,
+        max_revision: int = MAX_INT,
     ) -> typing.Iterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
@@ -65,10 +66,10 @@ class CommitStore(ICommitEvents):
                     yield _item_to_commit(doc, self._topic_map)
 
     def get_to(
-            self,
-            tenant_id: str,
-            stream_id: str,
-            max_time: datetime.datetime = datetime.datetime.max,
+        self,
+        tenant_id: str,
+        stream_id: str,
+        max_time: datetime.datetime = datetime.datetime.max,
     ) -> Iterable[Commit]:
         with psycopg.connect(self._connection_string, autocommit=True) as connection:
             with connection.cursor() as cur:
@@ -86,7 +87,7 @@ class CommitStore(ICommitEvents):
                     yield _item_to_commit(doc, self._topic_map)
 
     def get_all_to(
-            self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
+        self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
     ) -> Iterable[Commit]:
         with psycopg.connect(self._connection_string, autocommit=True) as connection:
             with connection.cursor() as cur:
@@ -105,7 +106,7 @@ class CommitStore(ICommitEvents):
     def commit(self, commit: Commit):
         try:
             with psycopg.connect(
-                    self._connection_string, autocommit=True
+                self._connection_string, autocommit=True
             ) as connection:
                 with connection.cursor() as cur:
                     json = to_json([e.to_json() for e in commit.events])
@@ -144,7 +145,7 @@ class CommitStore(ICommitEvents):
                     )
         except psycopg.errors.UniqueViolation:
             if self._detect_duplicate(
-                    commit.commit_id, commit.tenant_id, commit.stream_id
+                commit.commit_id, commit.tenant_id, commit.stream_id
             ):
                 raise DuplicateCommitException(
                     f"Commit {commit.commit_id} already exists in stream {commit.stream_id}"
@@ -163,11 +164,11 @@ class CommitStore(ICommitEvents):
             raise Exception(f"Failed to commit {commit.commit_id} with error {e}")
 
     def _detect_duplicate(
-            self, commit_id: UUID, tenant_id: str, stream_id: str
+        self, commit_id: UUID, tenant_id: str, stream_id: str
     ) -> bool:
         try:
             with psycopg.connect(
-                    self._connection_string, autocommit=True
+                self._connection_string, autocommit=True
             ) as connection:
                 with connection.cursor() as cur:
                     cur.execute(
@@ -207,7 +208,7 @@ class CommitStore(ICommitEvents):
                     uncommitted_events = list(map(self._get_body, commit.events))
                     committed_events = list(map(self._get_body, events))
                     if self._conflict_detector.conflicts_with(
-                            uncommitted_events, committed_events
+                        uncommitted_events, committed_events
                     ):
                         return True, -1
                     if doc[0] > latest_revision:

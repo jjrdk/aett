@@ -110,6 +110,7 @@ class TestSaga(Saga):
         )
         self.dispatch(cmd)
 
+
 # Topic test types
 
 

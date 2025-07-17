@@ -12,7 +12,7 @@ class AsyncSnapshotStore(IAccessSnapshotsAsync):
         self.collection: collection.AsyncCollection = db.get_collection(table_name)
 
     async def get(
-            self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
+        self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
     ) -> Snapshot | None:
         try:
             filters = {
@@ -43,7 +43,9 @@ class AsyncSnapshotStore(IAccessSnapshotsAsync):
                 f"Failed to get snapshot for stream {stream_id} with status code {e}"
             )
 
-    async def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] | None = None):
+    async def add(
+        self, snapshot: Snapshot, headers: typing.Dict[str, str] | None = None
+    ):
         if headers is None:
             headers = {}
         try:

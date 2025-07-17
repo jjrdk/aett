@@ -7,15 +7,15 @@ from aett.storage.synchronous.mysql import _item_to_commit
 
 class PersistenceManagement(IManagePersistence):
     def __init__(
-            self,
-            host: str,
-            user: str,
-            password: str,
-            database: str,
-            topic_map: TopicMap,
-            port: int = 3306,
-            commits_table_name: str = COMMITS,
-            snapshots_table_name: str = SNAPSHOTS,
+        self,
+        host: str,
+        user: str,
+        password: str,
+        database: str,
+        topic_map: TopicMap,
+        port: int = 3306,
+        commits_table_name: str = COMMITS,
+        snapshots_table_name: str = SNAPSHOTS,
     ):
         self.host: str = host
         self._user: str = user
@@ -28,7 +28,9 @@ class PersistenceManagement(IManagePersistence):
 
     def initialize(self):
         try:
-            stmts = [stmt.strip() for stmt in f"""CREATE TABLE IF NOT EXISTS {self._commits_table_name}
+            stmts = [
+                stmt.strip()
+                for stmt in f"""CREATE TABLE IF NOT EXISTS {self._commits_table_name}
                      (
                          TenantId varchar(36) charset utf8 NOT NULL,
                          StreamId varchar(36) charset utf8 NOT NULL,
@@ -57,13 +59,17 @@ class PersistenceManagement(IManagePersistence):
                          Payload blob NOT NULL,
                          Headers blob NOT NULL,
                          CONSTRAINT PK_Snapshots PRIMARY KEY (TenantId, StreamId, StreamRevision)
-                     );""".split(';') if stmt.strip()]
-            with pymysql.connect(host=self.host,
-                                 user=self._user,
-                                 password=self._password,
-                                 database=self._database,
-                                 port=self._port,
-                                 autocommit=True) as connection:
+                     );""".split(";")
+                if stmt.strip()
+            ]
+            with pymysql.connect(
+                host=self.host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                port=self._port,
+                autocommit=True,
+            ) as connection:
                 with connection.cursor() as c:
                     for stmt in stmts:
                         c.execute(query=stmt)
@@ -73,28 +79,28 @@ class PersistenceManagement(IManagePersistence):
             pass
 
     def drop(self):
-        with pymysql.connect(host=self.host,
-                             user=self._user,
-                             password=self._password,
-                             database=self._database,
-                             port=self._port,
-                             autocommit=True) as connection:
+        with pymysql.connect(
+            host=self.host,
+            user=self._user,
+            password=self._password,
+            database=self._database,
+            port=self._port,
+            autocommit=True,
+        ) as connection:
             with connection.cursor() as c:
-                c.execute(
-                    f"""DROP TABLE {self._snapshots_table_name};"""
-                )
-                c.execute(
-                    f"""DROP TABLE {self._commits_table_name};"""
-                )
+                c.execute(f"""DROP TABLE {self._snapshots_table_name};""")
+                c.execute(f"""DROP TABLE {self._commits_table_name};""")
             connection.commit()
 
     def purge(self, tenant_id: str):
-        with pymysql.connect(host=self.host,
-                             user=self._user,
-                             password=self._password,
-                             database=self._database,
-                             port=self._port,
-                             autocommit=True) as connection:
+        with pymysql.connect(
+            host=self.host,
+            user=self._user,
+            password=self._password,
+            database=self._database,
+            port=self._port,
+            autocommit=True,
+        ) as connection:
             with connection.cursor() as c:
                 c.execute(
                     f"""DELETE FROM {self._commits_table_name} WHERE TenantId = %s;""",
@@ -107,12 +113,14 @@ class PersistenceManagement(IManagePersistence):
             connection.commit()
 
     def get_from(self, checkpoint: int) -> Iterable[Commit]:
-        with pymysql.connect(host=self.host,
-                             user=self._user,
-                             password=self._password,
-                             database=self._database,
-                             port=self._port,
-                             autocommit=True) as connection:
+        with pymysql.connect(
+            host=self.host,
+            user=self._user,
+            password=self._password,
+            database=self._database,
+            port=self._port,
+            autocommit=True,
+        ) as connection:
             with connection.cursor() as cur:
                 cur.execute(
                     f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload

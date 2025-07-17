@@ -7,13 +7,15 @@ from aett.eventstore import IAccessSnapshotsAsync, SNAPSHOTS, MAX_INT, Snapshot
 
 
 class AsyncSnapshotStore(IAccessSnapshotsAsync):
-    def __init__(self,
-                 host: str,
-                 user: str,
-                 password: str,
-                 database: str,
-                 port: int = 3306,
-                 table_name: str = SNAPSHOTS):
+    def __init__(
+        self,
+        host: str,
+        user: str,
+        password: str,
+        database: str,
+        port: int = 3306,
+        table_name: str = SNAPSHOTS,
+    ):
         self._host: str = host
         self._user: str = user
         self._password: str = password
@@ -22,15 +24,17 @@ class AsyncSnapshotStore(IAccessSnapshotsAsync):
         self._table_name = table_name
 
     async def get(
-            self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
+        self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
     ) -> Snapshot | None:
         try:
-            async with connect(host=self._host,
-                               user=self._user,
-                               password=self._password,
-                               db=self._database,
-                               port=self._port,
-                               autocommit=True) as connection:
+            async with connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                db=self._database,
+                port=self._port,
+                autocommit=True,
+            ) as connection:
                 async with connection.cursor() as cur:
                     await cur.execute(
                         f"""SELECT *
@@ -59,16 +63,20 @@ class AsyncSnapshotStore(IAccessSnapshotsAsync):
                 f"Failed to get snapshot for stream {stream_id} with error {e}"
             )
 
-    async def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] | None = None):
+    async def add(
+        self, snapshot: Snapshot, headers: typing.Dict[str, str] | None = None
+    ):
         if headers is None:
             headers = {}
         try:
-            async with connect(host=self._host,
-                               user=self._user,
-                               password=self._password,
-                               db=self._database,
-                               port=self._port,
-                               autocommit=True) as connection:
+            async with connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                db=self._database,
+                port=self._port,
+                autocommit=True,
+            ) as connection:
                 async with connection.cursor() as cur:
                     await cur.execute(
                         f"""INSERT INTO {self._table_name} ( TenantId, StreamId, StreamRevision, CommitSequence, Payload, Headers) VALUES (%s, %s, %s, %s, %s, %s);""",

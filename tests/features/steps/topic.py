@@ -1,9 +1,14 @@
 from behave import *
 from pydantic import BaseModel
 
-from aett.eventstore import TopicMap
+from aett.eventstore import TopicMap, Topic
 from aett.eventstore.topic_map import HierarchicalTopicMap
-from features.steps.test_types import SampleClass, SampleModel, DerivedClass, SecondDerivedClass
+from features.steps.test_types import (
+    SampleClass,
+    SampleModel,
+    DerivedClass,
+    SecondDerivedClass,
+)
 
 use_step_matcher("re")
 
@@ -38,13 +43,17 @@ def step_impl(context):
     context.instance = SecondDerivedClass()
 
 
+@then("then (?P<topic>.+) can be resolved from the type attribute")
+def step_impl(context, topic: str):
+    resolved = Topic.get(context.instance)
+    assert resolved == topic, f"Expected topic to be '{topic}', but was '{resolved}'"
+
+
 @then("then (?P<expected>.+) can be resolved from the type")
 def step_impl(context, expected):
     topic_map: HierarchicalTopicMap = context.topic_map
     topic: str = topic_map.get(context.instance)
-    assert topic == expected, (
-        f"Expected topic to be '{expected}', but was '{topic}'"
-    )
+    assert topic == expected, f"Expected topic to be '{expected}', but was '{topic}'"
 
 
 @when("I register it with the TopicMap")
@@ -55,21 +64,27 @@ def step_impl(context):
 @then("the topic is list of all topics")
 def step_impl(context):
     topic_map: TopicMap = context.topic_map
-    assert len(topic_map.get_all()) == 1, f"Expected 1 topic, but got {len(topic_map.get_all())}"
+    assert len(topic_map.get_all()) == 1, (
+        f"Expected 1 topic, but got {len(topic_map.get_all())}"
+    )
 
 
 @then("then (?P<topic>.+) can be resolved from the topic map")
 def step_impl(context, topic):
     topic_map: HierarchicalTopicMap = context.topic_map
     resolved = topic_map.get_all()
-    assert topic in resolved, f"Expected topic '{topic}' to be in the topic map, but it was not found."
+    assert topic in resolved, (
+        f"Expected topic '{topic}' to be in the topic map, but it was not found."
+    )
 
 
 @when("I register it with the HierarchicalTopicMap")
 def step_impl(context):
     topic_map: HierarchicalTopicMap = context.topic_map
     topic_map.register(context.instance)
-    assert len(topic_map.get_all()) == 1, f"Expected 1 topic, but got {len(topic_map.get_all())}"
+    assert len(topic_map.get_all()) == 1, (
+        f"Expected 1 topic, but got {len(topic_map.get_all())}"
+    )
 
 
 @then("the topic is in list of all topics")

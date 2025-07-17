@@ -20,7 +20,11 @@ use_step_matcher("re")
 def step_impl(context):
     conflict_detector = ConflictDetector([TestEventConflictDelegate()])
     context.store = create_async_commit_store(
-        context.db, context.storage_type, context.topic_map, conflict_detector, context=context
+        context.db,
+        context.storage_type,
+        context.topic_map,
+        conflict_detector,
+        context=context,
     )
 
 
@@ -28,7 +32,11 @@ def step_impl(context):
 def step_impl(context):
     conflict_detector = ConflictDetector([TestEventConflictDelegate()])
     context.store = create_commit_store(
-        context.db, context.storage_type, context.topic_map, conflict_detector, context=context
+        context.db,
+        context.storage_type,
+        context.topic_map,
+        conflict_detector,
+        context=context,
     )
 
 

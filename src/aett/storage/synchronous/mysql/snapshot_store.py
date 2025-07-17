@@ -7,13 +7,15 @@ from aett.eventstore import IAccessSnapshots, SNAPSHOTS, MAX_INT, Snapshot
 
 
 class SnapshotStore(IAccessSnapshots):
-    def __init__(self,
-                 host: str,
-                 user: str,
-                 password: str,
-                 database: str,
-                 port: int = 3306,
-                 table_name: str = SNAPSHOTS):
+    def __init__(
+        self,
+        host: str,
+        user: str,
+        password: str,
+        database: str,
+        port: int = 3306,
+        table_name: str = SNAPSHOTS,
+    ):
         self._host: str = host
         self._user: str = user
         self._password: str = password
@@ -22,15 +24,17 @@ class SnapshotStore(IAccessSnapshots):
         self._table_name = table_name
 
     def get(
-            self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
+        self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
     ) -> Snapshot | None:
         try:
-            with pymysql.connect(host=self._host,
-                                 user=self._user,
-                                 password=self._password,
-                                 database=self._database,
-                                 port=self._port,
-                                 autocommit=True) as connection:
+            with pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                port=self._port,
+                autocommit=True,
+            ) as connection:
                 with connection.cursor() as cur:
                     cur.execute(
                         f"""SELECT *
@@ -63,12 +67,14 @@ class SnapshotStore(IAccessSnapshots):
         if headers is None:
             headers = {}
         try:
-            with pymysql.connect(host=self._host,
-                                 user=self._user,
-                                 password=self._password,
-                                 database=self._database,
-                                 port=self._port,
-                                 autocommit=True) as connection:
+            with pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                port=self._port,
+                autocommit=True,
+            ) as connection:
                 with connection.cursor() as cur:
                     cur.execute(
                         f"""INSERT INTO {self._table_name} ( TenantId, StreamId, StreamRevision, CommitSequence, Payload, Headers) VALUES (%s, %s, %s, %s, %s, %s);""",

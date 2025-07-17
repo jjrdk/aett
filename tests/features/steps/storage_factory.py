@@ -73,11 +73,11 @@ from aett.storage.synchronous.s3.snapshot_store import SnapshotStore as S3Snapsh
 
 
 def create_async_commit_store(
-        connection_string: str,
-        storage_type: str,
-        topic_map: TopicMap,
-        conflict_detector: ConflictDetector = None,
-        context: Any = None,
+    connection_string: str,
+    storage_type: str,
+    topic_map: TopicMap,
+    conflict_detector: ConflictDetector = None,
+    context: Any = None,
 ) -> ICommitEventsAsync:
     commit_store: ICommitEventsAsync | None = None
     match storage_type:
@@ -115,11 +115,11 @@ def create_async_commit_store(
 
 
 def create_commit_store(
-        connection_string: Any,
-        storage_type: str,
-        topic_map: TopicMap,
-        conflict_detector: ConflictDetector = None,
-        context: Any = None,
+    connection_string: Any,
+    storage_type: str,
+    topic_map: TopicMap,
+    conflict_detector: ConflictDetector = None,
+    context: Any = None,
 ) -> ICommitEvents:
     commit_store: ICommitEvents | None = None
     match storage_type:
@@ -174,7 +174,7 @@ def create_commit_store(
 
 
 def create_async_snapshot_store(
-        connection_string: str, storage_type: str, context: Any = None
+    connection_string: str, storage_type: str, context: Any = None
 ) -> IAccessSnapshotsAsync:
     snapshot_store: IAccessSnapshotsAsync | None = None
     match storage_type:
@@ -182,9 +182,13 @@ def create_async_snapshot_store(
             client = AsyncMongoClient(connection_string)
             snapshot_store = MongoAsyncSnapshotStore(client.get_database("test"))
         case "postgres_async":
-            snapshot_store = PostgresAsyncSnapshotStore(connection_string=connection_string)
+            snapshot_store = PostgresAsyncSnapshotStore(
+                connection_string=connection_string
+            )
         case "sqlite_async":
-            snapshot_store = SqliteAsyncSnapshotStore(connection_string=connection_string)
+            snapshot_store = SqliteAsyncSnapshotStore(
+                connection_string=connection_string
+            )
         case "mysql_async":
             snapshot_store = MySqlAsyncSnapshotStore(
                 host=context.host,
@@ -197,7 +201,7 @@ def create_async_snapshot_store(
 
 
 def create_snapshot_store(
-        connection_string: Any, storage_type: str, context: Any = None
+    connection_string: Any, storage_type: str, context: Any = None
 ) -> IAccessSnapshots:
     snapshot_store: IAccessSnapshots | None = None
     match storage_type:

@@ -45,7 +45,9 @@ class AsyncSnapshotStore(IAccessSnapshotsAsync):
                 f"Failed to get snapshot for stream {stream_id} with error {e}"
             )
 
-    async def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] | None = None):
+    async def add(
+        self, snapshot: Snapshot, headers: typing.Dict[str, str] | None = None
+    ):
         try:
             async with aiosqlite.connect(self._connection_string) as connection:
                 cur = await connection.cursor()

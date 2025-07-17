@@ -10,7 +10,10 @@ from aett.eventstore import ICommitEventsAsync, Commit
 
 class AsyncDefaultSagaRepository(AsyncSagaRepository):
     def __init__(
-            self, tenant_id: str, store: ICommitEventsAsync, logger: logging.Logger | None = None
+        self,
+        tenant_id: str,
+        store: ICommitEventsAsync,
+        logger: logging.Logger | None = None,
     ):
         """
         Initialize the default saga repository.
@@ -27,7 +30,7 @@ class AsyncDefaultSagaRepository(AsyncSagaRepository):
         )
 
     async def get(
-            self, cls: typing.Type[AsyncSagaRepository.TSaga], stream_id: str
+        self, cls: typing.Type[AsyncSagaRepository.TSaga], stream_id: str
     ) -> AsyncSagaRepository.TSaga:
         self._logger.debug(f"Getting saga {cls.__name__} with id {stream_id}")
         ait = self._store.get(self._tenant_id, stream_id)

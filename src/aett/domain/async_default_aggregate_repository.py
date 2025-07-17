@@ -19,11 +19,11 @@ from aett.eventstore import (
 
 class AsyncDefaultAggregateRepository(AsyncAggregateRepository):
     def __init__(
-            self,
-            tenant_id: str,
-            store: ICommitEventsAsync,
-            snapshot_store: IAccessSnapshotsAsync,
-            logger: logging.Logger | None = None,
+        self,
+        tenant_id: str,
+        store: ICommitEventsAsync,
+        snapshot_store: IAccessSnapshotsAsync,
+        logger: logging.Logger | None = None,
     ):
         """
         Initialize the default aggregate repository.
@@ -42,10 +42,10 @@ class AsyncDefaultAggregateRepository(AsyncAggregateRepository):
         )
 
     async def get(
-            self,
-            cls: Type[AsyncAggregateRepository.TAggregate],
-            stream_id: str,
-            max_version: int = MAX_INT,
+        self,
+        cls: Type[AsyncAggregateRepository.TAggregate],
+        stream_id: str,
+        max_version: int = MAX_INT,
     ) -> AsyncAggregateRepository.TAggregate:
         self._logger.debug(
             f"Getting aggregate {cls.__name__} with id {stream_id} at version {max_version}"
@@ -86,10 +86,10 @@ class AsyncDefaultAggregateRepository(AsyncAggregateRepository):
         return aggregate
 
     async def get_to(
-            self,
-            cls: Type[AsyncAggregateRepository.TAggregate],
-            stream_id: str,
-            max_time: datetime.datetime = datetime.datetime.max,
+        self,
+        cls: Type[AsyncAggregateRepository.TAggregate],
+        stream_id: str,
+        max_time: datetime.datetime = datetime.datetime.max,
     ) -> AsyncAggregateRepository.TAggregate:
         self._logger.debug(
             f"Getting aggregate {cls.__name__} with id {stream_id} at time point {max_time:%Y%m%d-%H%M%S%z}"
@@ -107,9 +107,9 @@ class AsyncDefaultAggregateRepository(AsyncAggregateRepository):
         return aggregate
 
     async def save(
-            self,
-            aggregate: AsyncAggregateRepository.TAggregate,
-            headers: Dict[str, str] | None = None,
+        self,
+        aggregate: AsyncAggregateRepository.TAggregate,
+        headers: Dict[str, str] | None = None,
     ) -> None:
         self._logger.debug(
             f"Saving aggregate {aggregate.id} at version {aggregate.version}"
@@ -134,11 +134,11 @@ class AsyncDefaultAggregateRepository(AsyncAggregateRepository):
         aggregate.uncommitted.clear()
 
     async def snapshot(
-            self,
-            cls: Type[AsyncAggregateRepository.TAggregate],
-            stream_id: str,
-            version: int = MAX_INT,
-            headers: Dict[str, str] | None = None,
+        self,
+        cls: Type[AsyncAggregateRepository.TAggregate],
+        stream_id: str,
+        version: int = MAX_INT,
+        headers: Dict[str, str] | None = None,
     ) -> None:
         self._logger.debug(
             f"Snapshotting aggregate {cls.__name__} with id {stream_id} at version {version}"
@@ -147,11 +147,11 @@ class AsyncDefaultAggregateRepository(AsyncAggregateRepository):
         await self._snapshot_aggregate(agg, headers)
 
     async def snapshot_at(
-            self,
-            cls: Type[AsyncAggregateRepository.TAggregate],
-            stream_id: str,
-            cut_off: datetime.datetime,
-            headers: Dict[str, str] | None = None,
+        self,
+        cls: Type[AsyncAggregateRepository.TAggregate],
+        stream_id: str,
+        cut_off: datetime.datetime,
+        headers: Dict[str, str] | None = None,
     ) -> None:
         self._logger.debug(
             f"Snapshotting aggregate {cls.__name__} with id {stream_id} at time point {cut_off:%Y%m%d-%H%M%S%z}"
@@ -160,7 +160,7 @@ class AsyncDefaultAggregateRepository(AsyncAggregateRepository):
         await self._snapshot_aggregate(agg, headers)
 
     async def _snapshot_aggregate(
-            self, aggregate: Aggregate, headers: Dict[str, str] | None = None
+        self, aggregate: Aggregate, headers: Dict[str, str] | None = None
     ) -> None:
         memento = aggregate.get_memento()
         snapshot = Snapshot(

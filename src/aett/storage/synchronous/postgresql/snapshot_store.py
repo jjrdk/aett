@@ -12,11 +12,11 @@ class SnapshotStore(IAccessSnapshots):
         self._table_name = table_name
 
     def get(
-            self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
+        self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
     ) -> Snapshot | None:
         try:
             with psycopg.connect(
-                    self._connection_string, autocommit=True
+                self._connection_string, autocommit=True
             ) as connection:
                 with connection.cursor() as cur:
                     cur.execute(
@@ -51,7 +51,7 @@ class SnapshotStore(IAccessSnapshots):
             headers = {}
         try:
             with psycopg.connect(
-                    self._connection_string, autocommit=True
+                self._connection_string, autocommit=True
             ) as connection:
                 with connection.cursor() as cur:
                     cur.execute(

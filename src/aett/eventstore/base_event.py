@@ -18,4 +18,6 @@ class BaseEvent(ABC, BaseModel):
         description="Gets the point in time at which the event was generated."
     )
 
-    correlation_id: Optional[str] = Field(default=None, description="Gets the correlation id of the event.")
+    correlation_id: Optional[str] = Field(
+        default=None, description="Gets the correlation id of the event."
+    )

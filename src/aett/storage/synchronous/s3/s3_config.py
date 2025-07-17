@@ -6,15 +6,15 @@ import inspect
 
 class S3Config:
     def __init__(
-            self,
-            bucket: str,
-            aws_access_key_id: str | None = None,
-            aws_secret_access_key: str | None = None,
-            aws_session_token: str | None = None,
-            profile_name: str | None = None,
-            region: str = "us-east-1",
-            endpoint_url: str | None = None,
-            use_tls: bool = True,
+        self,
+        bucket: str,
+        aws_access_key_id: str | None = None,
+        aws_secret_access_key: str | None = None,
+        aws_session_token: str | None = None,
+        profile_name: str | None = None,
+        region: str = "us-east-1",
+        endpoint_url: str | None = None,
+        use_tls: bool = True,
     ):
         """
         Defines the configuration for the S3 client.

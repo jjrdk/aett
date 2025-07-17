@@ -19,16 +19,16 @@ from aett.eventstore.i_commit_events import ICommitEvents
 
 class CommitStore(ICommitEvents):
     def __init__(
-            self,
-            topic_map: TopicMap,
-            conflict_detector: ConflictDetector | None = None,
-            table_name: str = COMMITS,
-            region: str = "eu-central-1",
-            profile_name: str | None = None,
-            aws_access_key_id: str | None = None,
-            aws_secret_access_key: str | None = None,
-            aws_session_token: str | None = None,
-            port: int = 8000,
+        self,
+        topic_map: TopicMap,
+        conflict_detector: ConflictDetector | None = None,
+        table_name: str = COMMITS,
+        region: str = "eu-central-1",
+        profile_name: str | None = None,
+        aws_access_key_id: str | None = None,
+        aws_secret_access_key: str | None = None,
+        aws_session_token: str | None = None,
+        port: int = 8000,
     ):
         self._topic_map = topic_map
         self._table_name = table_name
@@ -47,11 +47,11 @@ class CommitStore(ICommitEvents):
         )
 
     def get(
-            self,
-            tenant_id: str,
-            stream_id: str,
-            min_revision: int = 0,
-            max_revision: int = MAX_INT,
+        self,
+        tenant_id: str,
+        stream_id: str,
+        min_revision: int = 0,
+        max_revision: int = MAX_INT,
     ) -> typing.Iterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
@@ -61,8 +61,8 @@ class CommitStore(ICommitEvents):
             ConsistentRead=True,
             ProjectionExpression="TenantId,StreamId,StreamRevision,CommitId,CommitSequence,CommitStamp,Headers,Events",
             KeyConditionExpression=(
-                    Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
-                    & Key("StreamRevision").between(min_revision, max_revision)
+                Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
+                & Key("StreamRevision").between(min_revision, max_revision)
             ),
             ScanIndexForward=True,
         )
@@ -71,18 +71,18 @@ class CommitStore(ICommitEvents):
             yield self._item_to_commit(item)
 
     def get_to(
-            self,
-            tenant_id: str,
-            stream_id: str,
-            max_time: datetime.datetime = datetime.datetime.max,
+        self,
+        tenant_id: str,
+        stream_id: str,
+        max_time: datetime.datetime = datetime.datetime.max,
     ) -> Iterable[Commit]:
         query_response = self._table.scan(
             IndexName="CommitStampIndex",
             ConsistentRead=True,
             Select="ALL_ATTRIBUTES",
             FilterExpression=(
-                    Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
-                    & Attr("CommitStamp").lte(int(max_time.timestamp()))
+                Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
+                & Attr("CommitStamp").lte(int(max_time.timestamp()))
             ),
         )
         items = query_response["Items"]
@@ -92,7 +92,7 @@ class CommitStore(ICommitEvents):
             yield self._item_to_commit(item)
 
     def get_all_to(
-            self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
+        self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
     ) -> Iterable[Commit]:
         query_response = self._table.scan(
             IndexName="CommitStampIndex",
@@ -100,8 +100,8 @@ class CommitStore(ICommitEvents):
             Select="ALL_ATTRIBUTES",
             ProjectionExpression="CommitStamp",
             FilterExpression=(
-                    Key("TenantAndStream").begins_with(f"{tenant_id}")
-                    & Attr("CommitStamp").lte(int(max_time.timestamp()))
+                Key("TenantAndStream").begins_with(f"{tenant_id}")
+                & Attr("CommitStamp").lte(int(max_time.timestamp()))
             ),
         )
         items = query_response["Items"]
@@ -151,10 +151,10 @@ class CommitStore(ICommitEvents):
         except Exception as e:
             if e.__class__.__name__ == "ConditionalCheckFailedException":
                 if self._detect_duplicate(
-                        commit.commit_id,
-                        commit.tenant_id,
-                        commit.stream_id,
-                        commit.commit_sequence,
+                    commit.commit_id,
+                    commit.tenant_id,
+                    commit.stream_id,
+                    commit.commit_sequence,
                 ):
                     raise DuplicateCommitException("Duplicate commit detected")
                 else:
@@ -173,7 +173,7 @@ class CommitStore(ICommitEvents):
             )
 
     def _detect_duplicate(
-            self, commit_id: UUID, tenant_id: str, stream_id: str, commit_sequence: int
+        self, commit_id: UUID, tenant_id: str, stream_id: str, commit_sequence: int
     ) -> bool:
         duplicate_check = self._table.query(
             TableName=self._table_name,
@@ -183,8 +183,8 @@ class CommitStore(ICommitEvents):
             Select="SPECIFIC_ATTRIBUTES",
             ProjectionExpression="CommitId",
             KeyConditionExpression=(
-                    Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
-                    & Key("CommitSequence").eq(commit_sequence)
+                Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
+                & Key("CommitSequence").eq(commit_sequence)
             ),
         )
         items = duplicate_check["Items"]
@@ -201,8 +201,8 @@ class CommitStore(ICommitEvents):
         )
         for previous_commit in previous_commits:
             if self._conflict_detector.conflicts_with(
-                    list(map(self._get_body, commit.events)),
-                    list(map(self._get_body, previous_commit.events)),
+                list(map(self._get_body, commit.events)),
+                list(map(self._get_body, previous_commit.events)),
             ):
                 return True
         return False

@@ -23,24 +23,26 @@ from aett.storage.synchronous.s3 import S3Config
 
 class CommitStore(ICommitEvents):
     def __init__(
-            self,
-            s3_config: S3Config,
-            topic_map: TopicMap,
-            conflict_detector: ConflictDetector | None = None,
-            folder_name=COMMITS,
+        self,
+        s3_config: S3Config,
+        topic_map: TopicMap,
+        conflict_detector: ConflictDetector | None = None,
+        folder_name=COMMITS,
     ):
         self._s3_bucket: str = s3_config.bucket
         self._topic_map: TopicMap = topic_map
         self._resource = s3_config.to_client()
-        self._conflict_detector: ConflictDetector = conflict_detector or ConflictDetector.empty()
+        self._conflict_detector: ConflictDetector = (
+            conflict_detector or ConflictDetector.empty()
+        )
         self._folder_name = folder_name
 
     def get(
-            self,
-            tenant_id: str,
-            stream_id: str,
-            min_revision: int = 0,
-            max_revision: int = MAX_INT,
+        self,
+        tenant_id: str,
+        stream_id: str,
+        min_revision: int = 0,
+        max_revision: int = MAX_INT,
     ) -> Iterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
@@ -55,18 +57,18 @@ class CommitStore(ICommitEvents):
             key
             for key in map(lambda r: r.get("Key"), response.get("Contents"))
             if min_revision
-               <= int(key.split("_")[-1].replace(".json", ""))
-               <= max_revision
+            <= int(key.split("_")[-1].replace(".json", ""))
+            <= max_revision
         ]
         keys.sort()
         for key in keys:
             yield self._file_to_commit(key)
 
     def get_to(
-            self,
-            tenant_id: str,
-            stream_id: str,
-            max_time: datetime.datetime = datetime.datetime.max,
+        self,
+        tenant_id: str,
+        stream_id: str,
+        max_time: datetime.datetime = datetime.datetime.max,
     ) -> Iterable[Commit]:
         response = self._resource.list_objects(
             Bucket=self._s3_bucket,
@@ -86,7 +88,7 @@ class CommitStore(ICommitEvents):
             yield self._file_to_commit(key)
 
     def get_all_to(
-            self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
+        self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
     ) -> Iterable[Commit]:
         response = self._resource.list_objects(
             Bucket=self._s3_bucket,
@@ -156,13 +158,13 @@ class CommitStore(ICommitEvents):
                     f"Commit {commit.commit_id} already exists"
                 )
             if int(split[-2]) == commit_sequence or commit.stream_revision <= int(
-                    split[-1].replace(".json", "")
+                split[-1].replace(".json", "")
             ):
                 overlapping = [
                     key
                     for key in keys
                     if int(key.split("_")[-1].replace(".json", ""))
-                       >= commit.stream_revision
+                    >= commit.stream_revision
                 ]
                 if len(overlapping) == 0:
                     return
@@ -170,7 +172,7 @@ class CommitStore(ICommitEvents):
                 for o in overlapping:
                     c = self._file_to_commit(o)
                     if self._conflict_detector.conflicts_with(
-                            events, list(map(self._get_body, c.events))
+                        events, list(map(self._get_body, c.events))
                     ):
                         raise ConflictingCommitException(
                             f"Commit {commit.commit_id} conflicts with {c.commit_id}"

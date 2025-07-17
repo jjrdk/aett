@@ -16,7 +16,7 @@ class SnapshotStore(IAccessSnapshots):
         self.collection: database.Collection = db.get_collection(table_name)
 
     def get(
-            self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
+        self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
     ) -> Snapshot | None:
         try:
             filters = {

@@ -18,18 +18,19 @@ from aett.eventstore import (
     TopicMap,
     MAX_INT,
     Commit,
-    EventMessage, BaseEvent,
+    EventMessage,
+    BaseEvent,
 )
 from aett.storage.asynchronous.postgresql import _item_to_commit
 
 
 class AsyncCommitStore(ICommitEventsAsync):
     def __init__(
-            self,
-            connection_string: str,
-            topic_map: TopicMap,
-            conflict_detector: ConflictDetector | None = None,
-            table_name=COMMITS,
+        self,
+        connection_string: str,
+        topic_map: TopicMap,
+        conflict_detector: ConflictDetector | None = None,
+        table_name=COMMITS,
     ):
         self._topic_map = topic_map
         self._connection_string = connection_string
@@ -39,11 +40,11 @@ class AsyncCommitStore(ICommitEventsAsync):
         self._table_name = table_name
 
     async def get(
-            self,
-            tenant_id: str,
-            stream_id: str,
-            min_revision: int = 0,
-            max_revision: int = MAX_INT,
+        self,
+        tenant_id: str,
+        stream_id: str,
+        min_revision: int = 0,
+        max_revision: int = MAX_INT,
     ) -> typing.AsyncIterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
@@ -67,10 +68,10 @@ class AsyncCommitStore(ICommitEventsAsync):
             yield _item_to_commit(doc, self._topic_map)
 
     async def get_to(
-            self,
-            tenant_id: str,
-            stream_id: str,
-            max_time: datetime.datetime = datetime.datetime.max,
+        self,
+        tenant_id: str,
+        stream_id: str,
+        max_time: datetime.datetime = datetime.datetime.max,
     ) -> typing.AsyncIterable[Commit]:
         connection = await connect(self._connection_string)
         fetchall = await connection.fetch(
@@ -88,7 +89,7 @@ class AsyncCommitStore(ICommitEventsAsync):
             yield _item_to_commit(doc, self._topic_map)
 
     async def get_all_to(
-            self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
+        self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
     ) -> typing.AsyncIterable[Commit]:
         connection = await connect(self._connection_string)
         fetchall = await connection.fetch(
@@ -139,7 +140,7 @@ class AsyncCommitStore(ICommitEventsAsync):
 
         except UniqueViolationError:
             if await self._detect_duplicate(
-                    commit.commit_id, commit.tenant_id, commit.stream_id
+                commit.commit_id, commit.tenant_id, commit.stream_id
             ):
                 raise DuplicateCommitException(
                     f"Commit {commit.commit_id} already exists in stream {commit.stream_id}"
@@ -158,7 +159,7 @@ class AsyncCommitStore(ICommitEventsAsync):
             raise Exception(f"Failed to commit {commit.commit_id} with error {e}")
 
     async def _detect_duplicate(
-            self, commit_id: UUID, tenant_id: str, stream_id: str
+        self, commit_id: UUID, tenant_id: str, stream_id: str
     ) -> bool:
         try:
             connection = await connect(self._connection_string)
@@ -201,7 +202,7 @@ class AsyncCommitStore(ICommitEventsAsync):
             uncommitted_events = list(map(self._get_body, commit.events))
             committed_events = list(map(self._get_body, events))
             if self._conflict_detector.conflicts_with(
-                    uncommitted_events, committed_events
+                uncommitted_events, committed_events
             ):
                 return True, -1
             if doc[0] > latest_revision:

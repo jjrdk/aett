@@ -11,15 +11,15 @@ from aett.eventstore.constants import COMMITS, SNAPSHOTS
 
 class PersistenceManagement(IManagePersistence):
     def __init__(
-            self,
-            commits_table_name: str = COMMITS,
-            snapshots_table_name: str = SNAPSHOTS,
-            region: str = "eu-central-1",
-            profile_name: str | None = None,
-            aws_access_key_id: str | None = None,
-            aws_secret_access_key: str | None = None,
-            aws_session_token: str | None = None,
-            port: int = 8000,
+        self,
+        commits_table_name: str = COMMITS,
+        snapshots_table_name: str = SNAPSHOTS,
+        region: str = "eu-central-1",
+        profile_name: str | None = None,
+        aws_access_key_id: str | None = None,
+        aws_secret_access_key: str | None = None,
+        aws_session_token: str | None = None,
+        port: int = 8000,
     ):
         self.dynamodb = _get_resource(
             profile_name=profile_name,

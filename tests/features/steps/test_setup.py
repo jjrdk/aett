@@ -106,8 +106,12 @@ async def step_impl(context, storage: str):
             context.password = mysql_container.password
             context.database = mysql_container.dbname
             mgmt = MySqlPersistenceManagement(
-                host=context.host, user=context.user, password=context.password, port=context.port,
-                database=context.database, topic_map=tm
+                host=context.host,
+                user=context.user,
+                password=context.password,
+                port=context.port,
+                database=context.database,
+                topic_map=tm,
             )
             mgmt.initialize()
             context.mgmt = mgmt
@@ -130,8 +134,12 @@ async def step_impl(context, storage: str):
             context.password = mysql_container.password
             context.database = mysql_container.dbname
             mgmt = MySqlAsyncPersistenceManagement(
-                host=context.host, user=context.user, password=context.password, port=context.port,
-                database=context.database, topic_map=tm
+                host=context.host,
+                user=context.user,
+                password=context.password,
+                port=context.port,
+                database=context.database,
+                topic_map=tm,
             )
             await mgmt.initialize()
             context.mgmt = mgmt
