@@ -21,3 +21,8 @@ Feature: Topic definition
     And a sample class with a topic definition
     When I register it with the TopicMap
     Then the topic is list of all topics
+
+  Scenario: Class registration
+    Given a class with a topic annotation
+    When I register it with the TopicMap
+    Then the topic map can resolve the type from the topic

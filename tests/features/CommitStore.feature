@@ -12,6 +12,8 @@ Feature: Persist commits
       | postgres_async |
       | sqlite_async   |
       | mysql_async    |
+      | dynamodb_async |
+      | s3_async       |
 
   Scenario Outline: Commit event with nested base models to async stream
     Given a running <storage> server
@@ -26,6 +28,8 @@ Feature: Persist commits
       | postgres_async |
       | sqlite_async   |
       | mysql_async    |
+      | dynamodb_async |
+      | s3_async       |
 
   Scenario Outline: Commit event to sync stream
     Given a running <storage> server
@@ -39,6 +43,9 @@ Feature: Persist commits
       | postgres |
       | sqlite   |
       | mysql    |
+      | s3       |
+      | dynamo   |
+      | inmemory |
 
   Scenario Outline: Commit event with nested base models to sync stream
     Given a running <storage> server

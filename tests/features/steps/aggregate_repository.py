@@ -10,6 +10,7 @@ import aiomysql
 import boto3
 import psycopg
 import pymysql
+from aioboto3 import Session
 from behave import *
 from behave.api.async_step import async_run_until_complete
 from pydantic_core import to_json
@@ -146,6 +147,10 @@ async def step_impl(context):
                 await seed_postgres_async(context, x, time_stamp)
             case "mysql_async":
                 await seed_mysql_async(context, x, time_stamp)
+            case "dynamodb_async":
+                await seed_dynamo_async(context, x, time_stamp)
+            case "s3_async":
+                await seed_s3_async(context, x, time_stamp)
 
 
 @when("a series of commits is persisted")
@@ -195,15 +200,15 @@ def seed_dynamo(context, x, time_stamp):
             [
                 e.to_json()
                 for e in [
-                    EventMessage(
-                        body=TestEvent(
-                            source=context.stream_id,
-                            timestamp=time_stamp,
-                            version=x - 1,
-                            value=x,
-                        )
+                EventMessage(
+                    body=TestEvent(
+                        source=context.stream_id,
+                        timestamp=time_stamp,
+                        version=x - 1,
+                        value=x,
                     )
-                ]
+                )
+            ]
             ]
         ),
     }
@@ -213,6 +218,51 @@ def seed_dynamo(context, x, time_stamp):
         ReturnValuesOnConditionCheckFailure="NONE",
         ConditionExpression="attribute_not_exists(TenantAndStream) AND attribute_not_exists(CommitSequence)",
     )
+
+
+async def seed_dynamo_async(context, x, time_stamp):
+    session = Session(
+        aws_access_key_id="dummy",
+        aws_secret_access_key="dummy",
+        aws_session_token="dummy",
+    )
+    async with session.resource(
+        "dynamodb",
+        region_name="localhost",
+        endpoint_url=f"http://localhost:{context.db}",
+    ) as resource:
+        table = await resource.Table("commits")
+        item = {
+            "TenantAndStream": f"{context.tenant_id}{context.stream_id}",
+            "TenantId": context.tenant_id,
+            "StreamId": context.stream_id,
+            "StreamRevision": x,
+            "CommitId": str(uuid.uuid4()),
+            "CommitSequence": x,
+            "CommitStamp": int(time_stamp.timestamp()),
+            "Headers": to_json({}),
+            "Events": to_json(
+                [
+                    e.to_json()
+                    for e in [
+                    EventMessage(
+                        body=TestEvent(
+                            source=context.stream_id,
+                            timestamp=time_stamp,
+                            version=x - 1,
+                            value=x,
+                        )
+                    )
+                ]
+                ]
+            ),
+        }
+        _ = await table.put_item(
+            Item=item,
+            ReturnValues="NONE",
+            ReturnValuesOnConditionCheckFailure="NONE",
+            ConditionExpression="attribute_not_exists(TenantAndStream) AND attribute_not_exists(CommitSequence)",
+        )
 
 
 def seed_inmemory(context, x, time_stamp):
@@ -258,15 +308,15 @@ async def seed_mongo_async(context, x, time_stamp):
             [
                 e.to_json()
                 for e in [
-                    EventMessage(
-                        body=TestEvent(
-                            source=context.stream_id,
-                            timestamp=time_stamp,
-                            version=x - 1,
-                            value=x,
-                        )
+                EventMessage(
+                    body=TestEvent(
+                        source=context.stream_id,
+                        timestamp=time_stamp,
+                        version=x - 1,
+                        value=x,
                     )
-                ]
+                )
+            ]
             ]
         ),
         "CheckpointToken": x,
@@ -289,15 +339,15 @@ def seed_mongo(context, x, time_stamp):
             [
                 e.to_json()
                 for e in [
-                    EventMessage(
-                        body=TestEvent(
-                            source=context.stream_id,
-                            timestamp=time_stamp,
-                            version=x - 1,
-                            value=x,
-                        )
+                EventMessage(
+                    body=TestEvent(
+                        source=context.stream_id,
+                        timestamp=time_stamp,
+                        version=x - 1,
+                        value=x,
                     )
-                ]
+                )
+            ]
             ]
         ),
         "CheckpointToken": x,
@@ -328,15 +378,15 @@ def seed_postgres(context, x, time_stamp):
                     [
                         e.to_json()
                         for e in [
-                            EventMessage(
-                                body=TestEvent(
-                                    source=context.stream_id,
-                                    timestamp=time_stamp,
-                                    version=x - 1,
-                                    value=x,
-                                )
+                        EventMessage(
+                            body=TestEvent(
+                                source=context.stream_id,
+                                timestamp=time_stamp,
+                                version=x - 1,
+                                value=x,
                             )
-                        ]
+                        )
+                    ]
                     ]
                 ),
             ),
@@ -365,15 +415,15 @@ async def seed_postgres_async(context, x, time_stamp):
             [
                 e.to_json()
                 for e in [
-                    EventMessage(
-                        body=TestEvent(
-                            source=context.stream_id,
-                            timestamp=time_stamp,
-                            version=x - 1,
-                            value=x,
-                        )
+                EventMessage(
+                    body=TestEvent(
+                        source=context.stream_id,
+                        timestamp=time_stamp,
+                        version=x - 1,
+                        value=x,
                     )
-                ]
+                )
+            ]
             ]
         ),
     )
@@ -381,12 +431,12 @@ async def seed_postgres_async(context, x, time_stamp):
 
 def seed_mysql(context, x, time_stamp):
     with pymysql.connect(
-        host=context.host,
-        user=context.user,
-        password=context.password,
-        database=context.database,
-        port=context.port,
-        autocommit=True,
+            host=context.host,
+            user=context.user,
+            password=context.password,
+            database=context.database,
+            port=context.port,
+            autocommit=True,
     ) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
@@ -409,15 +459,15 @@ def seed_mysql(context, x, time_stamp):
                         [
                             e.to_json()
                             for e in [
-                                EventMessage(
-                                    body=TestEvent(
-                                        source=context.stream_id,
-                                        timestamp=time_stamp,
-                                        version=x - 1,
-                                        value=x,
-                                    )
+                            EventMessage(
+                                body=TestEvent(
+                                    source=context.stream_id,
+                                    timestamp=time_stamp,
+                                    version=x - 1,
+                                    value=x,
                                 )
-                            ]
+                            )
+                        ]
                         ]
                     ),
                 ),
@@ -426,12 +476,12 @@ def seed_mysql(context, x, time_stamp):
 
 async def seed_mysql_async(context, x, time_stamp):
     async with aiomysql.connect(
-        host=context.host,
-        user=context.user,
-        password=context.password,
-        db=context.database,
-        port=context.port,
-        autocommit=True,
+            host=context.host,
+            user=context.user,
+            password=context.password,
+            db=context.database,
+            port=context.port,
+            autocommit=True,
     ) as conn:
         async with conn.cursor() as cursor:
             await cursor.execute(
@@ -454,15 +504,15 @@ async def seed_mysql_async(context, x, time_stamp):
                         [
                             e.to_json()
                             for e in [
-                                EventMessage(
-                                    body=TestEvent(
-                                        source=context.stream_id,
-                                        timestamp=time_stamp,
-                                        version=x - 1,
-                                        value=x,
-                                    )
+                            EventMessage(
+                                body=TestEvent(
+                                    source=context.stream_id,
+                                    timestamp=time_stamp,
+                                    version=x - 1,
+                                    value=x,
                                 )
-                            ]
+                            )
+                        ]
                         ]
                     ),
                 ),
@@ -493,15 +543,15 @@ def seed_sqlite(context, x, time_stamp):
                     [
                         e.to_json()
                         for e in [
-                            EventMessage(
-                                body=TestEvent(
-                                    source=context.stream_id,
-                                    timestamp=time_stamp,
-                                    version=x - 1,
-                                    value=x,
-                                )
+                        EventMessage(
+                            body=TestEvent(
+                                source=context.stream_id,
+                                timestamp=time_stamp,
+                                version=x - 1,
+                                value=x,
                             )
-                        ]
+                        )
+                    ]
                     ]
                 ),
             ),
@@ -534,15 +584,15 @@ async def seed_sqlite_async(context, x, time_stamp):
                         [
                             e.to_json()
                             for e in [
-                                EventMessage(
-                                    body=TestEvent(
-                                        source=context.stream_id,
-                                        timestamp=time_stamp,
-                                        version=x - 1,
-                                        value=x,
-                                    )
+                            EventMessage(
+                                body=TestEvent(
+                                    source=context.stream_id,
+                                    timestamp=time_stamp,
+                                    version=x - 1,
+                                    value=x,
                                 )
-                            ]
+                            )
+                        ]
                         ]
                     ),
                 ),
@@ -584,6 +634,42 @@ def seed_s3(context, x, time_stamp):
         ContentLength=len(body),
         Metadata={k: to_json(v) for k, v in commit.headers.items()},
     )
+
+
+async def seed_s3_async(context, x, time_stamp):
+    commit = Commit(
+        tenant_id=context.tenant_id,
+        stream_id=context.stream_id,
+        commit_stamp=time_stamp,
+        commit_sequence=x,
+        stream_revision=1,
+        events=[
+            EventMessage(
+                body=TestEvent(
+                    source=context.stream_id,
+                    timestamp=time_stamp,
+                    version=x - 1,
+                    value=x,
+                )
+            )
+        ],
+        headers={},
+        checkpoint_token=0,
+        commit_id=uuid.uuid4(),
+    )
+    commit_key = f"commits/{commit.tenant_id}/{commit.stream_id}/{int(commit.commit_stamp.timestamp())}_{commit.commit_sequence}_{commit.stream_revision}.json"
+    d = commit.__dict__
+    d["events"] = [e.to_json() for e in commit.events]
+    d["headers"] = {k: to_json(v) for k, v in commit.headers.items()}
+    body = to_json(d)
+    async with context.db.to_client() as client:
+        await client.put_object(
+            Bucket=context.db.bucket,
+            Key=commit_key,
+            Body=body,
+            ContentLength=len(body),
+            Metadata={k: to_json(v) for k, v in commit.headers.items()},
+        )
 
 
 @step("a specific aggregate is loaded async at a specific time")

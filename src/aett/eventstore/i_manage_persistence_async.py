@@ -6,7 +6,7 @@ from aett.eventstore import Commit
 
 class IManagePersistenceAsync(ABC):
     @abstractmethod
-    async def initialize(self):
+    async def initialize(self) -> None:
         """
         Initializes the persistence mechanism.
         """
@@ -20,7 +20,7 @@ class IManagePersistenceAsync(ABC):
         pass
 
     @abstractmethod
-    async def purge(self, tenant_id: str):
+    async def purge(self, tenant_id: str) -> None:
         """
         Purges the persistence mechanism.
 
