@@ -149,6 +149,8 @@ async def step_impl(context):
                 await seed_mysql_async(context, x, time_stamp)
             case "dynamodb_async":
                 await seed_dynamo_async(context, x, time_stamp)
+            case "s3_async":
+                await seed_s3_async(context, x, time_stamp)
 
 
 @when("a series of commits is persisted")
@@ -632,6 +634,42 @@ def seed_s3(context, x, time_stamp):
         ContentLength=len(body),
         Metadata={k: to_json(v) for k, v in commit.headers.items()},
     )
+
+
+async def seed_s3_async(context, x, time_stamp):
+    commit = Commit(
+        tenant_id=context.tenant_id,
+        stream_id=context.stream_id,
+        commit_stamp=time_stamp,
+        commit_sequence=x,
+        stream_revision=1,
+        events=[
+            EventMessage(
+                body=TestEvent(
+                    source=context.stream_id,
+                    timestamp=time_stamp,
+                    version=x - 1,
+                    value=x,
+                )
+            )
+        ],
+        headers={},
+        checkpoint_token=0,
+        commit_id=uuid.uuid4(),
+    )
+    commit_key = f"commits/{commit.tenant_id}/{commit.stream_id}/{int(commit.commit_stamp.timestamp())}_{commit.commit_sequence}_{commit.stream_revision}.json"
+    d = commit.__dict__
+    d["events"] = [e.to_json() for e in commit.events]
+    d["headers"] = {k: to_json(v) for k, v in commit.headers.items()}
+    body = to_json(d)
+    async with context.db.to_client() as client:
+        await client.put_object(
+            Bucket=context.db.bucket,
+            Key=commit_key,
+            Body=body,
+            ContentLength=len(body),
+            Metadata={k: to_json(v) for k, v in commit.headers.items()},
+        )
 
 
 @step("a specific aggregate is loaded async at a specific time")

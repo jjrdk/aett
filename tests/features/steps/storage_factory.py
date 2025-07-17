@@ -76,10 +76,12 @@ from aett.storage.synchronous.sqlite.snapshot_store import (
 )
 from aett.storage.synchronous.s3.commit_store import CommitStore as S3CommitStore
 from aett.storage.synchronous.s3.snapshot_store import SnapshotStore as S3SnapshotStore
+from aett.storage.asynchronous.s3.async_commit_store import AsyncCommitStore as AsyncS3CommitStore
+from aett.storage.asynchronous.s3.async_snapshot_store import AsyncSnapshotStore as AsyncS3SnapshotStore
 
 
 def create_async_commit_store(
-    connection_string: str,
+    connection_string: Any,
     storage_type: str,
     topic_map: TopicMap,
     conflict_detector: ConflictDetector = None,
@@ -121,6 +123,12 @@ def create_async_commit_store(
         case "sqlite_async":
             commit_store = SqliteAsyncCommitStore(
                 connection_string=connection_string,
+                topic_map=topic_map,
+                conflict_detector=conflict_detector,
+            )
+        case "s3_async":
+            commit_store = AsyncS3CommitStore(
+                s3_config=connection_string,
                 topic_map=topic_map,
                 conflict_detector=conflict_detector,
             )
@@ -221,6 +229,8 @@ def create_async_snapshot_store(
                 database=context.database,
                 port=context.port,
             )
+        case "s3_async":
+            snapshot_store = AsyncS3SnapshotStore(s3_config=connection_string)
     return snapshot_store
 
 

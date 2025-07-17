@@ -56,11 +56,11 @@ Currently supported persistence stores are:
 | Storage Engine | Sync | Async |
 |:---------------|------|-------|
 | Sqlite         | +    | +     |
-| DynamoDB       | +    | -     |
+| DynamoDB       | +    | +     |
 | MongoDB        | +    | +     |
 | PostgreSQL     | +    | +     |
 | MySql          | +    | +     |
-| S3             | +    | -     |
+| S3             | +    | +     |
 | In-Memory      | +    | -     |
 
 ## Downloads

@@ -40,6 +40,10 @@ from aett.storage.synchronous.s3 import S3Config
 from aett.storage.synchronous.s3.persistence_management import (
     PersistenceManagement as S3PersistenceManagement,
 )
+from aett.storage.asynchronous.s3 import AsyncS3Config
+from aett.storage.asynchronous.s3.async_persistence_management import (
+    AsyncPersistenceManagement as AsyncS3PersistenceManagement,
+)
 from aett.storage.synchronous.sqlite.persistence_management import (
     PersistenceManagement as SqlitePersistenceManagement,
 )
@@ -174,6 +178,20 @@ async def step_impl(context, storage: str):
             )
             mgmt = S3PersistenceManagement(s3_config=context.db)
             mgmt.initialize()
+        case "s3_async":
+            context.process = MinioContainer(image="quay.io/minio/minio")
+            context.process.start()
+            minio_container = context.process
+            exposed_port = minio_container.get_exposed_port(9000)
+            context.db = AsyncS3Config(
+                bucket="test",
+                endpoint_url=f"http://localhost:{exposed_port}",
+                use_tls=False,
+                aws_access_key_id="minioadmin",
+                aws_secret_access_key="minioadmin",
+            )
+            mgmt = AsyncS3PersistenceManagement(s3_config=context.db)
+            await mgmt.initialize()
         case "sqlite":
             context.db = f"{context.tenant_id}.db"
             mgmt = SqlitePersistenceManagement(context.db, tm)
