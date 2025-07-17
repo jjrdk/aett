@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 from aett.eventstore import TopicMap, Topic
 from aett.eventstore.topic_map import HierarchicalTopicMap
-from features.steps.test_types import (
+from test_types import (
     SampleClass,
     SampleModel,
     DerivedClass,
