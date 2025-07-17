@@ -109,3 +109,25 @@ class TestSaga(Saga):
             value=event.value,
         )
         self.dispatch(cmd)
+
+# Topic test types
+
+
+@Topic("sample_topic")
+class SampleClass:
+    pass
+
+
+@Topic("secondary_topic")
+class DerivedClass(SampleClass):
+    pass
+
+
+@Topic("tertiary_topic")
+class SecondDerivedClass(DerivedClass):
+    pass
+
+
+@Topic("sample_model")
+class SampleModel(BaseModel):
+    pass
