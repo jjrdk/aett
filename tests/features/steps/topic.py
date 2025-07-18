@@ -55,7 +55,7 @@ def step_impl(context, topic: str):
 @then("then (?P<expected>.+) can be resolved from the type")
 def step_impl(context, expected):
     topic_map: HierarchicalTopicMap = context.topic_map
-    topic: str = topic_map.get(context.instance)
+    topic: str = topic_map.get_hierarchical_topic(context.instance)
     assert topic == expected, f"Expected topic to be '{expected}', but was '{topic}'"
 
 
@@ -94,8 +94,8 @@ def step_impl(context):
 @then("the topic is in list of all topics")
 def step_impl(context):
     topic_map: HierarchicalTopicMap = context.topic_map
-    topic: str = topic_map.get(context.instance)
-    assert topic in topic_map.get_all()
+    topic: str = topic_map.get_hierarchical_topic(context.instance)
+    assert topic in topic_map.get_all_hierarchical_topics()
 
 
 @step("BaseModel is excepted")
@@ -124,6 +124,16 @@ def step_impl(context):
 def step_impl(context):
     topic_map: TopicMap = context.topic_map
     resolved = topic_map.get(Topic.get(type(context.instance)))
+
+    assert isinstance(context.instance, resolved), (
+        f"Expected type to be '{type(context.instance)}', but was '{resolved}'"
+    )
+
+
+@then("the hierarchical topic map can resolve the type from the topic")
+def step_impl(context):
+    topic_map: HierarchicalTopicMap = context.topic_map
+    resolved = topic_map.resolve_type(Topic.get(type(context.instance)))
 
     assert isinstance(context.instance, resolved), (
         f"Expected type to be '{type(context.instance)}', but was '{resolved}'"

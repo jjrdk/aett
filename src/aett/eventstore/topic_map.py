@@ -93,7 +93,7 @@ class HierarchicalTopicMap:
 
     def register(self, instance: Any) -> Self:
         t = instance if isinstance(instance, type) else type(instance)
-        topic = self._resolve_topic(t)
+        topic = Topic.get(t)
         if topic not in self.__topics:
             self.add(topic, t)
 
@@ -116,7 +116,15 @@ class HierarchicalTopicMap:
                 self.register_module(o)
         return self
 
-    def get(self, instance: type) -> str | None:
+    def resolve_type(self, topic: str) -> type | None:
+        """
+        Gets the class of the event given the topic.
+        :param topic: The topic of the event.
+        :return: The class of the event.
+        """
+        return self.__topics.get(topic, None)
+
+    def get_hierarchical_topic(self, instance: type) -> str | None:
         """
         Gets the topic of the event given the class.
         :param instance: The class of the event.
@@ -131,3 +139,10 @@ class HierarchicalTopicMap:
         :return: A dictionary of all the topics and their classes.
         """
         return list(self.__topics.keys())
+
+    def get_all_hierarchical_topics(self) -> List[str]:
+        """
+        Gets all the hierarchical topics in the map.
+        :return: A list of all the hierarchical topics.
+        """
+        return [self._resolve_topic(type_value) for type_value in self.__topics.values()]
