@@ -13,7 +13,7 @@ class AsyncSnapshotStore(IAccessSnapshotsAsync):
         self.__config = s3_config
 
     async def get(
-            self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
+        self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
     ) -> Snapshot | None:
         async with self.__config.to_client() as client:
             files = await client.list_objects(
@@ -43,7 +43,9 @@ class AsyncSnapshotStore(IAccessSnapshotsAsync):
                 headers=d.get("headers"),
             )
 
-    async def add(self, snapshot: Snapshot, headers: Dict[str, str] | None = None) -> None:
+    async def add(
+        self, snapshot: Snapshot, headers: Dict[str, str] | None = None
+    ) -> None:
         async with self.__config.to_client() as client:
             if headers is not None:
                 snapshot.headers.update(headers)

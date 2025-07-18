@@ -76,8 +76,12 @@ from aett.storage.synchronous.sqlite.snapshot_store import (
 )
 from aett.storage.synchronous.s3.commit_store import CommitStore as S3CommitStore
 from aett.storage.synchronous.s3.snapshot_store import SnapshotStore as S3SnapshotStore
-from aett.storage.asynchronous.s3.async_commit_store import AsyncCommitStore as AsyncS3CommitStore
-from aett.storage.asynchronous.s3.async_snapshot_store import AsyncSnapshotStore as AsyncS3SnapshotStore
+from aett.storage.asynchronous.s3.async_commit_store import (
+    AsyncCommitStore as AsyncS3CommitStore,
+)
+from aett.storage.asynchronous.s3.async_snapshot_store import (
+    AsyncSnapshotStore as AsyncS3SnapshotStore,
+)
 
 
 def create_async_commit_store(

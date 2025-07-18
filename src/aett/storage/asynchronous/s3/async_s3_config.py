@@ -3,15 +3,15 @@ from aioboto3 import Session
 
 class AsyncS3Config:
     def __init__(
-            self,
-            bucket: str,
-            aws_access_key_id: str | None = None,
-            aws_secret_access_key: str | None = None,
-            aws_session_token: str | None = None,
-            profile_name: str | None = None,
-            region: str = "us-east-1",
-            endpoint_url: str | None = None,
-            use_tls: bool = True,
+        self,
+        bucket: str,
+        aws_access_key_id: str | None = None,
+        aws_secret_access_key: str | None = None,
+        aws_session_token: str | None = None,
+        profile_name: str | None = None,
+        region: str = "us-east-1",
+        endpoint_url: str | None = None,
+        use_tls: bool = True,
     ):
         """
         Defines the configuration for the S3 client.
@@ -45,5 +45,5 @@ class AsyncS3Config:
             service_name="s3",
             region_name=self._region,
             endpoint_url=self._endpoint_url,
-            verify=self._use_tls
+            verify=self._use_tls,
         )

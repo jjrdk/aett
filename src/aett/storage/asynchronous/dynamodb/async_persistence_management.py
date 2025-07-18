@@ -11,20 +11,23 @@ from aett.storage.asynchronous.dynamodb import _get_client
 
 class AsyncPersistenceManagement(IManagePersistenceAsync):
     def __init__(
-            self,
-            region: str = "eu-central-1",
-            profile_name: str | None = None,
-            aws_access_key_id: str | None = None,
-            aws_secret_access_key: str | None = None,
-            aws_session_token: str | None = None,
-            port: int = 8000,
-            commits_table_name: str = COMMITS,
-            snapshots_table_name: str = SNAPSHOTS,
+        self,
+        region: str = "eu-central-1",
+        profile_name: str | None = None,
+        aws_access_key_id: str | None = None,
+        aws_secret_access_key: str | None = None,
+        aws_session_token: str | None = None,
+        port: int = 8000,
+        commits_table_name: str = COMMITS,
+        snapshots_table_name: str = SNAPSHOTS,
     ):
-        self.__session = Session(aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key,
-                                 aws_session_token=aws_session_token,
-                                 region_name=region,
-                                 profile_name=profile_name)
+        self.__session = Session(
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            aws_session_token=aws_session_token,
+            region_name=region,
+            profile_name=profile_name,
+        )
         self.__port = port
         self.commits_table_name = commits_table_name
         self.snapshots_table_name = snapshots_table_name
@@ -94,14 +97,18 @@ class AsyncPersistenceManagement(IManagePersistenceAsync):
                 )
 
     async def drop(self):
-        with _get_client(session=self.__session, region=self.__region, port=self.__port) as client:
+        with _get_client(
+            session=self.__session, region=self.__region, port=self.__port
+        ) as client:
             tables = await client.tables.all()
             for table in tables:
                 if table.name in [self.commits_table_name, self.snapshots_table_name]:
                     await table.delete()
 
     async def purge(self, tenant_id: str):
-        with _get_client(session=self.__session, region=self.__region, port=self.__port) as client:
+        with _get_client(
+            session=self.__session, region=self.__region, port=self.__port
+        ) as client:
             table = client.Table(self.commits_table_name)
             query_response = await table.scan(
                 IndexName="CommitStampIndex",

@@ -10,7 +10,7 @@ from test_types import (
     SampleModel,
     DerivedClass,
     SecondDerivedClass,
-    TestEvent
+    TestEvent,
 )
 
 use_step_matcher("re")
@@ -106,17 +106,18 @@ def step_impl(context):
 
 @given("a class with a topic annotation")
 def step_impl(context):
-    context.instance = TestEvent(source="test",
-                                 timestamp=datetime.datetime.now(datetime.timezone.utc),
-                                 version=0, value=100)
+    context.instance = TestEvent(
+        source="test",
+        timestamp=datetime.datetime.now(datetime.timezone.utc),
+        version=0,
+        value=100,
+    )
 
 
 @then("the topic can be resolved from the type")
 def step_impl(context):
     topic = Topic.get(context.instance)
-    assert topic == "Test", (
-        f"Expected topic to be 'Test', but was '{topic}'"
-    )
+    assert topic == "Test", f"Expected topic to be 'Test', but was '{topic}'"
 
 
 @then("the topic map can resolve the type from the topic")
@@ -124,4 +125,6 @@ def step_impl(context):
     topic_map: TopicMap = context.topic_map
     resolved = topic_map.get(Topic.get(type(context.instance)))
 
-    assert isinstance(context.instance, resolved), f"Expected type to be '{type(context.instance)}', but was '{resolved}'"
+    assert isinstance(context.instance, resolved), (
+        f"Expected type to be '{type(context.instance)}', but was '{resolved}'"
+    )
