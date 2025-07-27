@@ -1,6 +1,9 @@
 import inspect
-from typing import Any, List, Self, Dict
+from typing import Any, Dict, Iterable, List, Self, Set
+from pydantic import BaseModel
 
+from aett.eventstore.base_command import BaseCommand
+from aett.eventstore.base_event import BaseEvent
 from aett.eventstore.topic import Topic
 
 
@@ -68,9 +71,9 @@ class HierarchicalTopicMap:
     Represents a map of topics to event classes.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.__topics: Dict[str, type] = {}
-        self.__excepted_bases__: List[type] = [object]
+        self.__excepted_bases__: Set[type] = {object, BaseModel, BaseEvent, BaseCommand}
 
     def add(self, topic: str, cls: type) -> Self:
         """
@@ -89,7 +92,7 @@ class HierarchicalTopicMap:
         if not isinstance(t, type):
             raise TypeError("Expected a class type")
         if t not in self.__excepted_bases__:
-            self.__excepted_bases__.append(t)
+            self.__excepted_bases__.add(t)
 
     def register(self, instance: Any) -> Self:
         t = instance if isinstance(instance, type) else type(instance)
@@ -99,11 +102,11 @@ class HierarchicalTopicMap:
 
         return self
 
-    def _resolve_topic(self, t: type) -> str:
+    def _resolve_topics(self, t: type, prefix: str | None = None) -> Iterable[str]:
         topic = t.__topic__ if hasattr(t, "__topic__") else t.__name__
         if t.__base__ and t.__base__ not in self.__excepted_bases__:
-            topic = f"{self._resolve_topic(t.__base__)}.{topic}"
-        return topic
+            yield from self._resolve_topics(t.__base__, prefix)
+        yield topic if prefix is None else f"{prefix}.{topic}"
 
     def register_module(self, module: object) -> Self:
         """
@@ -131,7 +134,10 @@ class HierarchicalTopicMap:
         :return: The topic of the event.
         """
         t = instance if isinstance(instance, type) else type(instance)
-        return self._resolve_topic(t) if t in self.__topics.values() else None
+        if t in self.__topics.values():
+            n = list(self._resolve_topics(t))
+            return next(iter(n), None) if n else None
+        return None
 
     def get_all(self) -> List[str]:
         """
@@ -140,9 +146,10 @@ class HierarchicalTopicMap:
         """
         return list(self.__topics.keys())
 
-    def get_all_hierarchical_topics(self) -> List[str]:
+    def get_all_hierarchical_topics(self) -> Iterable[str]:
         """
         Gets all the hierarchical topics in the map.
         :return: A list of all the hierarchical topics.
         """
-        return [self._resolve_topic(type_value) for type_value in self.__topics.values()]
+        for topic in self.__topics.values():
+            yield from self._resolve_topics(topic)
