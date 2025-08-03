@@ -200,15 +200,15 @@ def seed_dynamo(context, x, time_stamp):
             [
                 e.to_json()
                 for e in [
-                EventMessage(
-                    body=TestEvent(
-                        source=context.stream_id,
-                        timestamp=time_stamp,
-                        version=x - 1,
-                        value=x,
+                    EventMessage(
+                        body=TestEvent(
+                            source=context.stream_id,
+                            timestamp=time_stamp,
+                            version=x - 1,
+                            value=x,
+                        )
                     )
-                )
-            ]
+                ]
             ]
         ),
     }
@@ -245,15 +245,15 @@ async def seed_dynamo_async(context, x, time_stamp):
                 [
                     e.to_json()
                     for e in [
-                    EventMessage(
-                        body=TestEvent(
-                            source=context.stream_id,
-                            timestamp=time_stamp,
-                            version=x - 1,
-                            value=x,
+                        EventMessage(
+                            body=TestEvent(
+                                source=context.stream_id,
+                                timestamp=time_stamp,
+                                version=x - 1,
+                                value=x,
+                            )
                         )
-                    )
-                ]
+                    ]
                 ]
             ),
         }
@@ -308,15 +308,15 @@ async def seed_mongo_async(context, x, time_stamp):
             [
                 e.to_json()
                 for e in [
-                EventMessage(
-                    body=TestEvent(
-                        source=context.stream_id,
-                        timestamp=time_stamp,
-                        version=x - 1,
-                        value=x,
+                    EventMessage(
+                        body=TestEvent(
+                            source=context.stream_id,
+                            timestamp=time_stamp,
+                            version=x - 1,
+                            value=x,
+                        )
                     )
-                )
-            ]
+                ]
             ]
         ),
         "CheckpointToken": x,
@@ -339,15 +339,15 @@ def seed_mongo(context, x, time_stamp):
             [
                 e.to_json()
                 for e in [
-                EventMessage(
-                    body=TestEvent(
-                        source=context.stream_id,
-                        timestamp=time_stamp,
-                        version=x - 1,
-                        value=x,
+                    EventMessage(
+                        body=TestEvent(
+                            source=context.stream_id,
+                            timestamp=time_stamp,
+                            version=x - 1,
+                            value=x,
+                        )
                     )
-                )
-            ]
+                ]
             ]
         ),
         "CheckpointToken": x,
@@ -378,15 +378,15 @@ def seed_postgres(context, x, time_stamp):
                     [
                         e.to_json()
                         for e in [
-                        EventMessage(
-                            body=TestEvent(
-                                source=context.stream_id,
-                                timestamp=time_stamp,
-                                version=x - 1,
-                                value=x,
+                            EventMessage(
+                                body=TestEvent(
+                                    source=context.stream_id,
+                                    timestamp=time_stamp,
+                                    version=x - 1,
+                                    value=x,
+                                )
                             )
-                        )
-                    ]
+                        ]
                     ]
                 ),
             ),
@@ -415,15 +415,15 @@ async def seed_postgres_async(context, x, time_stamp):
             [
                 e.to_json()
                 for e in [
-                EventMessage(
-                    body=TestEvent(
-                        source=context.stream_id,
-                        timestamp=time_stamp,
-                        version=x - 1,
-                        value=x,
+                    EventMessage(
+                        body=TestEvent(
+                            source=context.stream_id,
+                            timestamp=time_stamp,
+                            version=x - 1,
+                            value=x,
+                        )
                     )
-                )
-            ]
+                ]
             ]
         ),
     )
@@ -431,12 +431,12 @@ async def seed_postgres_async(context, x, time_stamp):
 
 def seed_mysql(context, x, time_stamp):
     with pymysql.connect(
-            host=context.host,
-            user=context.user,
-            password=context.password,
-            database=context.database,
-            port=context.port,
-            autocommit=True,
+        host=context.host,
+        user=context.user,
+        password=context.password,
+        database=context.database,
+        port=context.port,
+        autocommit=True,
     ) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
@@ -459,15 +459,15 @@ def seed_mysql(context, x, time_stamp):
                         [
                             e.to_json()
                             for e in [
-                            EventMessage(
-                                body=TestEvent(
-                                    source=context.stream_id,
-                                    timestamp=time_stamp,
-                                    version=x - 1,
-                                    value=x,
+                                EventMessage(
+                                    body=TestEvent(
+                                        source=context.stream_id,
+                                        timestamp=time_stamp,
+                                        version=x - 1,
+                                        value=x,
+                                    )
                                 )
-                            )
-                        ]
+                            ]
                         ]
                     ),
                 ),
@@ -476,12 +476,12 @@ def seed_mysql(context, x, time_stamp):
 
 async def seed_mysql_async(context, x, time_stamp):
     async with aiomysql.connect(
-            host=context.host,
-            user=context.user,
-            password=context.password,
-            db=context.database,
-            port=context.port,
-            autocommit=True,
+        host=context.host,
+        user=context.user,
+        password=context.password,
+        db=context.database,
+        port=context.port,
+        autocommit=True,
     ) as conn:
         async with conn.cursor() as cursor:
             await cursor.execute(
@@ -504,15 +504,15 @@ async def seed_mysql_async(context, x, time_stamp):
                         [
                             e.to_json()
                             for e in [
-                            EventMessage(
-                                body=TestEvent(
-                                    source=context.stream_id,
-                                    timestamp=time_stamp,
-                                    version=x - 1,
-                                    value=x,
+                                EventMessage(
+                                    body=TestEvent(
+                                        source=context.stream_id,
+                                        timestamp=time_stamp,
+                                        version=x - 1,
+                                        value=x,
+                                    )
                                 )
-                            )
-                        ]
+                            ]
                         ]
                     ),
                 ),
@@ -543,15 +543,15 @@ def seed_sqlite(context, x, time_stamp):
                     [
                         e.to_json()
                         for e in [
-                        EventMessage(
-                            body=TestEvent(
-                                source=context.stream_id,
-                                timestamp=time_stamp,
-                                version=x - 1,
-                                value=x,
+                            EventMessage(
+                                body=TestEvent(
+                                    source=context.stream_id,
+                                    timestamp=time_stamp,
+                                    version=x - 1,
+                                    value=x,
+                                )
                             )
-                        )
-                    ]
+                        ]
                     ]
                 ),
             ),
@@ -584,15 +584,15 @@ async def seed_sqlite_async(context, x, time_stamp):
                         [
                             e.to_json()
                             for e in [
-                            EventMessage(
-                                body=TestEvent(
-                                    source=context.stream_id,
-                                    timestamp=time_stamp,
-                                    version=x - 1,
-                                    value=x,
+                                EventMessage(
+                                    body=TestEvent(
+                                        source=context.stream_id,
+                                        timestamp=time_stamp,
+                                        version=x - 1,
+                                        value=x,
+                                    )
                                 )
-                            )
-                        ]
+                            ]
                         ]
                     ),
                 ),

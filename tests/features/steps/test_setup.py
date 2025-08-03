@@ -87,7 +87,8 @@ async def step_impl(context, storage: str):
                 aws_secret_access_key="dummy",
                 aws_session_token="dummy",
                 region="localhost",
-                port=port)
+                port=port,
+            )
             await mgmt.initialize()
         case "inmemory":
             context.db = "inmemory"

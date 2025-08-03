@@ -1,3 +1,4 @@
+from aett.eventstore.base_command import BaseCommand
 from aett.eventstore.base_event import BaseEvent
 from aett.eventstore.commit import Commit
 from aett.eventstore.domain_event import DomainEvent

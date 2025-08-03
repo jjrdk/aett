@@ -10,14 +10,14 @@ from aett.eventstore import SNAPSHOTS, MAX_INT, Snapshot, IAccessSnapshotsAsync
 
 class SnapshotStore(IAccessSnapshotsAsync):
     def __init__(
-            self,
-            table_name: str = SNAPSHOTS,
-            region: str = "eu-central-1",
-            profile_name: str | None = None,
-            aws_access_key_id: str | None = None,
-            aws_secret_access_key: str | None = None,
-            aws_session_token: str | None = None,
-            port: int = 8000,
+        self,
+        table_name: str = SNAPSHOTS,
+        region: str = "eu-central-1",
+        profile_name: str | None = None,
+        aws_access_key_id: str | None = None,
+        aws_secret_access_key: str | None = None,
+        aws_session_token: str | None = None,
+        port: int = 8000,
     ):
         self.__session = Session(
             profile_name=profile_name,
@@ -30,7 +30,7 @@ class SnapshotStore(IAccessSnapshotsAsync):
         self.table_name = table_name
 
     async def get(
-            self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
+        self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
     ) -> Snapshot | None:
         try:
             async with _get_client(self.__session, self.__port) as client:
@@ -40,8 +40,8 @@ class SnapshotStore(IAccessSnapshotsAsync):
                     ConsistentRead=True,
                     Limit=1,
                     KeyConditionExpression=(
-                            Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
-                            & Key("StreamRevision").lte(max_revision)
+                        Key("TenantAndStream").eq(f"{tenant_id}{stream_id}")
+                        & Key("StreamRevision").lte(max_revision)
                     ),
                     ScanIndexForward=False,
                 )
@@ -62,7 +62,9 @@ class SnapshotStore(IAccessSnapshotsAsync):
                 f"Failed to get snapshot for stream {stream_id} with status code {e}"
             )
 
-    async def add(self, snapshot: Snapshot, headers: typing.Dict[str, str] | None = None):
+    async def add(
+        self, snapshot: Snapshot, headers: typing.Dict[str, str] | None = None
+    ):
         if headers is None:
             headers = {}
         try:
