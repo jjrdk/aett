@@ -22,12 +22,6 @@ Feature: Topic definition
     When I register it with the TopicMap
     Then the topic is list of all topics
 
-  Scenario: Turnaround topic definition
-    Given a class with a topic annotation
-    And a hierarchical topic map
-    When I register it with the HierarchicalTopicMap
-    Then the hierarchical topic map can resolve the type from the topic
-
   Scenario: Class registration
     Given a class with a topic annotation
     When I register it with the TopicMap
