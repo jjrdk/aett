@@ -1,9 +1,6 @@
 import inspect
-from typing import Any, Dict, Iterable, List, Self, Set
-from pydantic import BaseModel
+from typing import Any, Dict, List, Self
 
-from aett.eventstore.base_command import BaseCommand
-from aett.eventstore.base_event import BaseEvent
 from aett.eventstore.topic import Topic
 
 
