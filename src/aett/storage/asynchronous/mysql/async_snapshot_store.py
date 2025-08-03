@@ -89,7 +89,7 @@ class AsyncSnapshotStore(IAccessSnapshotsAsync):
                             to_json(headers),
                         ),
                     )
-                connection.commit()
+                await connection.commit()
         except Exception as e:
             raise Exception(
                 f"Failed to add snapshot for stream {snapshot.stream_id} with error {e}"
