@@ -718,8 +718,6 @@ async def step_impl(context, count):
             )
         )
         await context.repository.save(agg)
-    end_time = time.time()
-    elapsed = end_time - start_time
 
 
 @when("(\\d+) events are persisted to an aggregate")

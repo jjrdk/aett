@@ -3049,9 +3049,10 @@ mysql-async = ["aiomysql"]
 postgresql = ["psycopg", "psycopg-binary"]
 postgresql-async = ["asyncpg"]
 s3 = ["boto3"]
+s3-async = ["aioboto3"]
 sqlite-async = ["aiosqlite"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "5ebfad1729b4e76e613870ba5642c7e9fe80b40cc265dbd8a59c3f05c08f84c8"
+content-hash = "789823c6ac24dc87f7aa1e14d8e2f4950147c5d4a85a1d86c28688ea5b50395c"
