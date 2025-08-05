@@ -36,20 +36,22 @@ packages = [
     { include = "aett", from = "src" }
 ]
 
-[tool.poetry.group.test.dependencies]
-aioboto3=">=15.0"
-behave = "^1.2"
-pymongo = "~4.13"
-psycopg = "~3.2"
-psycopg-binary = "~3.2"
-asyncpg = "~0.30"
-testcontainers = { version = "~4.12", extras = ['minio', 'mysql'] }
-aiosqlite = "~0.21"
-pymysql = "~1.1"
-types-pymysql = "~1.1"
-aiomysql = "~0.2"
-pytest-xdist = "^3.8"
-mypy = ">=1.17,<2.0.0"
+[dependency-groups]
+dev = [
+    "aioboto3>=15.0",
+    "behave>=1.2",
+    "pymongo>=4.13",
+    "psycopg>=3.2",
+    "psycopg-binary>=3.2",
+    "asyncpg>=0.30",
+    "aiosqlite>=0.21",
+    "pymysql>=1.1",
+    "types-pymysql>=1.1",
+    "aiomysql>=0.2",
+    "pytest-xdist>=3.8",
+    "mypy>=1.17,<2.0.0",
+    "testcontainers[minio,mysql]>=4.12.0",
+]
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.12"

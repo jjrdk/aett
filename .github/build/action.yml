@@ -12,20 +12,19 @@ runs:
         python-version: '3.11'
     - run: |
         python -m pip install -U pip
-        python -m pip install -U poetry
-        poetry config virtualenvs.create false
+        python -m pip install -U uv
       shell: bash
     - name: Install dependencies
-      run: poetry install
+      run: uv sync --all-extras
       shell: bash
     - name: Run tests
       run: |
-        behave tests/features --junit --junit-directory reports -f pretty
+        .venv/bin/behave tests/features --junit --junit-directory reports -f pretty
         tar -czf test_reports.tar.gz reports/*.xml
         echo 'Wrote test report to test_reports.tar.gz'
       shell: bash
     - name: Build package
       run: |
-        poetry version ${{ inputs.release-tag }}
-        poetry build
+        uv version ${{ inputs.release-tag }}
+        uv build
       shell: bash
