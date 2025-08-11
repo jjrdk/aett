@@ -112,7 +112,7 @@ class DefaultAggregateRepository(AggregateRepository):
             commit_id=uuid.uuid4(),
             commit_sequence=aggregate.commit_sequence + 1,
             commit_stamp=datetime.datetime.now(datetime.timezone.utc),
-            headers={key: to_json(value).decode("utf-8") for key, value in kwargs},
+            headers={key: to_json(value).decode() for key, value in kwargs},
             events=list(aggregate.uncommitted),
             checkpoint_token=0,
         )
@@ -132,7 +132,7 @@ class DefaultAggregateRepository(AggregateRepository):
         )
         agg = self.get(cls, stream_id, version)
         self._snapshot_aggregate(
-            agg, {key: to_json(value).decode("utf-8") for key, value in kwargs}
+            agg, {key: to_json(value).decode() for key, value in kwargs}
         )
 
     def snapshot_at(
