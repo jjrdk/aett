@@ -51,10 +51,8 @@ dev = [
     "pytest-xdist>=3.8",
     "mypy>=1.17,<2.0.0",
     "testcontainers[minio,mysql]>=4.12.0",
+    "ruff>=0.12"
 ]
-
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.12"
 
 [tool.ruff.lint]
 ignore = ["F401", "F403", "F405", "E722", "F811", "F821", "F841"]
