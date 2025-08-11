@@ -146,9 +146,7 @@ class AsyncCommitStore(ICommitEventsAsync):
                 Key=commit_key,
                 Body=body,
                 ContentLength=len(body),
-                Metadata={
-                    k: to_json(v).decode() for k, v in commit.headers.items()
-                },
+                Metadata={k: to_json(v).decode() for k, v in commit.headers.items()},
             )
 
     async def check_exists(self, commit_sequence: int, commit: Commit) -> None:
