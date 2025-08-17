@@ -51,6 +51,11 @@ classes respectively.
 Both repositories use the `CommitStore` and `SnapshotStore` interfaces to store and retrieve events and snapshots from
 the persistence specific event stores.
 
+See also:
+
+- [Domain Modeling](docs/domain_modeling.md) for more information on how to model your domain aggregates and sagas.
+- [Domain Storage](docs/domain_storage.md) for more information on how to store and retrieve aggregates and sagas.
+
 Currently supported persistence stores are:
 
 | Storage Engine | Sync | Async |
