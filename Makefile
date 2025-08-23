@@ -9,9 +9,9 @@ update:
 
 test: install_dependencies
 	# Apply linter before running tests
-	.venv/bin/ruff format
+	uv run ruff format
 	# Run tests using behave
-	.venv/bin/behave tests/features --no-capture-stderr --junit --junit-directory reports -f pretty
+	uv run behave -f pretty
 
 build: test
 	# Build the project using uv

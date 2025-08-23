@@ -70,7 +70,7 @@ class SnapshotStore(IAccessSnapshots):
                 "StreamRevision": snapshot.stream_revision,
                 "Payload": snapshot.payload,
                 "CommitSequence": snapshot.commit_sequence,
-                "Headers": to_json(headers).decode("utf-8"),
+                "Headers": to_json(headers).decode(),
             }
             _ = self.table.put_item(
                 TableName=self.table_name,

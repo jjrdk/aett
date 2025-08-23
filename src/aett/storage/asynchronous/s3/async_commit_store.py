@@ -115,7 +115,7 @@ class AsyncCommitStore(ICommitEventsAsync):
         async with self.__config.to_client() as client:
             file = await client.get_object(Bucket=self.__s3_bucket, Key=key)
             body = await file.get("Body").read()
-            doc = from_json(body.decode("utf-8"))
+            doc = from_json(body.decode())
             return Commit(
                 tenant_id=doc.get("tenant_id"),
                 stream_id=doc.get("stream_id"),
@@ -146,9 +146,7 @@ class AsyncCommitStore(ICommitEventsAsync):
                 Key=commit_key,
                 Body=body,
                 ContentLength=len(body),
-                Metadata={
-                    k: to_json(v).decode("utf-8") for k, v in commit.headers.items()
-                },
+                Metadata={k: to_json(v).decode() for k, v in commit.headers.items()},
             )
 
     async def check_exists(self, commit_sequence: int, commit: Commit) -> None:

@@ -10,7 +10,7 @@ class TopicMap:
     """
 
     def __init__(self):
-        self.__topics: Dict[str, type] = {}
+        self._topics: Dict[str, type] = {}
 
     def add(self, topic: str, cls: type) -> Self:
         """
@@ -18,13 +18,13 @@ class TopicMap:
         :param topic: The topic of the event.
         :param cls: The class of the event.
         """
-        self.__topics[topic] = cls
+        self._topics[topic] = cls
         return self
 
     def register(self, instance: Any) -> Self:
         t = instance if isinstance(instance, type) else type(instance)
         topic = Topic.get(t)
-        if topic not in self.__topics:
+        if topic not in self._topics:
             self.add(topic, t)
 
         return self
@@ -46,18 +46,29 @@ class TopicMap:
         :param topic: The topic of the event.
         :return: The class of the event.
         """
-        return self.__topics.get(topic, None)
+        return self._topics.get(topic, None)
+
+    def get_from_type(self, t: type) -> str | None:
+        """
+        Gets the topic of the event given the class.
+        :param t: The class of the event.
+        :return: The topic of the event.
+        """
+        for topic, cls in self._topics.items():
+            if cls is t:
+                return topic
+        return None
 
     def get_all(self) -> List[str]:
         """
         Gets all the topics and their corresponding classes in the map.
         :return: A dictionary of all the topics and their classes.
         """
-        return list(self.__topics.keys())
+        return list(self._topics.keys())
 
     def get_all_types(self) -> List[type]:
         """
         Gets all the types in the map.
         :return: A list of all the types in the map.
         """
-        return list(self.__topics.values())
+        return list(self._topics.values())

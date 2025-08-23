@@ -75,7 +75,7 @@ class SnapshotStore(IAccessSnapshotsAsync):
                 "StreamRevision": snapshot.stream_revision,
                 "Payload": snapshot.payload,
                 "CommitSequence": snapshot.commit_sequence,
-                "Headers": to_json(headers).decode("utf-8"),
+                "Headers": to_json(headers).decode(),
             }
             async with _get_client(self.__session, self.__port) as client:
                 table = await client.Table(self.table_name)
