@@ -53,8 +53,8 @@ the persistence specific event stores.
 
 See also:
 
-- [Domain Modeling](https://github.com/jjrdk/aett/blob/master/docs/domain_modeling.md) for more information on how to model your domain aggregates and sagas.
-- [Domain Storage](https://github.com/jjrdk/aett/blob/master/docs/domain_storage.md) for more information on how to store and retrieve aggregates and sagas.
+- [Domain Modeling](https://github.com/jjrdk/aett/blob/HEAD/docs/domain_modeling.md) for more information on how to model your domain aggregates and sagas.
+- [Domain Storage](https://github.com/jjrdk/aett/blob/HEAD/docs/domain_storage.md) for more information on how to store and retrieve aggregates and sagas.
 
 Currently supported persistence stores are:
 
