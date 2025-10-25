@@ -55,31 +55,29 @@ class AsyncCommitStore(ICommitEventsAsync):
     ) -> typing.AsyncIterable[Commit]:
         max_revision = MAX_INT if max_revision >= MAX_INT else max_revision + 1
         min_revision = 0 if min_revision < 0 else min_revision
-        connection = await connect(
+        async with connect(
             host=self._host,
             user=self._user,
             password=self._password,
             db=self._database,
             port=self._port,
             autocommit=True,
-        )
-        cur = await connection.cursor()
-        await cur.execute(
-            f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
-          FROM {self._table_name}
-         WHERE TenantId = %s
-           AND StreamId = %s
-           AND StreamRevision >= %s
-           AND (StreamRevision - Items) < %s
-           AND CommitSequence > %s
-         ORDER BY CommitSequence;""",
-            (tenant_id, stream_id, min_revision, max_revision, 0),
-        )
-        fetchall = await cur.fetchall()
-        for doc in fetchall:
-            yield _item_to_commit(doc, self._topic_map)
-        await cur.close()
-        connection.close()
+        ) as connection:
+            async with connection.cursor() as cur:
+                await cur.execute(
+                    f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+                  FROM {self._table_name}
+                 WHERE TenantId = %s
+                   AND StreamId = %s
+                   AND StreamRevision >= %s
+                   AND (StreamRevision - Items) < %s
+                   AND CommitSequence > %s
+                 ORDER BY CommitSequence;""",
+                    (tenant_id, stream_id, min_revision, max_revision, 0),
+                )
+                fetchall = await cur.fetchall()
+                for doc in fetchall:
+                    yield _item_to_commit(doc, self._topic_map)
 
     async def get_to(
         self,
@@ -87,55 +85,51 @@ class AsyncCommitStore(ICommitEventsAsync):
         stream_id: str,
         max_time: datetime.datetime = datetime.datetime.max,
     ) -> typing.AsyncIterable[Commit]:
-        connection = await connect(
+        async with connect(
             host=self._host,
             user=self._user,
             password=self._password,
             db=self._database,
             port=self._port,
             autocommit=True,
-        )
-        cur = await connection.cursor()
-        await cur.execute(
-            f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
-                  FROM {self._table_name}
-                 WHERE TenantId = %s
-                   AND StreamId = %s
-                   AND CommitStamp <= %s
-                 ORDER BY CommitSequence;""",
-            (tenant_id, stream_id, max_time),
-        )
-        fetchall = await cur.fetchall()
-        for doc in fetchall:
-            yield _item_to_commit(doc, self._topic_map)
-        await cur.close()
-        connection.close()
+        ) as connection:
+            async with connection.cursor() as cur:
+                await cur.execute(
+                    f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+                          FROM {self._table_name}
+                         WHERE TenantId = %s
+                           AND StreamId = %s
+                           AND CommitStamp <= %s
+                         ORDER BY CommitSequence;""",
+                    (tenant_id, stream_id, max_time),
+                )
+                fetchall = await cur.fetchall()
+                for doc in fetchall:
+                    yield _item_to_commit(doc, self._topic_map)
 
     async def get_all_to(
         self, tenant_id: str, max_time: datetime.datetime = datetime.datetime.max
     ) -> typing.AsyncIterable[Commit]:
-        connection = await connect(
+        async with connect(
             host=self._host,
             user=self._user,
             password=self._password,
             db=self._database,
             port=self._port,
             autocommit=True,
-        )
-        cur = await connection.cursor()
-        await cur.execute(
-            f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
-                              FROM {self._table_name}
-                             WHERE TenantId = %s
-                               AND CommitStamp <= %s
-                             ORDER BY CheckpointNumber;""",
-            (tenant_id, max_time),
-        )
-        fetchall = cur.fetchall()
-        for doc in fetchall:
-            yield _item_to_commit(doc, self._topic_map)
-        await cur.close()
-        connection.close()
+        ) as connection:
+            async with connection.cursor() as cur:
+                await cur.execute(
+                    f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+                                      FROM {self._table_name}
+                                     WHERE TenantId = %s
+                                       AND CommitStamp <= %s
+                                     ORDER BY CheckpointNumber;""",
+                    (tenant_id, max_time),
+                )
+                fetchall = cur.fetchall()
+                for doc in fetchall:
+                    yield _item_to_commit(doc, self._topic_map)
 
     async def commit(self, commit: Commit) -> Commit:
         try:
@@ -203,26 +197,24 @@ class AsyncCommitStore(ICommitEventsAsync):
         self, commit_id: UUID, tenant_id: str, stream_id: str
     ) -> bool:
         try:
-            connection = await connect(
+            async with connect(
                 host=self._host,
                 user=self._user,
                 password=self._password,
                 db=self._database,
                 port=self._port,
                 autocommit=True,
-            )
-            cur = await connection.cursor()
-            await cur.execute(
-                f"""SELECT COUNT(*)
-              FROM {self._table_name}
-             WHERE TenantId = %s
-               AND StreamId = %s
-               AND CommitId = %s;""",
-                (tenant_id, stream_id, str(commit_id)),
-            )
-            result = await cur.fetchone()
-            await cur.close()
-            connection.close()
+            ) as connection:
+                async with connection.cursor() as cur:
+                    await cur.execute(
+                        f"""SELECT COUNT(*)
+                      FROM {self._table_name}
+                     WHERE TenantId = %s
+                       AND StreamId = %s
+                       AND CommitId = %s;""",
+                        (tenant_id, stream_id, str(commit_id)),
+                    )
+                    result = await cur.fetchone()
             return result[0] > 0
         except Exception as e:
             raise Exception(
@@ -230,39 +222,39 @@ class AsyncCommitStore(ICommitEventsAsync):
             )
 
     async def _detect_conflicts(self, commit: Commit) -> typing.Tuple[bool, int]:
-        connection = await connect(
+        async with connect(
             host=self._host,
             user=self._user,
             password=self._password,
             db=self._database,
             port=self._port,
             autocommit=True,
-        )
-        cur = await connection.cursor()
-        await cur.execute(
-            f"""SELECT StreamRevision, Payload
-                              FROM {self._table_name}
-                             WHERE TenantId = %s
-                               AND StreamId = %s
-                               AND StreamRevision <= %s
-                             ORDER BY CommitSequence;""",
-            (commit.tenant_id, commit.stream_id, commit.stream_revision),
-        )
-        fetchall = await cur.fetchall()
-        latest_revision = 0
-        for doc in fetchall:
-            events = [
-                EventMessage.from_dict(e, self._topic_map) for e in from_json(doc[1])
-            ]
-            uncommitted_events = list(map(self._get_body, commit.events))
-            committed_events = list(map(self._get_body, events))
-            if self._conflict_detector.conflicts_with(
-                uncommitted_events, committed_events
-            ):
-                return True, -1
-            if doc[0] > latest_revision:
-                latest_revision = int(doc[0])
-        return False, latest_revision
+        ) as connection:
+            async with connection.cursor() as cur:
+                await cur.execute(
+                    f"""SELECT StreamRevision, Payload
+                                      FROM {self._table_name}
+                                     WHERE TenantId = %s
+                                       AND StreamId = %s
+                                       AND StreamRevision <= %s
+                                     ORDER BY CommitSequence;""",
+                    (commit.tenant_id, commit.stream_id, commit.stream_revision),
+                )
+                fetchall = await cur.fetchall()
+                latest_revision = 0
+                for doc in fetchall:
+                    events = [
+                        EventMessage.from_dict(e, self._topic_map) for e in from_json(doc[1])
+                    ]
+                    uncommitted_events = list(map(self._get_body, commit.events))
+                    committed_events = list(map(self._get_body, events))
+                    if self._conflict_detector.conflicts_with(
+                        uncommitted_events, committed_events
+                    ):
+                        return True, -1
+                    if doc[0] > latest_revision:
+                        latest_revision = int(doc[0])
+                return False, latest_revision
 
     @staticmethod
     def _get_body(e: EventMessage) -> BaseEvent:
