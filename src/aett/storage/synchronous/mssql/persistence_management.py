@@ -8,11 +8,11 @@ from aett.storage.synchronous.mssql import _item_to_commit
 
 class PersistenceManagement(IManagePersistence):
     def __init__(
-        self,
-        connection_string: str,
-        topic_map: TopicMap,
-        commits_table_name: str = COMMITS,
-        snapshots_table_name: str = SNAPSHOTS,
+            self,
+            connection_string: str,
+            topic_map: TopicMap,
+            commits_table_name: str = COMMITS,
+            snapshots_table_name: str = SNAPSHOTS,
     ):
         self._connection_string: str = connection_string
         self._topic_map = topic_map
@@ -20,10 +20,9 @@ class PersistenceManagement(IManagePersistence):
         self._snapshots_table_name = snapshots_table_name
 
     def initialize(self):
-        try:
-            with connect(self._connection_string, autocommit=True) as connection:
-                with connection.cursor() as c:
-                    c.execute(f"""IF EXISTS(SELECT * FROM sysobjects WHERE name='{self._commits_table_name}' AND xtype = 'U') RETURN;
+        with connect(self._connection_string, autocommit=True) as connection:
+            with connection.cursor() as c:
+                c.execute(f"""IF EXISTS(SELECT * FROM sysobjects WHERE name='{self._commits_table_name}' AND xtype = 'U') RETURN;
                     CREATE TABLE [dbo].[{self._commits_table_name}]
                     (
                            [TenantId] [varchar](64) NOT NULL,
@@ -53,9 +52,7 @@ class PersistenceManagement(IManagePersistence):
                            [Headers] [varbinary](MAX) NULL CHECK ([Headers] IS NULL OR DATALENGTH([Headers]) > 0),
                            CONSTRAINT [PK_Snapshots] PRIMARY KEY CLUSTERED ([TenantId], [StreamId], [StreamRevision])
                     );""")
-                connection.commit()
-        except Exception:
-            pass
+            connection.commit()
 
     def drop(self):
         with connect(self._connection_string, autocommit=True) as connection:
