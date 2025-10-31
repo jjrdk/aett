@@ -127,8 +127,6 @@ class CommitStore(ICommitEvents):
                         ),
                     )
                     checkpoint_number = cur.fetchval()
-                    # cur.close()
-                    # connection.commit()
                     return Commit(
                         tenant_id=commit.tenant_id,
                         stream_id=commit.stream_id,
