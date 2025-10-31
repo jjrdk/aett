@@ -477,6 +477,7 @@ def seed_mysql(context, x, time_stamp):
 
 def seed_mssql(context, x, time_stamp):
     import mssql_python
+
     with mssql_python.connect(
         connection_str=context.db,
         autocommit=True,

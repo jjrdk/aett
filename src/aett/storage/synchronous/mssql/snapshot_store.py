@@ -11,12 +11,10 @@ class SnapshotStore(IAccessSnapshots):
         self._table_name = table_name
 
     def get(
-            self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
+        self, tenant_id: str, stream_id: str, max_revision: int = MAX_INT
     ) -> Snapshot | None:
         try:
-            with connect(
-                    self._connection_string, autocommit=True
-            ) as connection:
+            with connect(self._connection_string, autocommit=True) as connection:
                 with connection.cursor() as cur:
                     cur.execute(
                         f"""SELECT TOP 1 *
@@ -48,9 +46,7 @@ class SnapshotStore(IAccessSnapshots):
         if headers is None:
             headers = {}
         try:
-            with connect(
-                    self._connection_string, autocommit=True
-            ) as connection:
+            with connect(self._connection_string, autocommit=True) as connection:
                 with connection.cursor() as cur:
                     cur.execute(
                         f"""INSERT INTO {self._table_name} ( TenantId, StreamId, StreamRevision, CommitSequence, Payload, Headers) VALUES (?, ?, ?, ?, ?, ?);""",

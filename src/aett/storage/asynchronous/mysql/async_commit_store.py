@@ -244,7 +244,8 @@ class AsyncCommitStore(ICommitEventsAsync):
                 latest_revision = 0
                 for doc in fetchall:
                     events = [
-                        EventMessage.from_dict(e, self._topic_map) for e in from_json(doc[1])
+                        EventMessage.from_dict(e, self._topic_map)
+                        for e in from_json(doc[1])
                     ]
                     uncommitted_events = list(map(self._get_body, commit.events))
                     committed_events = list(map(self._get_body, events))
