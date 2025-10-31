@@ -208,12 +208,6 @@ def create_commit_store(
                 topic_map=topic_map,
                 conflict_detector=conflict_detector,
             )
-        case "mssql":
-            commit_store = MsSqlCommitStore(
-                connection_string=connection_string,
-                topic_map=topic_map,
-                conflict_detector=conflict_detector,
-            )
     if not commit_store:
         raise ValueError(f"Unknown storage type: {storage_type}")
     return commit_store
