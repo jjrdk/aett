@@ -170,7 +170,7 @@ class CommitStore(ICommitEvents):
          WHERE TenantId = ?
            AND StreamId = ?
            AND CommitId = ?;""",
-                        (tenant_id, stream_id, str(commit_id)),
+                        (tenant_id, stream_id, commit_id.bytes),
                     )
                     result = cur.fetchone()
                     cur.close()
