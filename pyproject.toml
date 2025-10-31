@@ -30,6 +30,7 @@ s3 = ["boto3~=1.40"]
 s3_async = ["aioboto3>=15.0"]
 mysql = ["pymysql~=1.1"]
 mysql_async = ["aiomysql~=0.2"]
+mssql = ["mssql-python>=0.13.1"]
 
 [tool.poetry]
 packages = [
@@ -48,9 +49,10 @@ dev = [
     "pymysql>=1.1",
     "types-pymysql>=1.1",
     "aiomysql>=0.2",
+    "mssql-python>=0.13.1",
     "pytest-xdist>=3.8",
     "mypy>=1.17,<2.0.0",
-    "testcontainers[minio,mysql]>=4.12.0",
+    "testcontainers[minio,mysql,mssql]>=4.12.0",
     "ruff>=0.12"
 ]
 

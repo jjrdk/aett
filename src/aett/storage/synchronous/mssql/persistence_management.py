@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from pymssql import connect
+from mssql_python import connect
 
 from aett.eventstore import IManagePersistence, TopicMap, COMMITS, SNAPSHOTS, Commit
 from aett.storage.synchronous.mssql import _item_to_commit
@@ -40,17 +40,19 @@ class PersistenceManagement(IManagePersistence):
                            [Headers] [varbinary](MAX) NULL CHECK ([Headers] IS NULL OR DATALENGTH([Headers]) > 0),
                            [Payload] [varbinary](MAX) NOT NULL CHECK (DATALENGTH([Payload]) > 0),
                            CONSTRAINT [PK_Commits] PRIMARY KEY CLUSTERED ([CheckpointNumber])
-                    
+                    );
                     CREATE UNIQUE NONCLUSTERED INDEX [IX_Commits_CommitSequence] ON {self._commits_table_name} (TenantId, StreamId, CommitSequence);
                     CREATE UNIQUE NONCLUSTERED INDEX [IX_Commits_CommitId] ON [dbo].[{self._commits_table_name}] ([TenantId], [StreamId], [CommitId]);
                     CREATE UNIQUE NONCLUSTERED INDEX [IX_Commits_Revisions] ON [dbo].[{self._commits_table_name}] ([TenantId], [StreamId], [StreamRevision], [Items]);
-                    CREATE INDEX [IX_Commits_Stamp] ON {self._commits_table_name} ([CommitS
+                    CREATE INDEX [IX_Commits_Stamp] ON {self._commits_table_name} ([CommitStamp]);
                     CREATE TABLE [dbo].[{self._snapshots_table_name}]
                     (
                            [TenantId] [varchar](64) NOT NULL,
                            [StreamId] [char](64) NOT NULL,
                            [StreamRevision] [int] NOT NULL CHECK ([StreamRevision] > 0),
+                           [CommitSequence] [int] NOT NULL CHECK ([CommitSequence] > 0),
                            [Payload] [varbinary](MAX) NOT NULL CHECK (DATALENGTH([Payload]) > 0),
+                           [Headers] [varbinary](MAX) NULL CHECK ([Headers] IS NULL OR DATALENGTH([Headers]) > 0),
                            CONSTRAINT [PK_Snapshots] PRIMARY KEY CLUSTERED ([TenantId], [StreamId], [StreamRevision])
                     );""")
                 connection.commit()
@@ -71,11 +73,11 @@ class PersistenceManagement(IManagePersistence):
         with connect(self._connection_string, autocommit=True) as connection:
             with connection.cursor() as c:
                 c.execute(
-                    f"""DELETE FROM {self._commits_table_name} WHERE TenantId = %s;""",
+                    f"""DELETE FROM {self._commits_table_name} WHERE TenantId = ?;""",
                     tenant_id,
                 )
                 c.execute(
-                    f"""DELETE FROM {self._snapshots_table_name} WHERE TenantId = %s;""",
+                    f"""DELETE FROM {self._snapshots_table_name} WHERE TenantId = ?;""",
                     tenant_id,
                 )
 
@@ -85,7 +87,7 @@ class PersistenceManagement(IManagePersistence):
                 cur.execute(
                     f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
                                   FROM {self._commits_table_name}
-                                 WHERE CommitStamp >= %s
+                                 WHERE CommitStamp >= ?
                                  ORDER BY CheckpointNumber;""",
                     (checkpoint,),
                 )

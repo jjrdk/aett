@@ -2,7 +2,6 @@ import datetime
 import sqlite3
 
 import aiosqlite
-import time
 import uuid
 
 import asyncpg
@@ -171,6 +170,8 @@ def step_impl(context):
                 seed_postgres(context, x, time_stamp)
             case "mysql":
                 seed_mysql(context, x, time_stamp)
+            case "mssql":
+                seed_mssql(context, x, time_stamp)
             case "s3":
                 seed_s3(context, x, time_stamp)
 
@@ -474,6 +475,48 @@ def seed_mysql(context, x, time_stamp):
             )
 
 
+def seed_mssql(context, x, time_stamp):
+    import mssql_python
+    with mssql_python.connect(
+        connection_str=context.db,
+        autocommit=True,
+    ) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """INSERT
+                   INTO commits
+                   (TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp,
+                    Headers, Payload)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);""",
+                (
+                    context.tenant_id,
+                    context.stream_id,
+                    context.stream_id,
+                    uuid.uuid4().bytes,
+                    x,
+                    x,
+                    1,
+                    time_stamp,
+                    to_json({}),
+                    to_json(
+                        [
+                            e.to_json()
+                            for e in [
+                                EventMessage(
+                                    body=TestEvent(
+                                        source=context.stream_id,
+                                        timestamp=time_stamp,
+                                        version=x - 1,
+                                        value=x,
+                                    )
+                                )
+                            ]
+                        ]
+                    ),
+                ),
+            )
+
+
 async def seed_mysql_async(context, x, time_stamp):
     async with aiomysql.connect(
         host=context.host,
@@ -704,7 +747,6 @@ def step_impl(context, version):
 @when("(\\d+) events are persisted async to an aggregate")
 @async_run_until_complete
 async def step_impl(context, count):
-    start_time = time.time()
     for i in range(0, int(count)):
         agg: TestAggregate = await context.repository.get(
             TestAggregate, context.stream_id

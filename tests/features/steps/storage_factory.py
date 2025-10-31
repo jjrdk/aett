@@ -190,6 +190,11 @@ def create_commit_store(
                 topic_map=topic_map,
                 conflict_detector=conflict_detector,
             )
+        case "mssql":
+            commit_store = MsSqlCommitStore(
+                connection_string=connection_string,
+                topic_map=topic_map,
+                conflict_detector=conflict_detector)
         case "s3":
             commit_store = S3CommitStore(
                 s3_config=connection_string,

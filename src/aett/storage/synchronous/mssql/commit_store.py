@@ -3,7 +3,7 @@ import typing
 from typing import Iterable
 from uuid import UUID
 
-from pymssql import IntegrityError, connect
+from mssql_python import IntegrityError, connect
 from pydantic_core import to_json, from_json
 
 from aett.domain import (
@@ -50,13 +50,13 @@ class CommitStore(ICommitEvents):
         with connect(self._connection_string, autocommit=True) as connection:
             with connection.cursor() as cur:
                 cur.execute(
-                    f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+                    f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp, CheckpointNumber, Headers, Payload
           FROM {self._table_name}
-         WHERE TenantId = %s
-           AND StreamId = %s
-           AND StreamRevision >= %s
-           AND (StreamRevision - Items) < %s
-           AND CommitSequence > %s
+         WHERE TenantId = ?
+           AND StreamId = ?
+           AND StreamRevision >= ?
+           AND (StreamRevision - Items) < ?
+           AND CommitSequence > ?
          ORDER BY CommitSequence;""",
                     (tenant_id, stream_id, min_revision, max_revision, 0),
                 )
@@ -73,11 +73,11 @@ class CommitStore(ICommitEvents):
         with connect(self._connection_string, autocommit=True) as connection:
             with connection.cursor() as cur:
                 cur.execute(
-                    f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
+                    f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp, CheckpointNumber, Headers, Payload
                   FROM {self._table_name}
-                 WHERE TenantId = %s
-                   AND StreamId = %s
-                   AND CommitStamp <= %s
+                 WHERE TenantId = ?
+                   AND StreamId = ?
+                   AND CommitStamp <= ?
                  ORDER BY CommitSequence;""",
                     (tenant_id, stream_id, max_time),
                 )
@@ -93,8 +93,8 @@ class CommitStore(ICommitEvents):
                 cur.execute(
                     f"""SELECT TenantId, StreamId, StreamIdOriginal, StreamRevision, CommitId, CommitSequence, CommitStamp,  CheckpointNumber, Headers, Payload
                           FROM {self._table_name}
-                         WHERE TenantId = %s
-                           AND CommitStamp <= %s
+                         WHERE TenantId = ?
+                           AND CommitStamp <= ?
                          ORDER BY CheckpointNumber;""",
                     (tenant_id, max_time),
                 )
@@ -113,7 +113,8 @@ class CommitStore(ICommitEvents):
                         f"""INSERT
           INTO {self._table_name}
              ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);""",
+        OUTPUT INSERTED.CheckpointNumber
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);""",
                         (
                             commit.tenant_id,
                             commit.stream_id,
@@ -127,9 +128,9 @@ class CommitStore(ICommitEvents):
                             json,
                         ),
                     )
-                    checkpoint_number = cur.lastrowid
-                    cur.close()
-                    connection.commit()
+                    checkpoint_number = cur.fetchval()
+                    # cur.close()
+                    # connection.commit()
                     return Commit(
                         tenant_id=commit.tenant_id,
                         stream_id=commit.stream_id,
@@ -139,7 +140,7 @@ class CommitStore(ICommitEvents):
                         commit_stamp=commit.commit_stamp,
                         headers=commit.headers,
                         events=commit.events,
-                        checkpoint_token=checkpoint_number[0],
+                        checkpoint_token=checkpoint_number,
                     )
         except IntegrityError:
             if self._detect_duplicate(
@@ -172,9 +173,9 @@ class CommitStore(ICommitEvents):
                     cur.execute(
                         f"""SELECT COUNT(*)
           FROM {self._table_name}
-         WHERE TenantId = %s
-           AND StreamId = %s
-           AND CommitId = %s;""",
+         WHERE TenantId = ?
+           AND StreamId = ?
+           AND CommitId = ?;""",
                         (tenant_id, stream_id, str(commit_id)),
                     )
                     result = cur.fetchone()
@@ -185,15 +186,15 @@ class CommitStore(ICommitEvents):
                 f"Failed to detect duplicate commit {commit_id} with error {e}"
             )
 
-    def _detect_conflicts(self, commit: Commit) -> (bool, int):
+    def _detect_conflicts(self, commit: Commit) -> typing.Tuple[bool, int]:
         with connect(self._connection_string, autocommit=True) as connection:
             with connection.cursor() as cur:
                 cur.execute(
                     f"""SELECT StreamRevision, Payload
                           FROM {self._table_name}
-                         WHERE TenantId = %s
-                           AND StreamId = %s
-                           AND StreamRevision <= %s
+                         WHERE TenantId = ?
+                           AND StreamId = ?
+                           AND StreamRevision <= ?
                          ORDER BY CommitSequence;""",
                     (commit.tenant_id, commit.stream_id, commit.stream_revision),
                 )

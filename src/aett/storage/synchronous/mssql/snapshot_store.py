@@ -1,5 +1,5 @@
 import typing
-from pymssql import connect
+from mssql_python import connect
 from pydantic_core import from_json, to_json
 
 from aett.eventstore import IAccessSnapshots, SNAPSHOTS, MAX_INT, Snapshot
@@ -19,13 +19,12 @@ class SnapshotStore(IAccessSnapshots):
             ) as connection:
                 with connection.cursor() as cur:
                     cur.execute(
-                        f"""SELECT *
+                        f"""SELECT TOP 1 *
           FROM {self._table_name}
-         WHERE TenantId = %s
-           AND StreamId = %s
-           AND StreamRevision <= %s
-         ORDER BY StreamRevision DESC
-         LIMIT 1;""",
+         WHERE TenantId = ?
+           AND StreamId = ?
+           AND StreamRevision <= ?
+         ORDER BY StreamRevision DESC;""",
                         (tenant_id, stream_id, max_revision),
                     )
                     item = cur.fetchone()
@@ -54,7 +53,7 @@ class SnapshotStore(IAccessSnapshots):
             ) as connection:
                 with connection.cursor() as cur:
                     cur.execute(
-                        f"""INSERT INTO {self._table_name} ( TenantId, StreamId, StreamRevision, CommitSequence, Payload, Headers) VALUES (%s, %s, %s, %s, %s, %s);""",
+                        f"""INSERT INTO {self._table_name} ( TenantId, StreamId, StreamRevision, CommitSequence, Payload, Headers) VALUES (?, ?, ?, ?, ?, ?);""",
                         (
                             snapshot.tenant_id,
                             snapshot.stream_id,
