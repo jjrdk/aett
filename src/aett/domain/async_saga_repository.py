@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar, Type
+from typing import Type, TypeVar
 
 from aett.domain import Saga
 
 
 class AsyncSagaRepository(ABC):
     """
-    Defines the abstract interface for an saga repository.
+    Defines the abstract interface for a saga repository.
     The repository is responsible for loading and saving sagas to the event store,
     typically using the ICommitEvents interface.
     """

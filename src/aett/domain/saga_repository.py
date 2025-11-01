@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar, Type, Dict
+from typing import Type, TypeVar
 
 from aett.domain.saga import Saga
 

@@ -2,15 +2,18 @@ import datetime
 import inspect
 import logging
 import uuid
-from typing import Type, Dict
+from typing import Dict, Type
 
 from pydantic_core import from_json, to_json
 
-from aett.domain.aggregate_repository import AggregateRepository, Aggregate
-from aett.eventstore import ICommitEvents, IAccessSnapshots, Commit, Snapshot, MAX_INT
+from aett.domain.aggregate_repository import Aggregate, AggregateRepository
+from aett.eventstore import Commit, IAccessSnapshots, ICommitEvents, MAX_INT, Snapshot
 
 
 class DefaultAggregateRepository(AggregateRepository):
+    """
+    The default aggregate repository implementation.
+    """
     def __init__(
         self,
         tenant_id: str,

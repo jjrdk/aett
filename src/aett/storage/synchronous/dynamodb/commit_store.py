@@ -1,9 +1,9 @@
-import datetime
-import typing
 from typing import Iterable
 from uuid import UUID
+import datetime
+import typing
 
-from boto3.dynamodb.conditions import Key, Attr
+from boto3.dynamodb.conditions import Attr, Key
 from pydantic_core import from_json, to_json
 
 from aett.domain import (
@@ -12,9 +12,9 @@ from aett.domain import (
     ConflictingCommitException,
     NonConflictingCommitException,
 )
-from aett.storage.synchronous.dynamodb import _get_resource
 from aett.eventstore import TopicMap, COMMITS, MAX_INT, Commit, EventMessage, BaseEvent
 from aett.eventstore.i_commit_events import ICommitEvents
+from aett.storage.synchronous.dynamodb import _get_resource
 
 
 class CommitStore(ICommitEvents):
