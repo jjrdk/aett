@@ -4,6 +4,7 @@ from pymongo import AsyncMongoClient, MongoClient
 from testcontainers.core.container import DockerContainer
 from testcontainers.minio import MinioContainer
 from testcontainers.mongodb import MongoDbContainer
+from testcontainers.mssql import SqlServerContainer
 from testcontainers.mysql import MySqlContainer
 from testcontainers.postgres import PostgresContainer
 
@@ -32,6 +33,9 @@ from aett.storage.synchronous.mongodb.persistence_management import (
 )
 from aett.storage.synchronous.mysql.persistence_management import (
     PersistenceManagement as MySqlPersistenceManagement,
+)
+from aett.storage.synchronous.mssql.persistence_management import (
+    PersistenceManagement as MsSqlPersistenceManagement,
 )
 from aett.storage.synchronous.postgresql.persistence_management import (
     PersistenceManagement as PostgresPersistenceManagement,
@@ -118,6 +122,30 @@ async def step_impl(context, storage: str):
             )
             mgmt.initialize()
             context.mgmt = mgmt
+        case "postgres_async":
+            context.process = PostgresContainer()
+            pg_container = context.process.start()
+            context.db = pg_container.get_connection_url().replace("+psycopg2", "")
+            mgmt = PostgresAsyncPersistenceManagement(
+                connection_string=context.db, topic_map=tm
+            )
+            await mgmt.initialize()
+            context.mgmt = mgmt
+        case "mssql":
+            context.process = SqlServerContainer()
+            mssql_container = context.process.start()
+            context.db = f"SERVER={mssql_container.get_container_host_ip()},{mssql_container.get_exposed_port(1433)};DATABASE={mssql_container.dbname};UID={mssql_container.username};PWD={mssql_container.password};Encrypt=no;"
+            context.host = mssql_container.get_container_host_ip()
+            context.port = int(mssql_container.get_exposed_port(1433))
+            context.user = mssql_container.username
+            context.password = mssql_container.password
+            context.database = mssql_container.dbname
+            mgmt = MsSqlPersistenceManagement(
+                connection_string=context.db,
+                topic_map=tm,
+            )
+            mgmt.initialize()
+            context.mgmt = mgmt
         case "mysql":
             context.process = MySqlContainer()
             mysql_container = context.process.start()
@@ -136,15 +164,6 @@ async def step_impl(context, storage: str):
                 topic_map=tm,
             )
             mgmt.initialize()
-            context.mgmt = mgmt
-        case "postgres_async":
-            context.process = PostgresContainer()
-            pg_container = context.process.start()
-            context.db = pg_container.get_connection_url().replace("+psycopg2", "")
-            mgmt = PostgresAsyncPersistenceManagement(
-                connection_string=context.db, topic_map=tm
-            )
-            await mgmt.initialize()
             context.mgmt = mgmt
         case "mysql_async":
             context.process = MySqlContainer()

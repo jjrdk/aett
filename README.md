@@ -53,8 +53,10 @@ the persistence specific event stores.
 
 See also:
 
-- [Domain Modeling](https://github.com/jjrdk/aett/blob/HEAD/docs/domain_modeling.md) for more information on how to model your domain aggregates and sagas.
-- [Domain Storage](https://github.com/jjrdk/aett/blob/HEAD/docs/domain_storage.md) for more information on how to store and retrieve aggregates and sagas.
+- [Domain Modeling](https://github.com/jjrdk/aett/blob/HEAD/docs/domain_modeling.md) for more information on how to
+  model your domain aggregates and sagas.
+- [Domain Storage](https://github.com/jjrdk/aett/blob/HEAD/docs/domain_storage.md) for more information on how to store
+  and retrieve aggregates and sagas.
 
 Currently supported persistence stores are:
 
@@ -65,12 +67,13 @@ Currently supported persistence stores are:
 | MongoDB        | +    | +     |
 | PostgreSQL     | +    | +     |
 | MySql          | +    | +     |
+| MS SQL Server  | +    | -     |
 | S3             | +    | +     |
 | In-Memory      | +    | -     |
 
 ## Downloads
 
-| Package                               | Downloads                                                                           |
-|---------------------------------------|-------------------------------------------------------------------------------------|
+| Package                                | Downloads                                                                           |
+|----------------------------------------|-------------------------------------------------------------------------------------|
 | [aett](https://pypi.org/project/aett/) | [![Downloads](https://static.pepy.tech/badge/aett)](https://pepy.tech/project/aett) |
 

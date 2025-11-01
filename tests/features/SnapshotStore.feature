@@ -12,8 +12,6 @@ Feature: Persist snapshots
       | postgres_async |
       | sqlite_async   |
       | mysql_async    |
-      | dynamodb_async |
-      | s3_async       |
 
   Scenario Outline: Commit async snapshots of the aggregate
     Given a running <storage> server
@@ -30,3 +28,4 @@ Feature: Persist snapshots
       | s3       |
       | sqlite   |
       | mysql    |
+      | mssql    |

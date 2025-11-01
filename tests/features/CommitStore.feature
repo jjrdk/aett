@@ -46,6 +46,7 @@ Feature: Persist commits
       | s3       |
       | dynamo   |
       | inmemory |
+      | mssql    |
 
   Scenario Outline: Commit event with nested base models to sync stream
     Given a running <storage> server
@@ -63,3 +64,4 @@ Feature: Persist commits
       | s3       |
       | sqlite   |
       | mysql    |
+      | mssql    |

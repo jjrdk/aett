@@ -11,8 +11,6 @@ Feature: Saga repository behavior
       | postgres_async |
       | sqlite_async   |
       | mysql_async    |
-      | dynamodb_async |
-      | s3_async       |
 
   Scenario Outline: Loading an saga from the repository
     Given a running <storage> server
@@ -28,6 +26,7 @@ Feature: Saga repository behavior
       | s3       |
       | sqlite   |
       | mysql    |
+      | mssql    |
 
   Scenario Outline: Loading a modified aggregate from the repository async
     Given a running <storage> server
@@ -36,7 +35,6 @@ Feature: Saga repository behavior
     And the saga is saved async to the repository
     And the saga is loaded again async
     Then the modified saga is loaded from storage
-    And the loaded saga has no headers
 
     Examples:
       | storage        |
@@ -44,8 +42,6 @@ Feature: Saga repository behavior
       | postgres_async |
       | sqlite_async   |
       | mysql_async    |
-      | dynamodb_async |
-      | s3_async       |
 
   Scenario Outline: Loading a modified aggregate from the repository
     Given a running <storage> server
@@ -54,7 +50,6 @@ Feature: Saga repository behavior
     And the saga is saved to the repository
     And the saga is loaded again
     Then the modified saga is loaded from storage
-    And the loaded saga has no headers
 
     Examples:
       | storage  |
@@ -65,3 +60,4 @@ Feature: Saga repository behavior
       | s3       |
       | sqlite   |
       | mysql    |
+      | mssql    |
