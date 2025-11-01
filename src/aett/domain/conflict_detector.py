@@ -1,12 +1,16 @@
 import inspect
 import logging
-from typing import List, Dict, Type, Callable, Iterable
+from typing import Callable, Dict, Iterable, List, Type
 
 from aett.domain.conflict_delegate import ConflictDelegate
 from aett.eventstore import BaseEvent, DomainEvent
 
 
 class ConflictDetector:
+    """
+    A conflict detector is a class that can detect conflicts between uncommitted and committed events.
+    It uses a set of delegates to perform the actual conflict detection.
+    """
     @staticmethod
     def empty() -> "ConflictDetector":
         return ConflictDetector()

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Generic
 
-from aett.domain.constants import TUncommitted, TCommitted
+from aett.domain.constants import TCommitted, TUncommitted
 
 
 class ConflictDelegate(ABC, Generic[TUncommitted, TCommitted]):

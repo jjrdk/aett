@@ -1,6 +1,6 @@
-import datetime
 from abc import ABC, abstractmethod
-from typing import TypeVar, Type, Dict
+import datetime
+from typing import Dict, Type, TypeVar
 
 from aett.domain.aggregate import Aggregate
 
