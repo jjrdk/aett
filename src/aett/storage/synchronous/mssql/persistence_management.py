@@ -8,11 +8,11 @@ from aett.storage.synchronous.mssql import _item_to_commit
 
 class PersistenceManagement(IManagePersistence):
     def __init__(
-            self,
-            connection_string: str,
-            topic_map: TopicMap,
-            commits_table_name: str = COMMITS,
-            snapshots_table_name: str = SNAPSHOTS,
+        self,
+        connection_string: str,
+        topic_map: TopicMap,
+        commits_table_name: str = COMMITS,
+        snapshots_table_name: str = SNAPSHOTS,
     ):
         self._connection_string: str = connection_string
         self._topic_map = topic_map

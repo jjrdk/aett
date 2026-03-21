@@ -14,6 +14,7 @@ class DefaultAggregateRepository(AggregateRepository):
     """
     The default aggregate repository implementation.
     """
+
     def __init__(
         self,
         tenant_id: str,

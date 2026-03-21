@@ -11,6 +11,7 @@ class ConflictDetector:
     A conflict detector is a class that can detect conflicts between uncommitted and committed events.
     It uses a set of delegates to perform the actual conflict detection.
     """
+
     @staticmethod
     def empty() -> "ConflictDetector":
         return ConflictDetector()

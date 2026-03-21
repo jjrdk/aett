@@ -21,6 +21,7 @@ class AsyncDefaultAggregateRepository(AsyncAggregateRepository):
     """
     The default implementation of an asynchronous aggregate repository.
     """
+
     def __init__(
         self,
         tenant_id: str,
