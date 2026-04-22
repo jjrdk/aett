@@ -58,11 +58,10 @@ class CommitStore(ICommitEvents):
            AND StreamRevision >= %s
            AND (StreamRevision - Items) < %s
            AND CommitSequence > %s
-         ORDER BY CommitSequence;""",
+         ORDER BY CommitSequence;""".encode(),
                     (tenant_id, stream_id, min_revision, max_revision, 0),
                 )
-                fetchall = cur.fetchall()
-                for doc in fetchall:
+                for doc in cur:
                     yield _item_to_commit(doc, self._topic_map)
 
     def get_to(
@@ -79,11 +78,10 @@ class CommitStore(ICommitEvents):
                  WHERE TenantId = %s
                    AND StreamId = %s
                    AND CommitStamp <= %s
-                 ORDER BY CommitSequence;""",
+                 ORDER BY CommitSequence;""".encode(),
                     (tenant_id, stream_id, max_time),
                 )
-                fetchall = cur.fetchall()
-                for doc in fetchall:
+                for doc in cur:
                     yield _item_to_commit(doc, self._topic_map)
 
     def get_all_to(
@@ -96,11 +94,10 @@ class CommitStore(ICommitEvents):
                           FROM {self._table_name}
                          WHERE TenantId = %s
                            AND CommitStamp <= %s
-                         ORDER BY CheckpointNumber;""",
+                         ORDER BY CheckpointNumber;""".encode(),
                     (tenant_id, max_time),
                 )
-                fetchall = cur.fetchall()
-                for doc in fetchall:
+                for doc in cur:
                     yield _item_to_commit(doc, self._topic_map)
 
     def commit(self, commit: Commit):
@@ -115,7 +112,7 @@ class CommitStore(ICommitEvents):
           INTO {self._table_name}
              ( TenantId, StreamId, StreamIdOriginal, CommitId, CommitSequence, StreamRevision, Items, CommitStamp, Headers, Payload )
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        RETURNING CheckpointNumber;""",
+        RETURNING CheckpointNumber;""".encode(),
                         (
                             commit.tenant_id,
                             commit.stream_id,
@@ -176,7 +173,7 @@ class CommitStore(ICommitEvents):
           FROM {self._table_name}
          WHERE TenantId = %s
            AND StreamId = %s
-           AND CommitId = %s;""",
+           AND CommitId = %s;""".encode(),
                         (tenant_id, stream_id, str(commit_id)),
                     )
                     result = cur.fetchone()
@@ -195,7 +192,7 @@ class CommitStore(ICommitEvents):
                          WHERE TenantId = %s
                            AND StreamId = %s
                            AND StreamRevision <= %s
-                         ORDER BY CommitSequence;""",
+                         ORDER BY CommitSequence;""".encode(),
                     (commit.tenant_id, commit.stream_id, commit.stream_revision),
                 )
                 fetchall = cur.fetchall()

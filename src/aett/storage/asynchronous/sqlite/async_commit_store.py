@@ -53,8 +53,7 @@ class AsyncCommitStore(ICommitEventsAsync):
          ORDER BY CommitSequence;""",
                 (tenant_id, stream_id, min_revision, max_revision, 0),
             )
-            fetchall = await cur.fetchall()
-            for doc in fetchall:
+            async for doc in cur:
                 yield _item_to_commit(doc, self._topic_map)
 
     async def get_to(
@@ -74,8 +73,7 @@ class AsyncCommitStore(ICommitEventsAsync):
                      ORDER BY CommitSequence;""",
                 (tenant_id, stream_id, max_time),
             )
-            fetchall = await cur.fetchall()
-            for doc in fetchall:
+            async for doc in cur:
                 yield _item_to_commit(doc, self._topic_map)
 
     async def get_all_to(
@@ -91,8 +89,7 @@ class AsyncCommitStore(ICommitEventsAsync):
                              ORDER BY CheckpointNumber;""",
                     (tenant_id, max_time),
                 )
-                fetchall = await cur.fetchall()
-                for doc in fetchall:
+                async for doc in cur:
                     yield _item_to_commit(doc, self._topic_map)
 
     async def commit(self, commit: Commit) -> Commit:

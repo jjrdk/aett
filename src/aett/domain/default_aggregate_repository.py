@@ -52,33 +52,26 @@ class DefaultAggregateRepository(AggregateRepository):
         )
         min_version = 0
         commit_sequence = 0
+        memento = None
         if snapshot is not None:
             min_version = snapshot.stream_revision + 1
             commit_sequence = snapshot.commit_sequence
-        commits = []
+            memento_type = (
+                inspect.signature(cls.apply_memento).parameters["memento"].annotation
+            )
+            memento = memento_type(**from_json(snapshot.payload))
+        aggregate = cls(stream_id, commit_sequence, memento)
         ita = self._store.get(
             tenant_id=self._tenant_id,
             stream_id=stream_id,
             min_revision=min_version,
             max_revision=max_version,
         )
-        for x in ita:
-            commits.append(x)
-        if len(commits) > 0:
-            commit_sequence = commits[-1].commit_sequence
-        memento_type = (
-            inspect.signature(cls.apply_memento).parameters["memento"].annotation
-        )
-        aggregate = cls(
-            stream_id,
-            commit_sequence,
-            memento_type(**from_json(snapshot.payload))
-            if snapshot is not None
-            else None,
-        )
-        for commit in commits:
+        for commit in ita:
+            commit_sequence = max(commit_sequence, commit.commit_sequence)
             for event in commit.events:
                 aggregate.raise_event(event.body)
+        aggregate._commit_sequence = commit_sequence
         aggregate.uncommitted.clear()
         return aggregate
 
@@ -94,12 +87,13 @@ class DefaultAggregateRepository(AggregateRepository):
         ait = self._store.get_to(
             tenant_id=self._tenant_id, stream_id=stream_id, max_time=max_time
         )
-        commits = [x for x in ait]
-        commit_sequence = commits[-1].commit_sequence if len(commits) > 0 else 0
+        commit_sequence = 0
         aggregate = cls(stream_id, commit_sequence, None)
-        for commit in commits:
+        for commit in ait:
+            commit_sequence = max(commit_sequence, commit.commit_sequence)
             for event in commit.events:
                 aggregate.raise_event(event.body)
+        aggregate._commit_sequence = commit_sequence
         aggregate.uncommitted.clear()
         return aggregate
 
